@@ -194,7 +194,7 @@ const BlogPage: React.FC = () => {
   {articles.map(article => (
     <article
       key={article._id}
-      onClick={() => navigate(`/blog/${article._id}`)}
+      onClick={() => navigate(`/blog/${article.id}`)}
       className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
     >
       {/* IMAGE */}

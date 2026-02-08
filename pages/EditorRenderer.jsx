@@ -28,12 +28,13 @@ const EditorRenderer = ({ data }) => {
         if (block.type === "header") {
           const Tag = `h${block.data?.level || 2}`;
           return (
-            <Tag
-              key={index}
-              className="font-bold text-slate-900 mt-8"
-            >
-              {(block.data?.text || "").replace(/&nbsp;/g, " ")}
-            </Tag>
+        <Tag
+  className="font-bold text-slate-900 mt-8"
+  dangerouslySetInnerHTML={{
+    __html: block.data?.text || ""
+  }}
+/>
+
           );
         }
 
@@ -105,22 +106,34 @@ const EditorRenderer = ({ data }) => {
         }
 
         /* ================= IMAGE ================= */
-        if (block.type === "image") {
-          return (
-            <figure key={index} className="my-8">
-              <img
-                src={block.data?.file?.url}
-                alt={block.data?.caption || ""}
-                className="w-full rounded-xl"
-              />
-              {block.data?.caption && (
-                <figcaption className="text-sm text-center text-gray-500 mt-2">
-                  {block.data.caption}
-                </figcaption>
-              )}
-            </figure>
-          );
-        }
+    if (block.type === "image") {
+  const align = block.data?.align || "center";
+
+  const alignClass =
+    align === "left"
+      ? "mr-auto ml-0"
+      : align === "right"
+      ? "ml-auto mr-0"
+      : "mx-auto";
+
+  return (
+    <figure key={index} className="my-8">
+      <img
+        src={block.data?.file?.url}
+        alt={block.data?.caption || ""}
+        className={`block ${alignClass} max-w-full rounded-xl`}
+        style={{ maxHeight: "420px", objectFit: "contain" }}
+      />
+
+      {block.data?.caption && (
+        <figcaption className="text-sm text-center text-gray-500 mt-2">
+          {block.data.caption}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
 
         /* ================= FALLBACK ================= */
         console.warn("Unknown block type:", block);

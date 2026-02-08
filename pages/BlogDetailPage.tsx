@@ -27,7 +27,8 @@ const BlogDetailPage: React.FC = () => {
       try {
         const res = await fetch("https://studycupsbackend-wb8p.onrender.com/api/blogs");
         const json = await res.json();
-        const filtered = json.data.filter((b: any) => b._id !== id);
+      const filtered = json.data.filter((b: any) => String(b.id) !== id);
+
         setRelatedBlogs(filtered.slice(0, 5));
       } catch (err) {
         console.error("Related blogs error", err);
@@ -92,7 +93,8 @@ const BlogDetailPage: React.FC = () => {
           </div>
 
           <div className="mt-8 bg-white p-6 rounded-2xl shadow-sm">
-            <EditorRenderer data={blog.content} />
+           <EditorRenderer data={blog.content || { blocks: [] }} />
+
           </div>
         </div>
 
