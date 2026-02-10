@@ -110,7 +110,7 @@ const BlogPage: React.FC = () => {
 
   return (
     
-    <div className="bg-[#f5f7fb] min-h-screen pt-28 pb-16">
+    <div className="bg-[#f5f7fb]  pt-28 pb-16">
 
       {/* HEADER */}
       <div className="max-w-7xl mx-auto px-6 mb-10">
@@ -121,7 +121,7 @@ const BlogPage: React.FC = () => {
       </div>
 
       {/* FEATURED + NEWS */}
-      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-3 gap-8 mb-16">
+      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-3 gap-8 mb-16 items-start">
 
         {/* FEATURED */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow overflow-hidden">
@@ -134,8 +134,9 @@ const BlogPage: React.FC = () => {
         </div>
 
         {/* RIGHT NEWS */}
-    {/* RIGHT NEWS */}
-<div className="bg-white rounded-2xl shadow flex flex-col h-[520px] relative overflow-hidden">
+    {/* RIGHT NEWS */} 
+    <aside className="bg-white rounded-2xl  shadow flex flex-col h-[520px]  sticky top-[24px]  self-start">
+
 
   {/* Header */}
   <div className="px-5 py-4 border-b">
@@ -179,8 +180,8 @@ const BlogPage: React.FC = () => {
     <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white to-transparent z-10" />
 
   </div>
-</div>
 
+</aside>
       </div>
 
       {/* ARTICLES FROM BACKEND */}

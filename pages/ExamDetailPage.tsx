@@ -242,6 +242,7 @@ const ExamDetailPage: React.FC = () => {
 
   {/* ================= SIDEBAR ================= */}
   <aside className="space-y-6"> 
+    <div className="hidden lg:block lg:sticky lg:top-[20px] space-y-6">
     {exam.highlights && (
   <div className="bg-white p-6 rounded-xl border">
     <h3 className="text-lg font-bold mb-4">
@@ -408,6 +409,7 @@ const ExamDetailPage: React.FC = () => {
           </div>
         ))}
       </div>
+    </div> 
     </div>
   </aside>
 </div>

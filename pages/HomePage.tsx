@@ -130,6 +130,9 @@ interface HomePageProps {
   colleges: College[];
 
   exams: any[];
+   onOpenBrochure: () => void;
+   onCompareToggle: (id: string) => void;
+  compareList: string[]; // 🔥 ADD THIS
 
 }
 
@@ -246,8 +249,10 @@ const REGION_MAP = {
 const HomePage: React.FC<HomePageProps> = ({
 
   colleges,
-
   exams,
+  onOpenBrochure,
+  onCompareToggle,
+  compareList
 
 }) => {
   useEffect(() => {
@@ -1838,11 +1843,10 @@ const HERO_TAGS = [
                       <AnimatedContainer delay={index * 90} className="h-full">
                         <CollegeCard
                           college={college}
-                          onOpenBrochure={() => {
-                            setModalMode("brochure");
-                            setApplyModalOpen(true);
-
-                          }} className="mb-0" />
+                            onOpenBrochure={onOpenBrochure}
+                          onCompareToggle={onCompareToggle}
+  isCompared={compareList.includes(String(college.id))}
+                          className="mb-0" />
                       </AnimatedContainer>
                     </div>
                   ))}
@@ -2494,15 +2498,8 @@ const HERO_TAGS = [
   `}</style>
 </section>
 
-
-
-
-
-
-
-
-      {/* Trusted by Students Section */}
-      <section className="py-16 bg-white">
+        {/* Trusted by Students Section */}
+  <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-6 text-center">
 
           <h2 className="text-lg md:text-xl font-semibold text-[#0A225A] mb-10">
@@ -2519,15 +2516,13 @@ const HERO_TAGS = [
               <img src="/logos/download.jpg" className="h-8 md:h-14  hover:grayscale-0 transition" />
               <img src="/logos/ITM.png" className="h-8 md:h-14 hover:grayscale-0 transition" />
               <img src="/logos/NBS.jpg" className="h-8 md:h-14 hover:grayscale-0 transition" />
-              <img src="/logos/StudyCups.png" className="h-8 md:h-14 hover:grayscale-0 transition" />
-
+            
               {/* Duplicate logos for infinite loop */}
               <img src="/logos/doon.png" className="h-8 md:h-14 hover:grayscale-0 transition" />
               <img src="/logos/download.jpg" className="h-8 md:h-14  hover:grayscale-0 transition" />
               <img src="/logos/ITM.png" className="h-8 md:h-14 hover:grayscale-0 transition" />
               <img src="/logos/NBS.jpg" className="h-8 md:h-14  hover:grayscale-0 transition" />
-              <img src="/logos/StudyCups.png" className="h-8 md:h-14 hover:grayscale-0 transition" />
-
+          
             </div>
           </div>
         </div>
@@ -2765,14 +2760,14 @@ const HERO_TAGS = [
           <section className="py-24 sm:py-32 px-4 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">Our <span className="text-orange-600">Alumni</span> Success</h2>
+            <h2 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">Our <span className="text-[orange]">Alumni</span> Success</h2>
             <p className="text-slate-500 mt-5 text-base sm:text-xl">Students from our partner schools now at top global firms.</p>
           </div>
           <SuccessCarousel testimonials={TESTIMONIALS} />
         </div>
       </section>
    
-      <section className="py-16 bg-white">
+      <section className="py-16 md:py-2 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-xl md:text-2xl font-bold text-slate-900">

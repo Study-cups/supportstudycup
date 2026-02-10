@@ -64,11 +64,7 @@ const rankingText =
 
 
   return (
-    <div onClick={() =>
-  navigate(
-    `/university/${college.id}-${slug}`
-  )
-}
+    <div 
       className="
         bg-white
         rounded-xl 
@@ -82,7 +78,15 @@ const rankingText =
       "
     >
       {/* IMAGE + GRADIENT */}
-      <div className="relative w-full h-[180px]">
+      <div 
+      onClick={() =>
+  navigate(
+    `/university/${college.id}-${slug}`
+  )
+}
+      
+      
+      className="relative w-full h-[180px]">
         <img
           src={mainImage}
           className="w-full h-full object-cover"
@@ -169,7 +173,11 @@ onClick={() =>
 
 
           <button
-            onClick={onOpenBrochure}
+            type="button"
+  onClick={(e) => {
+    e.stopPropagation();      // 🔥 mandatory
+    onOpenBrochure?.();       // 🔥 optional-safe
+  }}
             className="
                 flex justify-between items-center w-full text-left 
                 py-1 px-2 rounded-md transition-all

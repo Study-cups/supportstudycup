@@ -7,6 +7,7 @@ import { on } from "events";
 interface CourseDetailPageProps {
   colleges: College[];
   onOpenApplyNow: () => void;
+  onOpenBrochure: () => void;
 }
 
 
@@ -44,7 +45,8 @@ console.log("✅ CourseDetailPage MOUNTED");
 
 const CourseDetailPage = ({
   colleges,
-  onOpenApplyNow,
+  onOpenApplyNow, 
+  onOpenBrochure
 }: CourseDetailPageProps) => {
 
   const { categorySlug, courseSlug } = useParams<{
@@ -153,7 +155,7 @@ const CourseDetailPage = ({
 
 
   return (
-    <div className="min-h-screen bg-slate-50 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50">
 
 
       {/* HEADER */}
@@ -246,8 +248,8 @@ const CourseDetailPage = ({
 
 
       {/* BODY */}
-      <div className="container max-w-7xl md:max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
-
+   <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         <main className="lg:col-span-2 space-y-8">
           <section className="
@@ -392,7 +394,9 @@ const CourseDetailPage = ({
                     >
                       Apply Now
                     </a>
-                    <a className="inline-flex items-center justify-center rounded-md border px-4 py-2 font-semibold">
+                    <a className="inline-flex cursor-pointer items-center justify-center rounded-md border px-4 py-2 font-semibold" 
+                      onClick={onOpenBrochure}
+                    >
                       Download Brochure
                     </a>
                   </div>
@@ -554,8 +558,8 @@ const CourseDetailPage = ({
         </main>
 
         {/* SIDEBAR */}
-        <aside className="space-y-5 w-full block lg:sticky lg:top-[120px]">
-
+        <aside className="space-y-5 w-full block ">
+           <div className="lg:sticky lg:top-[20px]">
 
           <div className="bg-white p-6 rounded-xl shadow-sm border flex flex-col hidden md:block">
             <h3 className="text-xl font-bold">Apply Now</h3>
@@ -569,7 +573,8 @@ const CourseDetailPage = ({
               >
                 Apply Now
               </a>
-              <a className="inline-flex items-center justify-center rounded-md border px-4 py-2 font-semibold">
+              <a className="inline-flex items-center justify-center rounded-md border px-4 py-2 font-semibold cursor-pointer" 
+               onClick={onOpenBrochure}>
                 Download Brochure
               </a>
             </div>
@@ -610,11 +615,13 @@ const CourseDetailPage = ({
             ) : (
               <p className="text-slate-500">No colleges found offering this course.</p>
             )}
+          </div> 
           </div>
         </aside>
 
       </div>
 
+   </div>
     </div>
   );
 };

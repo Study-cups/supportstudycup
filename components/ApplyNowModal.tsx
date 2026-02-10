@@ -200,7 +200,10 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
 
                 <label className="flex items-start gap-2 text-xs text-gray-600">
                   <input type="checkbox" required />
-                  <span>I agree to Terms & Privacy Policy</span>
+                  <span >I agree to <a 
+                  target="_blank"
+  rel="noopener noreferrer"
+                  href="https://www.termsfeed.com/live/417bdd06-e677-4181-b70f-efa4edb0e654" className="text-blue-600 hover:underline">Terms & Privacy Policy</a></span>
                 </label>
 
                 <button

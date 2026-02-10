@@ -84,12 +84,18 @@ const App: React.FC = () => {
     setApplyModalOpen(true);
   };
 
-  const handleBrochure = () => {
+  const handleBrochure = (college) => {
   setApplyMode("brochure");
   setApplyModalOpen(true);
+  console.log("BROCHURE CLICKED");
+
 };
 
-
+const handleBrochureSimple = () => {
+  setApplyMode("brochure");
+  setApplyModalOpen(true);
+  console.log("BROCHURE SIMPLE");
+};
 
 
 
@@ -114,7 +120,15 @@ const App: React.FC = () => {
       })
       .finally(() => setLoading(false));
   }, []); 
-  
+  useEffect(() => {
+  const interval = setInterval(() => {
+    setApplyMode("apply");        // mode set
+    setApplyModalOpen(true);      // modal open
+  }, 10000); // ⏱️ 10 seconds
+
+  return () => clearInterval(interval);
+}, []);
+
 
   return (
   <>
@@ -143,6 +157,10 @@ const App: React.FC = () => {
             colleges={colleges}
             exams={exams}
             loading={loading}   // 👈 pass loading instead of blocking
+              onOpenBrochure={handleBrochure} // ✅ GLOBAL HANDLER 
+               compareList={compareList}
+      onCompareToggle={handleCompareToggle}
+
           />
         }
       /> 
@@ -182,6 +200,7 @@ const App: React.FC = () => {
           <CourseDetailPage
             colleges={colleges}
             onOpenApplyNow={handleApplyNow}
+            onOpenBrochure={handleBrochureSimple} 
           />
         }
       />
