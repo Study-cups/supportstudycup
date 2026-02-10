@@ -108,8 +108,8 @@ const Footer: React.FC<FooterProps> = ({
               <div className="space-y-1 text-sm">
                 <Link to="/" className="block text-blue-600 hover:underline">About StudyCups</Link>
                 <Link to="/" className="block text-blue-600 hover:underline">Contact Us</Link>
-                <Link to="/" className="block text-blue-600 hover:underline">Terms & Conditions</Link>
-                <Link to="/" className="block text-blue-600 hover:underline">Privacy Policy</Link>
+                <Link to="https://www.termsfeed.com/live/417bdd06-e677-4181-b70f-efa4edb0e654" className="block text-blue-600 hover:underline">Terms & Conditions</Link>
+                <Link to="https://www.termsfeed.com/live/417bdd06-e677-4181-b70f-efa4edb0e654" className="block text-blue-600 hover:underline">Privacy Policy</Link>
                 <Link to="/" className="block text-blue-600 hover:underline">Disclaimer</Link>
               </div>
             </div>
