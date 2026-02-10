@@ -120,14 +120,23 @@ const handleBrochureSimple = () => {
       })
       .finally(() => setLoading(false));
   }, []); 
-  useEffect(() => {
+ useEffect(() => {
   const interval = setInterval(() => {
-    setApplyMode("apply");        // mode set
-    setApplyModalOpen(true);      // modal open
-  }, 10000); // ⏱️ 10 seconds
+    const alreadySubmitted =
+      sessionStorage.getItem("applyFormSubmitted");
+
+    if (alreadySubmitted) {
+      clearInterval(interval); // 🛑 STOP FOREVER
+      return;
+    }
+
+    setApplyMode("apply");
+    setApplyModalOpen(true);
+  }, 10000);
 
   return () => clearInterval(interval);
 }, []);
+
 
 
   return (

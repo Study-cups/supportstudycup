@@ -45,7 +45,7 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
     e.preventDefault();
     if (loading) return;
     setLoading(true);
-
+   sessionStorage.setItem("applyFormSubmitted", "true");
     try {
       const response = await fetch(`${API_BASE}/api/registration`, {
         method: "POST",
