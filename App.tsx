@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route , Navigate, useLocation} from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 
 /* ===== COMMON COMPONENTS ===== */
 import Header from "./components/Header";
@@ -20,8 +20,8 @@ import DetailPage from "./pages/DetailPage";
 import ErrorBoundary from "./pages/ErrorBoundary";
 
 /* ===== TYPES ===== */
-import type { College } from "./types"; 
-import { useParams } from "react-router-dom"; 
+import type { College } from "./types";
+import { useParams } from "react-router-dom";
 const toSeoSlug = (value: string) =>
   value
     .toLowerCase()
@@ -30,6 +30,8 @@ const toSeoSlug = (value: string) =>
     .replace(/\//g, "-")
     .replace(/--+/g, "-");
 
+const getPopupKeyForRoute = (pathname: string) =>
+`popup_shown_${pathname}`;
 
 const OldCollegesRedirect = ({ withLocation }: { withLocation?: boolean }) => {
   const { streamSlug, locationSlug } = useParams();
@@ -58,6 +60,20 @@ const OldCollegesRedirect = ({ withLocation }: { withLocation?: boolean }) => {
 /* ===== API ===== */
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
 
+const canShowPopup = (pathname: string) => {
+  const pagePopupKey = getPopupKeyForRoute(pathname);
+
+  const shownOnThisPage =
+    sessionStorage.getItem(pagePopupKey);
+
+  const formSubmitted =
+    sessionStorage.getItem("applyFormSubmitted");
+
+  return !shownOnThisPage && !formSubmitted;
+};
+
+
+
 const App: React.FC = () => {
   const [colleges, setColleges] = useState<College[]>([]);
   const [exams, setExams] = useState<any[]>([]);
@@ -85,17 +101,17 @@ const App: React.FC = () => {
   };
 
   const handleBrochure = (college) => {
-  setApplyMode("brochure");
-  setApplyModalOpen(true);
-  console.log("BROCHURE CLICKED");
+    setApplyMode("brochure");
+    setApplyModalOpen(true);
+    console.log("BROCHURE CLICKED");
 
-};
+  };
 
-const handleBrochureSimple = () => {
-  setApplyMode("brochure");
-  setApplyModalOpen(true);
-  console.log("BROCHURE SIMPLE");
-};
+  const handleBrochureSimple = () => {
+    setApplyMode("brochure");
+    setApplyModalOpen(true);
+    console.log("BROCHURE SIMPLE");
+  };
 
 
 
@@ -119,31 +135,60 @@ const handleBrochureSimple = () => {
         console.error("API ERROR", err);
       })
       .finally(() => setLoading(false));
-  }, []); 
- useEffect(() => {
-  const interval = setInterval(() => {
-    const alreadySubmitted =
-      sessionStorage.getItem("applyFormSubmitted");
+  }, []);
 
-    if (alreadySubmitted) {
-      clearInterval(interval); // 🛑 STOP FOREVER
-      return;
+useEffect(() => {
+  const pathname = location.pathname;
+
+  if (!canShowPopup(pathname)) {
+    console.log("❌ Popup blocked for page:", pathname);
+    return;
+  }
+
+  const onScroll = () => {
+    const scrollTop =
+      window.pageYOffset || document.documentElement.scrollTop;
+
+    const windowHeight = window.innerHeight;
+    const fullHeight = document.body.scrollHeight;
+
+    const scrollPercent =
+      ((scrollTop + windowHeight) / fullHeight) * 100;
+
+    console.log("📜 Scroll %:", scrollPercent.toFixed(2));
+
+    if (scrollPercent >= 20) {
+      console.log("✅ Popup opened on:", pathname);
+
+      setApplyMode("apply");
+      setApplyModalOpen(true);
+
+      sessionStorage.setItem(
+        getPopupKeyForRoute(pathname),
+        "1"
+      );
+
+      window.removeEventListener("scroll", onScroll);
     }
+  };
 
-    setApplyMode("apply");
-    setApplyModalOpen(true);
-  }, 10000);
+  window.addEventListener("scroll", onScroll, { passive: true });
 
-  return () => clearInterval(interval);
-}, []);
+  return () => {
+    window.removeEventListener("scroll", onScroll);
+  };
+}, [location.pathname]);
+
+
+
 
 
 
   return (
-  <>
-    {/* ================= HEADER (ALWAYS INSTANT) ================= */} 
+    <>
+      {/* ================= HEADER (ALWAYS INSTANT) ================= */}
 
-   {!isLanding && (
+      {!isLanding && (
         <Header
           onOpenApplyNow={() => {
             setApplyMode("apply");
@@ -154,79 +199,77 @@ const handleBrochureSimple = () => {
         />
       )}
 
-    {/* ================= ROUTES (NEVER BLOCKED BY LOADING) ================= */} 
-  
-    <Routes> 
-     
- <Route path="/landing" element={<LandingApp />} />
-      <Route
-        path="/"
-        element={
-          <HomePage
-            colleges={colleges}
-            exams={exams}
-            loading={loading}   // 👈 pass loading instead of blocking
+      {/* ================= ROUTES (NEVER BLOCKED BY LOADING) ================= */}
+
+      <Routes>
+
+        <Route path="/landing" element={<LandingApp />} />
+        <Route
+          path="/"
+          element={
+            <HomePage
+              colleges={colleges}
+              exams={exams}
+              loading={loading}   // 👈 pass loading instead of blocking
               onOpenBrochure={handleBrochure} // ✅ GLOBAL HANDLER 
-               compareList={compareList}
-      onCompareToggle={handleCompareToggle}
+              compareList={compareList}
+              onCompareToggle={handleCompareToggle}
 
-          />
-        }
-      /> 
-
-
+            />
+          }
+        />
 
 
-{/* ================= PRIMARY SEO LISTING ROUTES ================= */}
-
-<Route
-  path="/:stream/top-colleges"
-  element={
-    <ListingPage
-      colleges={colleges}
-      compareList={compareList}
-      onCompareToggle={handleCompareToggle}
-      onOpenApplyNow={handleApplyNow}
-      onOpenBrochure={handleBrochure}
-    />
-  }
-/> 
-
- {/* 🔁 LEGACY SEO REDIRECT */}
-<Route
-  path="/:courseSlug-colleges"
-  element={
-    <Navigate
-      to={(window.location.pathname.replace("-colleges", "/colleges"))}
-      replace
-    />
-  }
-/>
-
- <Route
-    path="/courses/:categorySlug/:courseSlug"
-        element={
-          <CourseDetailPage
-            colleges={colleges}
-            onOpenApplyNow={handleApplyNow}
-            onOpenBrochure={handleBrochureSimple} 
-          />
-        }
-      />
-<Route
-  path="/:stream/:seoSlug"
-  element={
-    <ListingPage
-      colleges={colleges}
-      compareList={compareList}
-      onCompareToggle={handleCompareToggle}
-      onOpenApplyNow={handleApplyNow}
-      onOpenBrochure={handleBrochure}
-    />
-  }
-/>
 
 
+        {/* ================= PRIMARY SEO LISTING ROUTES ================= */}
+
+        <Route
+          path="/:stream/top-colleges"
+          element={
+            <ListingPage
+              colleges={colleges}
+              compareList={compareList}
+              onCompareToggle={handleCompareToggle}
+              onOpenApplyNow={handleApplyNow}
+              onOpenBrochure={handleBrochure}
+            />
+          }
+        />
+
+        {/* 🔁 LEGACY SEO REDIRECT */}
+        <Route
+          path="/:courseSlug-colleges"
+          element={
+            <Navigate
+              to={(window.location.pathname.replace("-colleges", "/colleges"))}
+              replace
+            />
+          }
+        />
+
+        <Route
+          path="/courses/:categorySlug/:courseSlug"
+          element={
+            <CourseDetailPage
+              colleges={colleges}
+              onOpenApplyNow={handleApplyNow}
+              onOpenBrochure={handleBrochureSimple}
+            />
+          }
+        />
+        <Route
+          path="/:stream/:seoSlug"
+          element={
+            <ListingPage
+              colleges={colleges}
+              compareList={compareList}
+              onCompareToggle={handleCompareToggle}
+              onOpenApplyNow={handleApplyNow}
+              onOpenBrochure={handleBrochure}
+            />
+          }
+        />
 
 
 
@@ -235,33 +278,35 @@ const handleBrochureSimple = () => {
 
 
 
-{/* ALL COLLEGES */}
-<Route
-  path="/colleges"
-  element={
-    <ListingPage
-      colleges={colleges}
-      compareList={compareList}
-      onCompareToggle={handleCompareToggle}
-      onOpenApplyNow={handleApplyNow}
-      onOpenBrochure={handleBrochure}
-    />
-  }
-/>
-{/* ================= OLD URL → SEO REDIRECTS ================= */}
 
-<Route
-  path="/colleges/:streamSlug"
-  element={<OldCollegesRedirect />}
-/>
 
-<Route
-  path="/colleges/:streamSlug/:locationSlug"
-  element={<OldCollegesRedirect withLocation />}
-/>
-{/* ================= PRIMARY SEO LISTING ROUTES ================= */}
+        {/* ALL COLLEGES */}
+        <Route
+          path="/colleges"
+          element={
+            <ListingPage
+              colleges={colleges}
+              compareList={compareList}
+              onCompareToggle={handleCompareToggle}
+              onOpenApplyNow={handleApplyNow}
+              onOpenBrochure={handleBrochure}
+            />
+          }
+        />
+        {/* ================= OLD URL → SEO REDIRECTS ================= */}
 
-{/* This route will now match both:
+        <Route
+          path="/colleges/:streamSlug"
+          element={<OldCollegesRedirect />}
+        />
+
+        <Route
+          path="/colleges/:streamSlug/:locationSlug"
+          element={<OldCollegesRedirect withLocation />}
+        />
+        {/* ================= PRIMARY SEO LISTING ROUTES ================= */}
+
+        {/* This route will now match both:
     1. /mba/top-mba-colleges
     2. /mba/top-mba-colleges-in-delhi-ncr 
 
@@ -279,7 +324,7 @@ const handleBrochureSimple = () => {
 />
 */}
 
-{/* <Route
+        {/* <Route
   path="/:courseSlug-colleges/:collegeSlug"
   element={
     <DetailPage
@@ -294,72 +339,75 @@ const handleBrochureSimple = () => {
 
 
 
-     <Route
-  path="/university/:collegeIdSlug"
-  element={
-    <DetailPage
-      colleges={colleges}
-      compareList={compareList}
-      onCompareToggle={handleCompareToggle}
-      onOpenApplyNow={handleApplyNow}
-      onOpenBrochure={handleBrochure}
-    />
-  }
-/>
+        <Route
+          path="/university/:collegeIdSlug"
+          element={
+            <DetailPage
+              colleges={colleges}
+              compareList={compareList}
+              onCompareToggle={handleCompareToggle}
+              onOpenApplyNow={handleApplyNow}
+              onOpenBrochure={handleBrochure}
+            />
+          }
+        />
 
 
-      <Route
-        path="/courses"
-        element={<CoursesPage colleges={colleges} />}
+        <Route
+          path="/courses"
+          element={<CoursesPage colleges={colleges} />}
+        />
+
+
+
+        <Route
+          path="/exams"
+          element={<ExamsPage exams={exams} />}
+        />
+
+        <Route
+          path="/exam/:id"
+          element={<ExamDetailPage />}
+        />
+
+        <Route
+          path="/blog"
+          element={<BlogPage blogs={blogs} />}
+        />
+
+        <Route
+          path="/blog/:id"
+          element={<BlogDetailPage />}
+        />
+
+        <Route
+          path="/compare"
+          element={
+            <ComparePage
+              colleges={colleges}
+              compareList={compareList}
+            />
+          }
+        />
+
+        <Route path="*" element={<ErrorBoundary />} />
+      </Routes>
+
+      {/* ================= APPLY MODAL ================= */}
+      <ApplyNowModal
+        isOpen={applyModalOpen}
+        mode={applyMode}
+        onClose={() => {
+          sessionStorage.setItem(getPopupKeyForRoute(location.pathname), "1");
+          setApplyModalOpen(false);
+        }}
       />
 
-     
+      {/* ================= FOOTER ================= */}
+      {!isLanding && <Footer exams={exams} colleges={colleges} />}
 
-      <Route
-        path="/exams"
-        element={<ExamsPage exams={exams} />}
-      />
-
-      <Route
-        path="/exam/:id"
-        element={<ExamDetailPage />}
-      />
-
-      <Route
-        path="/blog"
-        element={<BlogPage blogs={blogs} />}
-      />
-
-      <Route
-        path="/blog/:id"
-        element={<BlogDetailPage />}
-      />
-
-      <Route
-        path="/compare"
-        element={
-          <ComparePage
-            colleges={colleges}
-            compareList={compareList}
-          />
-        }
-      /> 
-      
-       <Route path="*" element={<ErrorBoundary />} /> 
-    </Routes>
-
-    {/* ================= APPLY MODAL ================= */}
-    <ApplyNowModal
-      isOpen={applyModalOpen}
-      mode={applyMode}
-      onClose={() => setApplyModalOpen(false)}
-    />
-
-    {/* ================= FOOTER ================= */}
-   {!isLanding && <Footer exams={exams} colleges={colleges} />}
-
-  </>
-); 
+    </>
+  );
 
 };
 
