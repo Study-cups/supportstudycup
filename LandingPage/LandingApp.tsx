@@ -44,7 +44,8 @@ const App: React.FC = () => {
       />
     </Helmet>
 
-    <div className="sr-only min-h-screen flex flex-col pb-24 md:pb-32 selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden bg-white">
+   <div className="min-h-screen flex flex-col pb-24 md:pb-32 selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden bg-white">
+
       <Ticker />
       <PopupForm isOpen={isPopupOpen} onClose={() => setIsPopupOpen(false)} />
 
