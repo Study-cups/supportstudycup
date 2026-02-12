@@ -87,11 +87,11 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
     >
       <div
         className="
-          relative w-full max-w-5xl rounded-[28px]
+          relative w-full max-w-4xl rounded-[28px]
           bg-[#F2F5FA]
           text-gray-900
           shadow-[0_50px_120px_rgba(0,0,0,0.35)]
-          px-6 py-6 md:px-12 md:py-10
+          px-6 py-6 md:px-12 md:py-6
         "
         onClick={(e) => e.stopPropagation()}
       >
@@ -109,31 +109,31 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
         {!isSubmitted ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             {/* LEFT */}
-            <div className="hidden md:block">
-              <h1 className="text-[32px] font-bold leading-tight">
-                Unlock Your  Future!
-              </h1>
+           <div className="hidden md:flex items-center justify-center rounded-[22px]
+                bg-[#1E40AF] relative overflow-hidden p-10">
 
-              <div className="mt-6 bg-white rounded-xl p-6 w-fit shadow-sm">
-                <img
-                  src="/images/Untitled design (17).png"
-                  alt="Student Illustration"
-                  className="w-full h-auto"
-                />
-              </div>
+  {/* Decorative circles */}
+  <div className="absolute -top-16 -left-16 w-48 h-48 bg-blue-500/30 rounded-full"></div>
+  <div className="absolute bottom-[-60px] right-[-60px] w-56 h-56 bg-indigo-400/20 rounded-full"></div>
 
-              <ul className="mt-8 space-y-4 text-sm font-medium text-gray-700 flex flex-row gap-2 items-center">
-                <li className="flex items-center gap-3">
-                  📘 <span>Find Courses</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  🎓 <span>Get Scholarships</span>
-                </li>
-                <li className="flex items-center gap-3">
-                  🧑‍🏫 <span>Expert Counselling</span>
-                </li>
-              </ul>
-            </div>
+  {/* Content */}
+  <div className="relative z-10 text-center text-white max-w-sm">
+    <img
+      src="/images/Registeredimg.png"
+      alt="Student Illustration"
+      className="mx-auto w-72"
+    />
+
+    <h2 className="mt-8 text-2xl font-semibold leading-snug">
+      Start Your Academic Journey
+    </h2>
+
+    <p className="mt-3 text-sm text-blue-100">
+      Discover colleges, courses & expert guidance tailored for you
+    </p>
+  </div>
+</div>
+
 
             {/* RIGHT FORM */}
             <div className="bg-white rounded-2xl p-7 md:p-9 shadow-md">
