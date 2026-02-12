@@ -83,7 +83,7 @@ const App: React.FC = () => {
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [applyMode, setApplyMode] = useState<"apply" | "brochure">("apply");
   const location = useLocation();
-  const isLanding = location.pathname.startsWith("/landing");
+  const isLanding = location.pathname.startsWith("/registration");
 
 
 
@@ -138,7 +138,11 @@ const App: React.FC = () => {
   }, []);
 
 useEffect(() => {
-  const pathname = location.pathname;
+  const pathname = location.pathname; 
+
+   if (pathname.startsWith("/registration")) {
+    return;
+  }
 
   if (!canShowPopup(pathname)) {
     console.log("❌ Popup blocked for page:", pathname);
@@ -203,7 +207,7 @@ useEffect(() => {
 
       <Routes>
 
-        <Route path="/landing" element={<LandingApp />} />
+        <Route path="/registration" element={<LandingApp />} />
         <Route
           path="/"
           element={
