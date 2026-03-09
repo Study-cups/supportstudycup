@@ -679,7 +679,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
           <button
             onClick={() => setFilters((p) => ({ ...p }))}
-            className="w-full rounded-lg bg-[#0f7a86] py-3 text-base font-semibold text-white"
+            className="w-full rounded-lg bg-[#1E4A7A] py-3 text-base font-semibold text-white"
           >
             Apply Filters
           </button>
@@ -1629,7 +1629,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
               </p>
             </div>
 
-            <div className="mt-8 lg:mt-auto rounded-[32px] bg-gradient-to-r from-[#0f7a86] via-[#117484] to-[#0f5f78] px-5 py-6 md:px-10 md:py-8 text-white relative overflow-hidden">
+            <div className="mt-8 lg:mt-auto rounded-[32px] bg-[#1E4A7A] px-5 py-6 md:px-10 md:py-8 text-white relative overflow-hidden">
               <div className="absolute -right-12 top-8 h-36 w-36 rounded-full bg-white/5 blur-xl pointer-events-none" />
               <div className="relative z-10 max-w-3xl">
                 <h3 className="text-[30px] md:text-[30px] leading-[1.08] tracking-tight font-serif font-semibold text-white">

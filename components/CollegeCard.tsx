@@ -87,10 +87,12 @@ const rankingText =
       
       
       className="relative w-full h-[180px]">
-        <img
-          src={mainImage}
+        <img src={`${mainImage}?v=${Date.now()}`} 
           className="w-full h-full object-cover"
+        
         />
+        
+        
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
 

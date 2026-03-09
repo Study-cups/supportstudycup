@@ -21,6 +21,18 @@ export const toCourseSlug = (name: string = "") => {
     .trim();
 };
 
+export const buildCourseDetailPath = (
+  categorySlug: string = "",
+  courseName: string = "",
+  courseSlug: string = ""
+) => {
+  const normalizedCategory = toSeoSlug(categorySlug) || "general";
+  const normalizedName = courseName.trim();
+  const normalizedSlug =
+    courseSlug.trim() || toCourseSlug(normalizedName) || toSeoSlug(normalizedName);
+  return `/courses/${normalizedCategory}/${normalizedSlug}`;
+};
+
 export const normalize = (text?: string | null) => {
   if (!text) return "";
   return text

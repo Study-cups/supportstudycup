@@ -4,7 +4,7 @@ import { PARTNER_LOGOS } from "../logos";
 import CollegeCard from "../components/CollegeCard";
 import { lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import {  toCourseSlug } from "./Seo"
+import { buildCourseDetailPath, toCourseSlug } from "./Seo"
 import { Helmet } from "react-helmet-async";
 import SuccessCarousel from "@/LandingPage/components/SuccessCarousel";
 
@@ -1630,7 +1630,7 @@ const HERO_TAGS = [
     type="submit"
     className="
       px-8 py-3
-      bg-gradient-to-r from-[#F4A71D] to-[#E29600]
+      bg-[#f4a71d]
       text-white
       font-semibold
       rounded-xl
@@ -1717,9 +1717,7 @@ const HERO_TAGS = [
       w-full
       py-3
       rounded-xl
-      bg-gradient-to-r
-      from-[#FF9F3F]
-      to-[#FF6A3D]
+      bg-[#f4a71d]
       text-white
       font-semibold
       text-sm
@@ -1757,8 +1755,8 @@ const HERO_TAGS = [
 </section>
 
 
-      <section className="bg-[#132a44] mb-2 md:mb-0">
-        <div className="border-y border-[#1f4962] bg-[#0f6d7a] overflow-hidden">
+      <section className="bg-[#1E4A7A] mb-2 md:mb-0">
+        <div className="border-y border-[#1f4962] bg-[#1E4A7A] overflow-hidden">
           <div className="homepage-ticker-track py-2 md:py-2.5">
             {[...ADMISSION_TICKER_ITEMS, ...ADMISSION_TICKER_ITEMS].map((item, idx) => (
               <span
@@ -2126,7 +2124,7 @@ const HERO_TAGS = [
 
           <p className="text-[14px] md:text-[16px] leading-[20px] md:leading-[24px] text-black text-center mt-1">
             Search by city to{" "}
-            <span className="text-[#0CC25F] font-semibold">
+            <span className="text-[#f4a71d] font-semibold">
               Explore Top Colleges
             </span>{" "}
             in your area.
@@ -2353,7 +2351,7 @@ const HERO_TAGS = [
                         const categorySlug = getCategorySlugFromStream(course.name);
                         const courseSlug = toCourseSlug(course.name);
                     
-                        navigate(`/courses/${categorySlug}/${courseSlug}`);
+                        navigate(buildCourseDetailPath(categorySlug, course.name, courseSlug));
                       }}
 
 
@@ -2441,7 +2439,7 @@ const HERO_TAGS = [
                         Course Overview →
                       </button>
 
-                      <button className="shrink-0 rounded-full bg-green-500 px-3 py-2 text-[8px] font-semibold text-white hover:bg-green-600 md:text-[11px]">
+                      <button className="shrink-0 rounded-full bg-[#f0a018] px-3 py-2 text-[8px] font-semibold text-white md:text-[11px]">
                         View Details
                       </button>
                     </div>
@@ -2698,34 +2696,58 @@ const HERO_TAGS = [
 </section>
 
         {/* Trusted by Students Section */}
-  <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-6 text-center">
+ <section className="py-16 bg-white">
+  <div className="max-w-7xl mx-auto px-6 text-center">
 
-          <h2 className="text-lg md:text-xl font-semibold text-[#0A225A] mb-10">
-            Trusted by Students from Top Institutions
-          </h2>
+    <h2 className="text-lg md:text-xl font-semibold text-[#0A225A] mb-10">
+      Top Universities We Work With
+    </h2>
 
-          {/* SLIDER WRAPPER */}
-          <div className="overflow-hidden relative">
+    <div className="overflow-hidden relative">
+      <div className="flex items-center gap-6 animate-logoScroll whitespace-nowrap">
 
-            {/* SLIDER (infinite scroll) */}
-            <div className="flex items-center gap-16 animate-logoScroll whitespace-nowrap">
-
-              <img src="/logos/doon.png" className="h-8 md:h-14  hover:grayscale-0 transition" />
-              <img src="/logos/download.jpg" className="h-8 md:h-14  hover:grayscale-0 transition" />
-              <img src="/logos/ITM.png" className="h-8 md:h-14 hover:grayscale-0 transition" />
-              <img src="/logos/NBS.jpg" className="h-8 md:h-14 hover:grayscale-0 transition" />
-            
-              {/* Duplicate logos for infinite loop */}
-              <img src="/logos/doon.png" className="h-8 md:h-14 hover:grayscale-0 transition" />
-              <img src="/logos/download.jpg" className="h-8 md:h-14  hover:grayscale-0 transition" />
-              <img src="/logos/ITM.png" className="h-8 md:h-14 hover:grayscale-0 transition" />
-              <img src="/logos/NBS.jpg" className="h-8 md:h-14  hover:grayscale-0 transition" />
-          
-            </div>
-          </div>
+        {/* BOX */}
+        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
+          <img src="/logos/doon.png" className="h-8 md:h-10 object-contain" />
         </div>
-      </section>
+
+        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
+          <img src="/logos/download.jpg" className="h-8 md:h-10 object-contain" />
+        </div>
+
+        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
+          <img src="/logos/ITM.png" className="h-8 md:h-10 object-contain" />
+        </div>
+
+        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
+          <img src="/logos/NBS.jpg" className="h-8 md:h-10 object-contain" />
+        </div>
+
+        {/* Duplicate for infinite scroll */}
+
+        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
+          <img src="/logos/doon.png" className="h-8 md:h-10 object-contain" />
+        </div> 
+
+        
+
+        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
+          <img src="/logos/download.jpg" className="h-8 md:h-10 object-contain" />
+        </div>
+
+        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
+          <img src="/logos/ITM.png" className="h-8 md:h-10 object-contain" />
+        </div>
+
+        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
+          <img src="/logos/NBS.jpg" className="h-8 md:h-10 object-contain" />
+        </div>
+ 
+ 
+      </div>
+    </div>
+  </div>
+</section>
 
 
         <section className="py-16 bg-[#f4f6fb]">

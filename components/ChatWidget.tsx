@@ -60,7 +60,7 @@ const ChatbotWidget: React.FC = () => {
     {
       sender: "bot",
       text:
-        "Hi 👋\nI’m Alisha, your personalised AI career assistant 🤖✨\n\nHow can I help you today?",
+        "Hi 👋\, your personalised AI career assistant 🤖✨\n\nHow can I help you today?",
     },
   ]);
 

@@ -7,12 +7,37 @@ interface FooterProps {
   colleges?: any[];
   hideNewsletterOnMobile?: boolean;
 }
-const getCollegeSlug = (college: any) => {
-  if (college.slugId) return college.slugId;
-  if (college.slug && college.id) return `${college.slug}--${college.id}`;
-  if (college.name && college.id)
-    return `${college.name.toLowerCase().replace(/\s+/g, "-")}--${college.id}`;
-  return "";
+
+const toSeoSlug = (value: string = "") =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const getExamPath = (exam: any) => {
+  const examSlug =
+    toSeoSlug(exam?.name || "") + (exam?.year ? `-${exam.year}` : "");
+
+  return examSlug ? `/exams/${examSlug}` : "/exams";
+};
+
+const getCollegePath = (college: any) => {
+  const collegeId = college?.id ? String(college.id).trim() : "";
+  const nameSlug = toSeoSlug(college?.name || "");
+
+  if (collegeId && nameSlug) {
+    return `/university/${collegeId}-${nameSlug}`;
+  }
+
+  if (collegeId) {
+    return `/university/${collegeId}`;
+  }
+
+  return "/colleges";
 };
 
 /* ================= NEWSLETTER ================= */
@@ -22,7 +47,7 @@ const Newsletter: React.FC<{ hideOnMobile?: boolean }> = ({ hideOnMobile = false
       <div className="max-w-7xl mx-auto px-4">
         <div
           className="
-            bg-[#0f747f]
+            bg-[#1E4A7A]
             rounded-t-[36px]
             px-5 md:px-10
             py-8 md:py-10
@@ -153,8 +178,8 @@ const Footer: React.FC<FooterProps> = ({
                 <h4 className="text-sm font-semibold mb-3">Explore Exams</h4>
                 <ul className="space-y-1.5 text-sm text-slate-600">
                   {examList.slice(0, 6).map((exam) => (
-                    <li key={exam._id}>
-                      <Link to={`/exam/${exam.id}`} className="hover:text-blue-600">
+                    <li key={exam.id ?? exam._id ?? exam.name}>
+                      <Link to={getExamPath(exam)} className="hover:text-blue-600">
                         {exam.name}
                       </Link>
                     </li>
@@ -177,19 +202,20 @@ const Footer: React.FC<FooterProps> = ({
                 <h4 className="text-sm font-semibold mb-3">Top Colleges</h4>
                 <ul className="space-y-2 text-sm text-slate-600">
                   {collegeList.slice(0, 5).map((college) => (
-                    <Link
-                      key={college.id}
-                      to={`/college/${getCollegeSlug(college)}`}
-                      className="
-                        block
-                        leading-snug
-                        break-words
-                        whitespace-normal
-                        hover:text-blue-600
-                      "
-                    >
-                      {college.name}
-                    </Link>
+                    <li key={college.id ?? college.name}>
+                      <Link
+                        to={getCollegePath(college)}
+                        className="
+                          block
+                          leading-snug
+                          break-words
+                          whitespace-normal
+                          hover:text-blue-600
+                        "
+                      >
+                        {college.name}
+                      </Link>
+                    </li>
                   ))}
 
                   <li>
@@ -232,7 +258,7 @@ const Footer: React.FC<FooterProps> = ({
               <p>Â© 2026 StudyCups</p>
               <p>
                 Regular Helpdesk: <strong>+91 8081269969</strong> | Online Helpdesk:{" "}
-                <strong>+91 7753831118</strong>
+                <strong>0512-4061386</strong>
               </p>
             </div>
           </div>

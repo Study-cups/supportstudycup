@@ -1,6 +1,7 @@
 import React, { useState , useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { College } from "../types";
+import { buildCourseDetailPath, toCourseSlug } from "../pages/Seo";
 
 
 
@@ -16,7 +17,45 @@ const toSeoSlug = (text: string) =>
     .trim()
     .replace(/\([^)]*\)/g, "")
     .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-"); 
+    .replace(/\s+/g, "-");
+
+const normalizeCollegeSlugSource = (text: string = "") => {
+  if (!text) return "";
+
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+
+  const withoutDescription =
+    normalized.split(/\s+(?:is|was|has|have|offers?|offering|ranked|established|founded|approved|affiliated|located|admission|note)\b/i)[0]?.trim() ||
+    normalized;
+
+  const firstChunk = withoutDescription.split(/[|,:;]+/)[0]?.trim() || withoutDescription;
+  return firstChunk.replace(/[-\s|,:;]+$/g, "").trim();
+};
+
+const extractCollegeNameFromAbout = (aboutText: string = "") => {
+  const cleaned = normalizeCollegeSlugSource(aboutText);
+  if (cleaned.length < 6) return "";
+  return cleaned;
+};
+
+const buildCollegeCodePrefix = (shortName: string = "") => {
+  const words = shortName
+    .replace(/\([^)]*\)/g, "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length < 2) return "";
+
+  const first = words[0].replace(/[^A-Za-z]/g, "");
+  const second = words[1].replace(/[^A-Za-z]/g, "");
+
+  if (!first || first !== first.toUpperCase() || first.length < 2) return "";
+  if (!second) return first.toLowerCase();
+
+  return `${first.toLowerCase()}${second[0].toLowerCase()}`;
+};
 
 const Header: React.FC<HeaderProps> = ({ onOpenApplyNow  , colleges ,exams}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -80,7 +119,10 @@ const COURSE_CATEGORY_MAP: Record<string, string> = {
 };
 
 const getExamsForCourse = (courseName: string) => {
-  const allowedExams = COURSE_EXAM_MAP[courseName];
+  const matchedCourseName = Object.keys(COURSE_REGEX_MAP).find((label) =>
+    COURSE_REGEX_MAP[label].test(courseName.toLowerCase())
+  );
+  const allowedExams = COURSE_EXAM_MAP[matchedCourseName || courseName];
   if (!allowedExams || !Array.isArray(exams)) return [];
 
   return exams
@@ -96,13 +138,17 @@ const getExamsForCourse = (courseName: string) => {
     }));
 };
 
-
+const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
 
 const [activeCourse, setActiveCourse] = useState<{
   name: string;
   stream: string;
+  slug?: string;
+  colleges?: any[];
 } | null>(null);  
 const [activeCollege, setActiveCollege] = useState<any | null>(null);
+const activeCollegeRef = React.useRef<any | null>(null);
+const collegeMenuRequestRef = React.useRef(0);
 const collegeLookupById = useMemo(() => {
   const resultMap = new Map<number, any>();
 
@@ -156,7 +202,80 @@ const getMenuCourses = () => {
   }));
 };
 
-const getMatchableCourseValues = (college: any) => {
+const getMenuTextValue = (value: unknown) => {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object" && "value" in value) {
+    return String((value as { value?: unknown }).value ?? "").trim();
+  }
+  return "";
+};
+
+const getCollegeSummary = (college: any) => ({
+  id: college?.id,
+  name: college?.name,
+  logoUrl: college?.logoUrl,
+});
+
+const buildCollegePath = (college: any) => {
+  const collegeId = Number(college?.id);
+  if (!collegeId) return "/university";
+
+  const shortName = normalizeCollegeSlugSource(
+    college?.basic?.name || college?.name || ""
+  );
+  const prefixCode = buildCollegeCodePrefix(shortName);
+  const aboutBasedName = extractCollegeNameFromAbout(
+    college?.basic?.about?.value ||
+      college?.about?.value ||
+      college?.rawScraped?.about_text ||
+      college?.description ||
+      ""
+  );
+  const longNameSource =
+    [
+      college?.basic?.full_name,
+      college?.full_name,
+      aboutBasedName,
+      college?.rawScraped?.college_name,
+      shortName,
+    ]
+      .map((value) => normalizeCollegeSlugSource(typeof value === "string" ? value : ""))
+      .find(Boolean) || shortName;
+  const longNameSlug = toSeoSlug(longNameSource);
+
+  if (longNameSlug) {
+    const fullSlug =
+      prefixCode && !longNameSlug.startsWith(`${prefixCode}-`)
+        ? `${prefixCode}-${longNameSlug}`
+        : longNameSlug;
+    return `/university/${collegeId}-${fullSlug}`;
+  }
+
+  const rawSlug = typeof college?.slug === "string" ? college.slug.trim() : "";
+  if (rawSlug) {
+    const cleaned = rawSlug.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const parts = cleaned.match(/^(.*)--(\d+)$/);
+    const slugPart =
+      parts && Number(parts[2]) === collegeId
+        ? parts[1]
+        : cleaned.replace(/^\d+-/, "");
+    const normalizedSlugPart = toSeoSlug(slugPart);
+
+    if (normalizedSlugPart) {
+      return `/university/${collegeId}-${normalizedSlugPart}`;
+    }
+  }
+
+  const fallbackName = toSeoSlug(college?.name || "");
+  return fallbackName ? `/university/${collegeId}-${fallbackName}` : `/university/${collegeId}`;
+};
+
+const getCanonicalCourseName = (courseName = "") =>
+  Object.keys(COURSE_REGEX_MAP).find((label) =>
+    COURSE_REGEX_MAP[label].test(courseName.toLowerCase())
+  ) || "";
+
+const getCollegeCourseEntries = (college: any) => {
   const rawCourses = Array.isArray(college?.rawScraped?.courses)
     ? college.rawScraped.courses
     : [];
@@ -165,12 +284,233 @@ const getMatchableCourseValues = (college: any) => {
     ? college.rawScraped.courses_full_time
     : [];
 
+  return [...rawCourses, ...listedCourses, ...fullTimeCourses];
+};
+
+const getCourseCategoryFromName = (courseName = "") => {
+  const matchedCourseName = getCanonicalCourseName(courseName);
+  if (!matchedCourseName) return "general";
+
+  const matchedCourse = getMenuCourses().find((course) => course.name === matchedCourseName);
+
+  return matchedCourse?.stream || "general";
+};
+
+const getCourseMenuKey = (
+  courseName = "",
+  options: { preserveRawName?: boolean } = {}
+) => {
+  if (options.preserveRawName) {
+    return `course:${toCourseSlug(courseName) || toSeoSlug(courseName)}`;
+  }
+
+  const canonicalCourseName = getCanonicalCourseName(courseName);
+  if (canonicalCourseName) {
+    return `canonical:${toSeoSlug(canonicalCourseName)}`;
+  }
+
+  return `course:${toCourseSlug(courseName) || toSeoSlug(courseName)}`;
+};
+
+const mergeMenuCourseEntry = (
+  resultMap: Map<string, any>,
+  course: any,
+  college?: any,
+  options: { preserveRawName?: boolean } = {}
+) => {
+  const rawCourseName =
+    getMenuTextValue(course?.course_name) ||
+    getMenuTextValue(course?.name) ||
+    getMenuTextValue(course?.title);
+  const canonicalCourseName = options.preserveRawName
+    ? ""
+    : getCanonicalCourseName(rawCourseName);
+  const courseName = options.preserveRawName
+    ? rawCourseName
+    : canonicalCourseName || rawCourseName;
+
+  if (!courseName) return;
+
+  const courseKey = getCourseMenuKey(courseName, options);
+  const explicitStream =
+    getMenuTextValue(course?.stream) ||
+    getMenuTextValue(course?.course_stream) ||
+    getMenuTextValue(course?.stream_name);
+  const detailSlug =
+    getMenuTextValue(course?.slug_url) ||
+    getMenuTextValue(course?.slug);
+  const courseSlug = toCourseSlug(courseName);
+  const existingEntry = resultMap.get(courseKey);
+
+  if (existingEntry) {
+    if (canonicalCourseName) {
+      existingEntry.name = courseName;
+    } else if (courseName.length < existingEntry.name.length) {
+      existingEntry.name = courseName;
+    }
+
+    if (!existingEntry.slug && courseSlug) {
+      existingEntry.slug = courseSlug;
+    }
+
+    if (!existingEntry.detailSlug && detailSlug) {
+      existingEntry.detailSlug = detailSlug;
+    }
+
+    if (college?.id) {
+      const alreadyIncluded = existingEntry.colleges.some(
+        (item: any) => item.id === college.id
+      );
+
+      if (!alreadyIncluded) {
+        existingEntry.colleges.push(getCollegeSummary(college));
+      }
+    }
+
+    return;
+  }
+
+  resultMap.set(courseKey, {
+    key: courseKey,
+    name: courseName,
+    slug: courseSlug,
+    detailSlug,
+    stream: explicitStream
+      ? toSeoSlug(explicitStream)
+      : getCourseCategoryFromName(courseName),
+    colleges: college?.id ? [getCollegeSummary(college)] : [],
+  });
+};
+
+const mergeMenuCourseTree = (
+  resultMap: Map<string, any>,
+  course: any,
+  college?: any,
+  options: { preserveRawName?: boolean } = {}
+) => {
+  mergeMenuCourseEntry(resultMap, course, college, options);
+
+  const parentCourseName =
+    getMenuTextValue(course?.course_name) ||
+    getMenuTextValue(course?.name) ||
+    getMenuTextValue(course?.title);
+  const parentStream =
+    getMenuTextValue(course?.stream) ||
+    getMenuTextValue(course?.course_stream) ||
+    getMenuTextValue(course?.stream_name);
+  const subCourses = Array.isArray(course?.sub_courses) ? course.sub_courses : [];
+
+  subCourses.forEach((subCourse: any) => {
+    mergeMenuCourseEntry(
+      resultMap,
+      {
+        ...subCourse,
+        course_name:
+          getMenuTextValue(subCourse?.course_name) ||
+          getMenuTextValue(subCourse?.name) ||
+          getMenuTextValue(subCourse?.title) ||
+          parentCourseName,
+        stream:
+          getMenuTextValue(subCourse?.stream) ||
+          getMenuTextValue(subCourse?.course_stream) ||
+          getMenuTextValue(subCourse?.stream_name) ||
+          parentStream,
+      },
+      college,
+      options
+    );
+  });
+};
+
+const getExamsForMenuCourses = (courseEntries: any[] = []) => {
+  const resultMap = new Map<string | number, any>();
+
+  courseEntries.forEach((course) => {
+    getExamsForCourse(course.name).forEach((exam) => {
+      const examKey = exam?.id ?? `${exam?.name}-${exam?.year ?? ""}`;
+      if (resultMap.has(examKey)) return;
+
+      resultMap.set(examKey, exam);
+    });
+  });
+
+  return Array.from(resultMap.values());
+};
+
+const fetchCollegeMenuCourses = async (
+  college: any,
+  options: { preserveRawName?: boolean } = {}
+) => {
+  const cacheKey = options.preserveRawName
+    ? `college-courses:detailed:${college?.id}`
+    : `college-courses:${college?.id}`;
+  const cachedCourses = hoverCache.current[cacheKey];
+  if (Array.isArray(cachedCourses)) {
+    return cachedCourses;
+  }
+
+  const response = await fetch(
+    `${API_BASE}/college-course/college/${college.id}`
+  );
+  const json = await response.json();
+  const docs = Array.isArray(json?.data) ? json.data : [];
+  const resultMap = new Map<string, any>();
+
+  docs.forEach((doc: any) => {
+    const courses = Array.isArray(doc?.courses) ? doc.courses : [];
+    courses.forEach((course: any) =>
+      mergeMenuCourseTree(resultMap, course, college, options)
+    );
+  });
+
+  const uniqueCourses = Array.from(resultMap.values()).sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  hoverCache.current[cacheKey] = uniqueCourses;
+  return uniqueCourses;
+};
+
+const getCollegeCourseFallbackPath = (college: any, course: any) => {
+  const detailSlug =
+    getMenuTextValue(course?.detailSlug) ||
+    getMenuTextValue(course?.slug_url) ||
+    getMenuTextValue(course?.slug) ||
+    toCourseSlug(course?.name || "");
+
+  if (!college?.id || !detailSlug) return "";
+
+  return `${buildCollegePath(college)}/course/${detailSlug}`;
+};
+
+const handleCollegeMenuCourseClick = (course: any) => {
+  const selectedCollegeSummary =
+    activeCollegeRef.current || activeCollege || course?.colleges?.[0];
+  const selectedCollege =
+    collegeLookupById.get(selectedCollegeSummary?.id) || selectedCollegeSummary;
+
+  if (!selectedCollege) {
+    return;
+  }
+
+  const collegeFallbackPath = getCollegeCourseFallbackPath(selectedCollege, course);
+  if (!collegeFallbackPath) {
+    return;
+  }
+
+  navigate(collegeFallbackPath);
+};
+
+const getMatchableCourseValues = (college: any) => {
+  const courseEntries = getCollegeCourseEntries(college);
+
   return [
     college?.stream,
-    ...rawCourses.map((course: any) => course?.name || course?.course_name),
-    ...listedCourses.map((course: any) => course?.name || course?.course_name),
-    ...fullTimeCourses.map(
-      (course: any) => course?.name || course?.course_name || course?.title
+    ...courseEntries.map(
+      (course: any) =>
+        getMenuTextValue(course?.name) ||
+        getMenuTextValue(course?.course_name) ||
+        getMenuTextValue(course?.title)
     ),
   ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
 };
@@ -188,11 +528,91 @@ React.useEffect(() => {
 React.useEffect(() => {
   if (!showCollegesMenu) return;
 
+  let isCancelled = false;
+
   setActiveCollege(null);
+  activeCollegeRef.current = null;
   setCollegeMenuColleges(allMenuColleges);
-  setCollegeMenuCourses(getMenuCourses());
   setCollegeMenuExams(allMenuExams);
-}, [showCollegesMenu, allMenuColleges, allMenuExams]);
+
+  const cachedAllCourses = hoverCache.current["all-college-courses"];
+  if (Array.isArray(cachedAllCourses)) {
+    setLoadingMenu(false);
+    setCollegeMenuCourses(cachedAllCourses);
+    return;
+  }
+
+  setCollegeMenuCourses([]);
+  setLoadingMenu(true);
+
+  const loadAllCollegeCourses = async () => {
+    const resultMap = new Map<string, any>();
+    const batchSize = 12;
+
+    try {
+      for (let index = 0; index < colleges.length; index += batchSize) {
+        const batch = colleges.slice(index, index + batchSize);
+        const batchResults = await Promise.allSettled(
+          batch.map((college) => fetchCollegeMenuCourses(college))
+        );
+
+        batchResults.forEach((result) => {
+          if (result.status !== "fulfilled") return;
+
+          result.value.forEach((course: any) => {
+            const existingEntry = resultMap.get(course.key);
+
+            if (!existingEntry) {
+              resultMap.set(course.key, {
+                ...course,
+                colleges: Array.isArray(course.colleges) ? [...course.colleges] : [],
+              });
+              return;
+            }
+
+            if (course.name.length < existingEntry.name.length) {
+              existingEntry.name = course.name;
+            }
+
+            if (!existingEntry.slug && course.slug) {
+              existingEntry.slug = course.slug;
+            }
+
+            (course.colleges || []).forEach((collegeItem: any) => {
+              const alreadyIncluded = existingEntry.colleges.some(
+                (item: any) => item.id === collegeItem.id
+              );
+
+              if (!alreadyIncluded) {
+                existingEntry.colleges.push(collegeItem);
+              }
+            });
+          });
+        });
+      }
+
+      const uniqueCourses = Array.from(resultMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+
+      hoverCache.current["all-college-courses"] = uniqueCourses;
+
+      if (!isCancelled && !activeCollegeRef.current) {
+        setCollegeMenuCourses(uniqueCourses);
+      }
+    } finally {
+      if (!isCancelled && !activeCollegeRef.current) {
+        setLoadingMenu(false);
+      }
+    }
+  };
+
+  loadAllCollegeCourses();
+
+  return () => {
+    isCancelled = true;
+  };
+}, [showCollegesMenu, allMenuColleges, allMenuExams, colleges]);
 
 const getCollegesForCourse = (courseName: string) => {
   const regex = COURSE_REGEX_MAP[courseName];
@@ -217,7 +637,7 @@ const getCollegesForCourse = (courseName: string) => {
   return Array.from(resultMap.values());
 };
 
-const getCoursesForCollege = (college: any) => {
+const getCourseCategoriesForCollege = (college: any) => {
   const matchableValues = getMatchableCourseValues(college);
   const matchedCourses = getMenuCourses().filter((course) =>
     matchableValues.some((value) =>
@@ -245,10 +665,44 @@ const getCoursesForCollege = (college: any) => {
   return [];
 };
 
+const getCoursesForCollege = (college: any) => {
+  const resultMap = new Map<string, { name: string; stream: string }>();
+
+  getCollegeCourseEntries(college).forEach((course: any) => {
+    const courseName =
+      getMenuTextValue(course?.course_name) ||
+      getMenuTextValue(course?.name) ||
+      getMenuTextValue(course?.title);
+
+    if (!courseName) return;
+
+    const courseKey = courseName.toLowerCase().replace(/\s+/g, " ").trim();
+    if (resultMap.has(courseKey)) return;
+
+    const explicitStream =
+      getMenuTextValue(course?.stream) ||
+      getMenuTextValue(course?.course_stream) ||
+      getMenuTextValue(course?.stream_name);
+
+    resultMap.set(courseKey, {
+      name: courseName,
+      stream: explicitStream
+        ? toSeoSlug(explicitStream)
+        : getCourseCategoryFromName(courseName),
+    });
+  });
+
+  if (resultMap.size > 0) {
+    return Array.from(resultMap.values());
+  }
+
+  return getCourseCategoriesForCollege(college);
+};
+
 const getExamsForCollege = (college: any) => {
   const resultMap = new Map<string | number, any>();
 
-  getCoursesForCollege(college).forEach((course) => {
+  getCourseCategoriesForCollege(college).forEach((course) => {
     getExamsForCourse(course.name).forEach((exam) => {
       const examKey = exam?.id ?? `${exam?.name}-${exam?.year ?? ""}`;
       if (resultMap.has(examKey)) return;
@@ -264,10 +718,18 @@ const getExamsForCollege = (college: any) => {
 
 
 
-const handleCourseHover = (course: { name: string; stream: string }) => {
+const handleCourseHover = (course: {
+  name: string;
+  stream: string;
+  slug?: string;
+  colleges?: any[];
+}) => {
   setActiveCourse(course);
 
-  const collegesMatched = getCollegesForCourse(course.name); 
+  const collegesMatched =
+    Array.isArray(course.colleges) && course.colleges.length > 0
+      ? course.colleges
+      : getCollegesForCourse(course.name); 
   const examsMatched = getExamsForCourse(course.name); // ✅ ADD 
 
 
@@ -275,12 +737,43 @@ const handleCourseHover = (course: { name: string; stream: string }) => {
   setMenuExams(examsMatched); // ✅ ADD 
 };
 
-const handleCollegeHover = (college: any) => {
+const handleCollegeHover = async (college: any) => {
   const sourceCollege = collegeLookupById.get(college?.id) || college;
+  const requestId = ++collegeMenuRequestRef.current;
 
   setActiveCollege(sourceCollege);
-  setCollegeMenuCourses(getCoursesForCollege(sourceCollege));
-  setCollegeMenuExams(getExamsForCollege(sourceCollege));
+  activeCollegeRef.current = sourceCollege;
+
+  const cachedCourses = hoverCache.current[`college-courses:detailed:${sourceCollege?.id}`];
+  if (Array.isArray(cachedCourses)) {
+    setLoadingMenu(false);
+    setCollegeMenuCourses(cachedCourses);
+    setCollegeMenuExams(getExamsForMenuCourses(cachedCourses));
+    return;
+  }
+
+  setLoadingMenu(true);
+  setCollegeMenuCourses([]);
+
+  try {
+    const fetchedCourses = await fetchCollegeMenuCourses(sourceCollege, {
+      preserveRawName: true,
+    });
+    if (collegeMenuRequestRef.current !== requestId) return;
+
+    setCollegeMenuCourses(fetchedCourses);
+    setCollegeMenuExams(getExamsForMenuCourses(fetchedCourses));
+  } catch (error) {
+    if (collegeMenuRequestRef.current !== requestId) return;
+
+    console.error("College menu courses API error:", error);
+    setCollegeMenuCourses(getCoursesForCollege(sourceCollege));
+    setCollegeMenuExams(getExamsForCollege(sourceCollege));
+  } finally {
+    if (collegeMenuRequestRef.current === requestId) {
+      setLoadingMenu(false);
+    }
+  }
 };
 
  const tabClass = (path: string) =>
@@ -317,9 +810,7 @@ const CoursesMegaMenu = () => {
                 onMouseEnter={() => handleCourseHover(course)} 
                 
                onClick={() =>
-    navigate(
-    `/courses/${course.stream}/${toSeoSlug(course.name)}`
-  )
+    navigate(buildCourseDetailPath(course.stream, course.name))
   }
 
                 className={`text-sm py-1.5 cursor-pointer ${
@@ -442,7 +933,7 @@ const CollegesMegaMenu = () => {
                   key={college.id}
                   onMouseEnter={() => handleCollegeHover(college)}
                   onClick={() =>
-                    navigate(`/university/${college.id}-${toSeoSlug(college.name)}`)
+                    navigate(buildCollegePath(collegeLookupById.get(college?.id) || college))
                   }
                   className={`text-sm py-1.5 cursor-pointer ${
                     activeCollege?.id === college.id
@@ -472,13 +963,15 @@ const CollegesMegaMenu = () => {
           </p>
 
           <div className="max-h-[360px] overflow-y-auto pr-1">
-            {collegeMenuCourses.length > 0 ? (
+            {loadingMenu && collegeMenuCourses.length === 0 ? (
+              <p className="text-sm text-slate-500">Loading courses...</p>
+            ) : collegeMenuCourses.length > 0 ? (
               collegeMenuCourses.map((course) => (
                 <p
-                  key={course.name}
-                  onClick={() =>
-                    navigate(`/courses/${course.stream}/${toSeoSlug(course.name)}`)
-                  }
+                  key={course.key || course.name}
+                  onClick={() => {
+                    void handleCollegeMenuCourseClick(course);
+                  }}
                   className="text-sm text-slate-700 py-1.5 cursor-pointer hover:text-[#1E4A7A]"
                 >
                   {course.name}

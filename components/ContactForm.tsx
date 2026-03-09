@@ -155,9 +155,9 @@ const ContactForm: React.FC = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full px-6 py-3 font-semibold text-white bg-[#0CC25F] 
+                        className={`w-full px-6 py-3 font-semibold text-white bg-[#f0a018] 
                                    rounded-xl shadow-lg transition-all duration-300
-                                   ${loading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#0aa34f]"}`}
+                                   ${loading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#e09010]"}`}
                     >
                         {loading ? "Submitting..." : "Submit Query"}
                     </button>

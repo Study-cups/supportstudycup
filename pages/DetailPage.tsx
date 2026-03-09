@@ -2950,17 +2950,120 @@ if (blockType === "heading") {
     college?.basic?.affiliations,
     detail?.basic?.affiliations
   );
+
+  const collegeName = college?.basic?.name || college?.name || "College";
+  const courseMetaName = selectedCourse?.course_name || selectedCourse?.name || "";
+  const collegeLocation = [college?.basic?.city, college?.basic?.state]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(", ");
+  const collegeTypeLabel =
+    detail?.type || college?.basic?.college_type || college?.type || "";
+  const canonicalPath = activeCourseSlug
+    ? buildUniversityPath("Courses & Fees", activeCourseSlug)
+    : tabFromRoute
+      ? buildUniversityPath(tabFromRoute)
+      : baseCollegePath;
+  const canonicalUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${canonicalPath}`
+      : canonicalPath;
+  const metaImage =
+    college?.heroImages || college?.basic?.logo || college?.logoUrl || "";
+  const metaTitle = (() => {
+    if (activeCourseSlug && courseMetaName) {
+      return `${courseMetaName} at ${collegeName} 2026: Fees, Eligibility, Admission | StudyCups`;
+    }
+
+    switch (activeTab) {
+      case "Courses & Fees":
+        return `${collegeName} Courses & Fees 2026: Eligibility, Duration, Admission | StudyCups`;
+      case "admission":
+        return `${collegeName} Admission 2026: Dates, Eligibility, Cutoff, Selection Process | StudyCups`;
+      case "placement":
+        return `${collegeName} Placements 2025: Highest Package, Average Package, Recruiters | StudyCups`;
+      case "cutoff":
+        return `${collegeName} Cutoff 2025: Round-wise, Category-wise Cutoff | StudyCups`;
+      case "scholarship":
+        return `${collegeName} Scholarships 2026: Eligibility, Amount, Application Process | StudyCups`;
+      case "ranking":
+        return `${collegeName} Ranking 2025: NIRF, Outlook, India Today | StudyCups`;
+      case "faculty":
+        return `${collegeName} Faculty 2026: Departments, Teachers, Reviews | StudyCups`;
+      case "qna":
+        return `${collegeName} Q&A 2026: Student Questions and Answers | StudyCups`;
+      case "reviews":
+        return `${collegeName} Reviews 2026: Rating, Student Feedback, Campus Life | StudyCups`;
+      case "gallery":
+        return `${collegeName} Photos 2026: Campus, Hostel, Events, Infrastructure | StudyCups`;
+      default:
+        return `${collegeName} 2026: Admission, Courses, Fees, Cutoff, Placement, Ranking | StudyCups`;
+    }
+  })();
+  const metaDescription = (() => {
+    if (activeCourseSlug && courseMetaName) {
+      return `Check ${courseMetaName} at ${collegeName}${collegeLocation ? `, ${collegeLocation}` : ""} including fees, eligibility, admission process, duration and key course details for 2026.`;
+    }
+
+    switch (activeTab) {
+      case "Courses & Fees":
+        return `Explore ${collegeName}${collegeLocation ? `, ${collegeLocation}` : ""} courses and fees for 2026. Check eligibility, duration, fee structure and admission details by program.`;
+      case "admission":
+        return `Get ${collegeName} admission 2026 details including eligibility, entrance exams, important dates, selection process and application steps.`;
+      case "placement":
+        return `Explore ${collegeName} placements 2025 with highest package, average package${placementRateValue !== "N/A" ? `, estimated placement rate ${placementRateValue}` : ""} and top recruiters.`;
+      case "cutoff":
+        return `Check ${collegeName} cutoff 2025 including round-wise and category-wise cutoff trends, qualifying exams and admission benchmarks.`;
+      case "scholarship":
+        return `Find ${collegeName} scholarship details for 2026 including eligibility, scholarship amount, available schemes and application process.`;
+      case "ranking":
+        return `View ${collegeName} ranking 2025 across top surveys and agencies along with reputation, academic performance and key highlights.`;
+      case "faculty":
+        return `Know more about ${collegeName} faculty, departments, academic expertise and teaching support for students.`;
+      case "qna":
+        return `Read verified ${collegeName} student questions and answers covering admission, placements, fees, hostel, campus life and academics.`;
+      case "reviews":
+        return `Read ${collegeName} reviews, student ratings and feedback on placements, faculty, infrastructure, hostel and overall campus experience.`;
+      case "gallery":
+        return `Browse ${collegeName} campus photos covering classrooms, hostel, events, infrastructure and student life.`;
+      default:
+        return `Explore ${collegeName}${collegeLocation ? `, ${collegeLocation}` : ""}${collegeTypeLabel ? `, ${collegeTypeLabel}` : ""}${establishedYearLabel ? ` established in ${establishedYearLabel}` : ""}. Check admission 2026, courses, fees, cutoff, placements, ranking and reviews.`;
+    }
+  })();
+  const metaKeywords = [
+    `${collegeName} admission 2026`,
+    `${collegeName} fees`,
+    `${collegeName} courses`,
+    `${collegeName} cutoff`,
+    `${collegeName} placements`,
+    `${collegeName} ranking`,
+    collegeLocation ? `${collegeName} ${collegeLocation}` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
  
 
   return ( 
     <> 
-   {schema && (
   <Helmet>
-    <script type="application/ld+json">
-      {JSON.stringify(schema)}
-    </script>
+    <title>{metaTitle}</title>
+    <meta name="description" content={metaDescription} />
+    <meta name="keywords" content={metaKeywords} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={metaTitle} />
+    <meta property="og:description" content={metaDescription} />
+    <meta property="og:url" content={canonicalUrl} />
+    {metaImage ? <meta property="og:image" content={metaImage} /> : null}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={metaTitle} />
+    <meta name="twitter:description" content={metaDescription} />
+    {metaImage ? <meta name="twitter:image" content={metaImage} /> : null}
+    {schema && (
+      <script type="application/ld+json">
+        {JSON.stringify(schema)}
+      </script>
+    )}
   </Helmet>
-)}
    
     <div>
       {/* HERO */}

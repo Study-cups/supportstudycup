@@ -4,7 +4,7 @@ import { useOnScreen } from "../hooks/useOnScreen";
 import { useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom"; 
-import {  toCourseSlug } from "./Seo"
+import { buildCourseDetailPath, toCourseSlug } from "./Seo"
 import { ArrowRight, ChevronDown, GraduationCap } from "lucide-react";
 
 /* ================= ANIMATION ================= */
@@ -912,7 +912,7 @@ useEffect(() => {
 const getCourseLink = (course: any) => {
   const categorySlug = getCourseCategorySlug(course.name);
   const courseSlug = course.slug || toCourseSlug(course.name);
-  return `/courses/${categorySlug}/${courseSlug}`;
+  return buildCourseDetailPath(categorySlug, course.name, courseSlug);
 };
 
 const renderCompactCourseCard = (course: any) => {
@@ -1852,7 +1852,7 @@ const renderSectionPagination = (
     </div> 
        <section className="mt-14 ">
         <div className="mx-auto max-w-[1120px] border-t border-[#d7d0c6] pt-10">
-          <div className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#0f7a83_0%,#0f6c79_52%,#0c5a69_100%)] shadow-[0_20px_45px_rgba(7,29,53,0.12)]">
+          <div className="overflow-hidden rounded-[30px] bg-[#1E4A7A] shadow-[0_20px_45px_rgba(7,29,53,0.12)]">
             <div className="grid gap-8 px-6 py-7 md:grid-cols-[1.35fr_0.75fr] md:px-10 md:py-9">
               <div className="max-w-[640px]">
                 <p
@@ -1957,7 +1957,7 @@ const renderSectionPagination = (
           className="mt-5 max-w-[540px] text-[2rem] leading-[1.02] text-white md:text-[3rem]"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
-          MBA / PGDM{" "}
+         {" "}
           <span className="font-medium italic text-[#f3a11c]">Admission</span>
           <br />
           Consulting

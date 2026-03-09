@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import FlexibleBlockRenderer from "./FlexibleBlockRenderer";
+import { buildCourseDetailPath } from "./Seo";
 
 interface CourseDetailPageProps {
   onOpenApplyNow: () => void;
@@ -559,6 +560,24 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
     const source = Array.isArray(course?.collegesOffering) ? course.collegesOffering : [];
     return [...new Map(source.map((item: any) => [String(item?.id), item])).values()];
   }, [course?.collegesOffering]);
+  const canonicalPath = useMemo(() => {
+    if (!course) return "";
+
+    const resolvedTitle = course?.course_name || course?.name || "";
+    const resolvedCategory = pickFirstText(
+      course?.stream,
+      course?.course_stream,
+      course?.stream_name,
+      categorySlug ? startCaseFromSlug(categorySlug) : ""
+    );
+
+    return buildCourseDetailPath(resolvedCategory || categorySlug || "general", resolvedTitle);
+  }, [categorySlug, course]);
+  const canonicalUrl = useMemo(() => {
+    if (!canonicalPath) return "";
+    if (typeof window === "undefined") return canonicalPath;
+    return `${window.location.origin}${canonicalPath}`;
+  }, [canonicalPath]);
   const hasSyllabusContent = useMemo(
     () => hasStructuredContent(course?.syllabus_detail),
     [course?.syllabus_detail]
@@ -575,6 +594,21 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
       setActiveTab("Overview");
     }
   }, [activeTab, hasSyllabusContent]);
+
+  useEffect(() => {
+    if (!course || !canonicalPath) return;
+
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.delete("name");
+
+    const nextSearch = searchParams.toString();
+    const nextUrl = nextSearch ? `${canonicalPath}?${nextSearch}` : canonicalPath;
+    const currentUrl = `${location.pathname}${location.search}`;
+
+    if (currentUrl !== nextUrl) {
+      navigate(nextUrl, { replace: true });
+    }
+  }, [canonicalPath, course, location.pathname, location.search, navigate]);
 
   const toggleComparedCollege = (collegeId: string) => {
     setComparedCollegeIds((prev) =>
@@ -647,6 +681,8 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
           name="description"
           content={`Explore ${courseTitle} including fees, duration, syllabus, course details and colleges offering this course.`}
         />
+        {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
+        {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
       </Helmet>
 
       <section className="relative overflow-hidden bg-[linear-gradient(120deg,#041a31_0%,#072746_62%,#10273d_100%)]">
