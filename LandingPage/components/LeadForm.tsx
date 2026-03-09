@@ -17,7 +17,7 @@ const LeadForm: React.FC<{ id?: string; className?: string }> = ({ id, className
     setLoading(true);
 
     try {
-      const res = await fetch("https://studycupsbackend-production.up.railway.app/api/registration", {
+      const res = await fetch("https://studycupsbackend-wb8p.onrender.com/api/registration", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

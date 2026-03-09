@@ -7,19 +7,19 @@ export const toSeoSlug = (text: string = "") =>
     .replace(/\([^)]*\)/g, "")
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
-export const toCourseSlug = (name: string) =>
-  name
+export const toCourseSlug = (name: string = "") => {
+  return name
     .toLowerCase()
-    .trim()
-    .replace(/\[.*?\]/g, "")      // strip [PGP-FABM]
-    .replace(/\([^)]*\)/g, "")    // strip (nested)
     .replace(/&/g, "and")
-    .replace(/[^a-z0-9\s]/g, "")
-    .replace(/\s+/g, "-")         // spaces → hyphens
-    .replace(/-+/g, "-")          // collapse multiple hyphens
-    .replace(/^-+|-+$/g, "");     // ❗ trim leading/trailing hyphens
+    .replace(/\./g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .trim();
+};
 
 export const normalize = (text?: string | null) => {
   if (!text) return "";

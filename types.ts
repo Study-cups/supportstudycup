@@ -14,7 +14,9 @@ export interface Placements {
     averagePackage: string;
     placementPercentage: number;
     topRecruiters: string[];
-}
+} 
+
+
 
 export interface College {
     id: number;
@@ -37,6 +39,14 @@ export interface College {
     courses: Course[];
     placements: Placements;
 }
+type Step =
+  | "welcome"
+  | "name"
+  | "email"
+  | "phone"
+  | "city"
+  | "course"
+  | "done";
 
 export type View =
   | { page: 'home' }

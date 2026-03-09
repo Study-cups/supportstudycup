@@ -63,8 +63,10 @@ const DUMMY_NEWS = [
     category: "Articles",
   },
  
-  
+
 ]; 
+
+const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
 
 const loopingNews = [...DUMMY_NEWS, ...DUMMY_NEWS];
 
@@ -80,6 +82,14 @@ const PRIORITY_CITIES = [
   "Coimbatore",
   "Dehradun",
   "Lucknow"
+];
+
+const ADMISSION_TICKER_ITEMS = [
+  { icon: "🩺", label: "MBBS Direct Admission Open" },
+  { icon: "💻", label: "B.Tech Counselling Available" },
+  { icon: "⚖️", label: "Law (LLB) 2026 Applications" },
+  { icon: "🎓", label: "MBA Scholarship Up to Rs 1 Lakh" },
+  { icon: "📍", label: "Offices in Kanpur, Lucknow, Delhi NCR" }
 ];
 
 
@@ -174,8 +184,165 @@ const StreamTag: React.FC<{ stream: string }> = ({ stream }) => {
   );
 };
 
+const getCourseTextValue = (...values: unknown[]) =>
+  values
+    .find((value) => typeof value === "string" && value.trim().length > 0)
+    ?.toString()
+    .trim() || "";
+
+const normalizeCourseKey = (value = "") =>
+  value
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+type HomeExploreLevel =
+  | "Postgraduate"
+  | "Undergraduate"
+  | "Doctoral"
+  | "Certificate";
+
+const HOME_EXPLORE_LEVEL_ORDER: HomeExploreLevel[] = [
+  "Postgraduate",
+  "Undergraduate",
+  "Doctoral",
+  "Certificate",
+];
+
+const HOME_FACET_PLACEHOLDER_VALUES = new Set([
+  "n/a",
+  "na",
+  "not available",
+  "not applicable",
+  "nil",
+  "none",
+  "null",
+  "undefined",
+]);
+
+const HOME_MONEY_LIKE_PATTERN =
+  /(?:\u20B9|\binr\b|\brs\.?\b|\brupees?\b)|(?:\b\d{1,3}(?:,\d{2,3}){1,}(?:\.\d+)?\b)|(?:\b\d+(?:\.\d+)?\s*(?:lpa|lakh|lakhs|lac|crore|crores|cr|million|mn|thousand|k)\b)/i;
+
+const isNoiseHomeFacetValue = (value = "") => {
+  const normalized = value.toLowerCase().replace(/\s+/g, " ").trim();
+
+  if (!normalized || HOME_FACET_PLACEHOLDER_VALUES.has(normalized)) {
+    return true;
+  }
+
+  return HOME_MONEY_LIKE_PATTERN.test(value);
+};
+
+const normalizeHomeLevelKey = (value = "") =>
+  value.toLowerCase().replace(/[^a-z]/g, "");
+
+const isDoctoralCourseValue = (value = "") => {
+  const normalized = normalizeHomeLevelKey(value);
+  return [
+    "doctoral",
+    "doctorate",
+    "phd",
+    "postdoctoral",
+    "postdoctorate",
+    "dphil",
+    "mphil",
+  ].some((keyword) => normalized.includes(keyword));
+};
+
+const isPostgraduateCourseValue = (value = "") => {
+  const normalized = normalizeHomeLevelKey(value);
+  return [
+    "postgraduate",
+    "postgraduation",
+    "pg",
+    "master",
+    "masters",
+    "mba",
+    "pgdm",
+    "mtech",
+    "msc",
+    "mcom",
+    "ma",
+    "mca",
+    "llm",
+  ].some((keyword) => normalized.includes(keyword));
+};
+
+const isUndergraduateCourseValue = (value = "") => {
+  const normalized = normalizeHomeLevelKey(value);
+  return [
+    "undergraduate",
+    "undergraduation",
+    "ug",
+    "bachelor",
+    "btech",
+    "be",
+    "bba",
+    "bcom",
+    "ba",
+    "bsc",
+    "bca",
+    "mbbs",
+    "bds",
+    "llb",
+  ].some((keyword) => normalized.includes(keyword));
+};
+
+const isCertificateCourseValue = (value = "") => {
+  const normalized = normalizeHomeLevelKey(value);
+  return [
+    "certificate",
+    "certification",
+    "certified",
+    "diploma",
+    "cert",
+  ].some((keyword) => normalized.includes(keyword));
+};
+
+const normalizeHomeCourseLevel = (value = ""): HomeExploreLevel | null => {
+  if (isNoiseHomeFacetValue(value)) return null;
+  if (isDoctoralCourseValue(value)) return "Doctoral";
+  if (isPostgraduateCourseValue(value)) return "Postgraduate";
+  if (isUndergraduateCourseValue(value)) return "Undergraduate";
+  if (isCertificateCourseValue(value)) return "Certificate";
+  return null;
+};
+
+const inferCourseLevel = (course: any, courseName = "") => {
+  const explicitLevel = normalizeHomeCourseLevel(
+    getCourseTextValue(course?.level, course?.course_level)
+  );
+  if (explicitLevel) return explicitLevel;
+
+  return normalizeHomeCourseLevel(courseName) || "General";
+};
+
+const getCourseTypeValue = (course: any) =>
+  getCourseTextValue(course?.mode, course?.study_mode, course?.type) || "Full Time";
+
+const formatCourseFeeValue = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    const lakhs = Math.round((value / 100000) * 100) / 100;
+    return `INR ${lakhs} L`;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .replace(/â‚¹|Ã¢â€šÂ¹/g, "INR ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  return "N/A";
+};
+
+const preferValue = (currentValue: string, nextValue: string, fallback = "N/A") => {
+  if (!currentValue || currentValue === fallback) return nextValue || fallback;
+  return currentValue;
+};
+
 const extractCourses = (colleges = []) => {
-  const map = new Map();
+  const map = new Map<string, any>();
 
   (Array.isArray(colleges) ? colleges : []).forEach(col => {
     const courseArray = col?.rawScraped?.courses;
@@ -197,31 +364,62 @@ const extractCourses = (colleges = []) => {
         return;
       }
 
-      const key = c.name?.trim()?.toLowerCase();
+      const courseName = getCourseTextValue(c?.name, c?.course_name);
+      const key = normalizeCourseKey(courseName);
       if (!key) return;
 
+      const normalizedCourse = {
+        id: c?.id ?? key,
+        name: courseName,
+        type: getCourseTypeValue(c),
+        level: inferCourseLevel(c, courseName),
+        duration: getCourseTextValue(c?.duration, c?.course_duration) || "NA",
+        fees: formatCourseFeeValue(c?.fees ?? c?.avg_fees ?? c?.total_fees),
+        courseKey: key,
+        colleges: [col.id],
+        courseIds: c?.id ? [c.id] : [],
+      };
+
       if (!map.has(key)) {
-        map.set(key, {
-          id: c.id,
-          name: c.name,
-          level: c.mode || "Full Time",
-          duration: c.duration || "NA",
-          fees: c.fees ?? "N/A",
-          courseKey: key,
-          colleges: [col.id],
-          courseIds: [c.id],
-        });
+        map.set(key, normalizedCourse);
       } else {
         const entry = map.get(key);
         if (!entry.colleges.includes(col.id)) {
           entry.colleges.push(col.id);
-          entry.courseIds.push(c.id);
+          if (c?.id) entry.courseIds.push(c.id);
         }
+
+        entry.type = preferValue(entry.type, normalizedCourse.type, "Full Time");
+        entry.level = preferValue(entry.level, normalizedCourse.level, "General");
+        entry.duration = preferValue(entry.duration, normalizedCourse.duration, "NA");
+        entry.fees = preferValue(entry.fees, normalizedCourse.fees, "N/A");
       }
     });
   });
 
-  return Array.from(map.values());
+  return Array.from(map.values()).sort((a, b) => {
+    const collegeGap = (b?.colleges?.length || 0) - (a?.colleges?.length || 0);
+    if (collegeGap !== 0) return collegeGap;
+    return String(a?.name || "").localeCompare(String(b?.name || ""));
+  });
+};
+
+const normalizeExploreCourse = (course: any) => {
+  const courseName = getCourseTextValue(course?.course_name, course?.name);
+  const totalColleges = Number(course?.totalColleges ?? course?.total_college_count ?? 0);
+
+  return {
+    id: course?.id ?? course?.slug ?? normalizeCourseKey(courseName),
+    name: courseName,
+    type: getCourseTypeValue(course),
+    level: inferCourseLevel(course, courseName),
+    duration: getCourseTextValue(course?.duration, course?.course_duration) || "NA",
+    fees: formatCourseFeeValue(course?.avg_fees ?? course?.fees ?? course?.total_fees),
+    courseKey: normalizeCourseKey(courseName),
+    colleges: Array.from({ length: Math.max(totalColleges, 0) }),
+    collegeCount: totalColleges,
+    slug: course?.slug || "",
+  };
 };
 
 // src/constants/regionMap.ts
@@ -283,16 +481,13 @@ const [heroCity, setHeroCity] = useState("");
   const [error, setError] = useState("");
   // STREAM FILTER FOR EXPLORE COURSES
   const [exploreLevel, setExploreLevel] = useState("All");
+  const [exploreCourses, setExploreCourses] = useState<any[]>([]);
   // UNIQUE STREAMS FROM COURSES
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"apply" | "brochure">("apply");
 
 const location = useLocation();
 const selectedRegion = location.state?.region || null;
-  const scrollY = useScroll();
-
-  const heroTranslate = Math.min(scrollY * 0.18, 60);
-  // image moves upward 
 
   const collegeMatchesStream = (college: any, selectedStream: string) => {
     if (!selectedStream || selectedStream === "All Streams") return true;
@@ -388,15 +583,6 @@ const regionList = useMemo(() => {
   ];
 
 
-
-
-
-  const animatedCollegeWords = useMemo(
-    () => ["Ranking", "Placements", "Reviews"]
-    ,
-    []
-  );
-
   const cityStateList = useMemo(() => {
     const map = new Map<string, { city: string; state: string | null }>();
 
@@ -429,13 +615,6 @@ useEffect(() => {
 }, [stateList]);
 
 
-  const [animatedCollegeWordIndex, setAnimatedCollegeWordIndex] = useState(0);
-
-  const words = ["Ranking", "Placements", "Reviews"];
-  const [currentWord, setCurrentWord] = useState("");
-  const [wordIndex, setWordIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedtopcollge, setSelectedtopcollge] = useState("");
   const [selectedExamFilter, setSelectedExamFilter] = useState("All");
  const [filteredStates, setFilteredStates] = useState<string[]>([]);
@@ -450,17 +629,45 @@ useEffect(() => {
     return refs;
   }, [cityStateList]);
 
-  // 1️⃣ Home page ke liye colleges limit karo
-  const limitedColleges = useMemo(() => {
-    if (!Array.isArray(colleges)) return [];
-    return colleges.slice(0, 20);
+  const fallbackCourses = useMemo(() => {
+    if (!Array.isArray(colleges) || colleges.length === 0) return [];
+    return extractCourses(colleges);
   }, [colleges]);
 
-  // 2️⃣ Courses sirf limited colleges se nikalo (HEAVY LOGIC)
-  const courses = useMemo(() => {
-    if (!limitedColleges || limitedColleges.length === 0) return [];
-    return extractCourses(limitedColleges);
-  }, [limitedColleges]);
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${API_BASE}/main-course-card?page=1&limit=60`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load main course cards");
+        return res.json();
+      })
+      .then((json) => {
+        if (cancelled) return;
+
+        const normalized = Array.isArray(json?.data)
+          ? json.data.map((course: any) => normalizeExploreCourse(course))
+          : [];
+
+        if (normalized.length > 0) {
+          setExploreCourses(normalized);
+        } else {
+          setExploreCourses(fallbackCourses);
+        }
+      })
+      .catch((err) => {
+        console.error("Home explore courses API error", err);
+        if (!cancelled) {
+          setExploreCourses(fallbackCourses);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fallbackCourses]);
+
+  const courses = exploreCourses.length > 0 ? exploreCourses : fallbackCourses;
 
    
   const normalizeName = (s = "") =>
@@ -489,40 +696,6 @@ const orderStatesLikeCollegeApply = (states: string[]) => {
   return [...priority, ...others];
 };
 
-
-
-
-  useEffect(() => {
-    let typingSpeed = 120;
-
-    if (isDeleting) typingSpeed = 20;
-
-    const handleTyping = () => {
-      const fullWord = words[wordIndex];
-
-      if (!isDeleting) {
-        setCurrentWord(fullWord.substring(0, charIndex + 1));
-        setCharIndex(charIndex + 1);
-
-        if (charIndex + 1 === fullWord.length) {
-          setTimeout(() => setIsDeleting(true), 1500);
-        }
-      } else {
-        setCurrentWord(fullWord.substring(0, charIndex - 1));
-        setCharIndex(charIndex - 1);
-
-        if (charIndex - 1 === 0) {
-          setIsDeleting(false);
-          setWordIndex((prev) => (prev + 1) % words.length);
-        }
-      }
-    };
-
-    const timeout = setTimeout(handleTyping, typingSpeed);
-
-    return () => clearTimeout(timeout);
-  }, [charIndex, isDeleting]);
-
   const CITY_ICONS = [
     "/icons/gate-of-india.png",
     "/icons/bangalore.png",
@@ -547,17 +720,6 @@ const CITY_ICON_MAP: Record<string, string> = {
   "Dehradun": "/icons/temple_6482997.png",
   "Lucknow": "/icons/red-fort_3806647.png",
 };
-
-
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimatedCollegeWordIndex(
-        (prevIndex) => (prevIndex + 1) % animatedCollegeWords.length
-      );
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [animatedCollegeWords]);
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -807,24 +969,34 @@ const filteredColleges = useMemo(() => {
 
   const faqs = [
     {
-      question: "How does the AI recommendation work?",
+      question: "Is StudyCups counselling free?",
       answer:
-        "Our AI College Counselor uses a powerful language model to understand your query and match colleges based on your preferences for location, courses, and budget.",
+        "Yes! Your initial 30-minute profile assessment call is completely free. Our counsellor will review your profile and give honest, personalised guidance at no charge. Paid service packages are available for full application support.",
     },
     {
-      question: "Is there a cost to apply through StudyCups?",
+      question: "Can I get a good MBA with a low CAT score?",
       answer:
-        "Using StudyCups to find and compare colleges is free. Standard college application fees may still apply as per each institution.",
+        "Absolutely. Many excellent MBA and PGDM colleges in India accept students with 50-70 percentile scores. StudyCups specialises in helping students across all score ranges find the right college with strong placements and a reputable degree.",
     },
     {
-      question: "How accurate is the college data?",
+      question: "Does StudyCups help with MBBS admissions in India?",
       answer:
-        "We regularly update information from official college websites, government data, and other reliable sources.",
+        "Yes. We provide guidance for NEET-based counselling, management quota, and direct admission routes at medical colleges across India. Our counsellors are experienced in both government and private medical college admissions.",
     },
     {
-      question: "Can I compare more than two colleges?",
+      question: "What is the StudyCups MBA Scholarship?",
       answer:
-        "Yes. On the listing page you can select multiple colleges and open the Compare view for a side-by-side comparison.",
+        "StudyCups offers a scholarship of up to Rs 1 lakh per student for MBA admissions in the 2024-26 batch, based on financial need. The scholarship covers tuition fees and books. You can apply through our website at studycups.in/mba-scholarship/",
+    },
+    {
+      question: "Where are StudyCups offices located?",
+      answer:
+        "We have two offices: our Corporate Office in Lajpat Nagar-1, New Delhi, and our Registered Office at Room No. 219, Kalpana Plaza, Birhana Road, Kanpur (208001), Uttar Pradesh. You can also reach us at 0512-4061386 or 8081269969.",
+    },
+    {
+      question: "How is StudyCups different from Shiksha or Collegedunia?",
+      answer:
+        "Portals like Shiksha and Collegedunia provide information. StudyCups is a hands-on consulting service. We assign a dedicated counselor, write your SOP, prepare you for interviews, manage your applications, and stay with you until you receive your admission letter.",
     },
   ];
 
@@ -1003,12 +1175,19 @@ const filteredColleges = useMemo(() => {
 
   // FILTERED COURSES
   const exploreLevels = useMemo(() => {
-    const s = new Set<string>();
-    courses.forEach(c => {
-      if (c.level) s.add(c.level.trim());
-    });
-    return ["All", ...Array.from(s)];
+    const availableLevels = HOME_EXPLORE_LEVEL_ORDER.filter((level) =>
+      courses.some((course) => course.level === level)
+    );
+
+    return ["All", ...availableLevels];
   }, [courses]);
+
+  useEffect(() => {
+    if (exploreLevel !== "All" && !exploreLevels.includes(exploreLevel)) {
+      setExploreLevel("All");
+    }
+  }, [exploreLevel, exploreLevels]);
+
 const HOME_REGIONS = [
   "Delhi NCR",
   "Uttar Pradesh",
@@ -1200,7 +1379,7 @@ const HERO_TAGS = [
         />
         <link rel="canonical" href="https://studycups.in/" />
       </Helmet>
-<section className="relative w-full h-[600px] max-md:h-auto max-md:py-20 overflow-hidden bg-white">
+<section className="relative w-full h-[600px] max-md:h-auto max-md:pt-20 max-md:pb-4 overflow-hidden bg-white">
   {/* ================= BACKGROUND GLOWS ================= */}
   <div className="absolute top-[-10%] left-[10%] w-[35%] h-[45%] rounded-full bg-[#E6F0FF] blur-[120px] opacity-80 pointer-events-none" />
   <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[40%] rounded-full bg-[#EDF4FF] blur-[100px] opacity-70 pointer-events-none" />
@@ -1273,68 +1452,45 @@ const HERO_TAGS = [
   className="
     absolute
     top-0
-    right-[-25%] md:right-0
-    w-[260px] md:w-[460px]
-    h-[100px] md:h-[460px]
+    right-[-72px]
+    w-[250px]
+    h-[150px]
     pointer-events-none
-    z-[2] block md:hidden
+    z-[2]
+    block md:hidden
   "
 >
-  {/* MAIN SQUARE */}
+  {/* YELLOW SHAPE (BEHIND) */}
   <div
-    className="
-      absolute
-      inset-0
-      rounded-[36px]
-      bg-gradient-to-br
-      from-[#1e4b8f]
-      to-[#163d7a]
-      shadow-[0_50px_140px_rgba(0,0,0,0.28)]
-    "
+    className="absolute top-[8px] right-[58px] w-[182px] h-[112px] rounded-[36px] bg-[#D9A83E]"
+    style={{ transform: "rotate(26deg)" }}
   />
 
-  {/* TOP LIGHT CUT */}
+  {/* BLUE SHAPE (FRONT) */}
   <div
-    className="
-      absolute
-      inset-0
-      rounded-[36px]
-      bg-gradient-to-tr
-      from-[#2b63b3]
-      to-transparent
-      opacity-80
-      clip-square-top
-    "
-  />
+    className="absolute top-[12px] right-[4px] w-[160px] h-[98px] rounded-[38px] overflow-hidden shadow-[0_18px_42px_rgba(0,0,0,0.22)]"
+    style={{ transform: "rotate(-20deg)" }}
+  >
+    <div className="absolute inset-0 bg-gradient-to-br from-[#1e4b8f] to-[#163d7a]" />
+    <div
+      className="absolute inset-0 opacity-85"
+      style={{
+        clipPath: "polygon(38% 0%, 100% 0%, 100% 64%, 44% 44%)",
+        background: "linear-gradient(135deg, #2b63b3, #1c4a8f)"
+      }}
+    />
+    <div
+      className="absolute inset-0 opacity-95"
+      style={{
+        clipPath: "polygon(0% 66%, 44% 44%, 100% 64%, 100% 100%, 0% 100%)",
+        background: "linear-gradient(180deg, #103163, #0c254d)"
+      }}
+    />
+  </div>
 
-  {/* BOTTOM DARK CUT */}
+  {/* CORNER GLOW */}
   <div
-    className="
-      absolute
-      inset-0
-      rounded-[36px]
-      bg-gradient-to-b
-      from-transparent
-      to-[#0c254d]
-      opacity-90
-      clip-square-bottom
-    "
-  />
-
-  {/* HERO IMAGE */}
-  <img
-    src={HERO_HUMAN_IMAGE}
-    alt="Students"
-    className="
-      absolute
-      -bottom-6 md:-bottom-10
-      -left-10 md:-left-16
-      w-[260px] md:w-[420px]
-      h-auto
-      object-contain
-      drop-shadow-[0_30px_60px_rgba(0,0,0,0.35)] 
-      hidden
-    "
+    className="absolute -top-1 right-[70px] w-[130px] h-[64px] bg-[#4f7ec8]/35 blur-[20px] rounded-full"
   />
 </div>
 
@@ -1601,6 +1757,46 @@ const HERO_TAGS = [
 </section>
 
 
+      <section className="bg-[#132a44] mb-2 md:mb-0">
+        <div className="border-y border-[#1f4962] bg-[#0f6d7a] overflow-hidden">
+          <div className="homepage-ticker-track py-2 md:py-2.5">
+            {[...ADMISSION_TICKER_ITEMS, ...ADMISSION_TICKER_ITEMS].map((item, idx) => (
+              <span
+                key={`${item.label}-${idx}`}
+                className="inline-flex items-center text-[11px] sm:text-[13px] md:text-[15px] font-semibold text-white/95 mr-6 sm:mr-8 md:mr-10 whitespace-nowrap"
+              >
+                <span className="mr-1.5 sm:mr-2 inline-flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-white/20 text-[9px] sm:text-[11px]">
+                  {item.icon}
+                </span>
+                {item.label}
+                <span className="ml-4 sm:ml-6 text-white/45">&bull;</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <style>{`
+        .homepage-ticker-track {
+          width: max-content;
+          display: flex;
+          align-items: center;
+          animation: homepageMarquee 30s linear infinite;
+          will-change: transform;
+        }
+
+        @media (max-width: 640px) {
+          .homepage-ticker-track {
+            animation-duration: 36s;
+          }
+        }
+
+        @keyframes homepageMarquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
+
 
 
       {/* -------------------------------------------------- */}
@@ -1642,7 +1838,7 @@ const HERO_TAGS = [
           <AnimatedContainer key={category.name} delay={index * 80}>
             <button
               onClick={() =>
-                navigate('/courses', {
+                navigate(`/courses?stream=${encodeURIComponent(category.name)}`, {
                   state: { initialStream: category.name },
                 })
               }
@@ -2141,7 +2337,7 @@ const HERO_TAGS = [
 
             <div
               id="courseScroll"
-              className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4 px-2"
+              className="flex gap-8 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-4 px-2"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
               {courses
@@ -2162,18 +2358,21 @@ const HERO_TAGS = [
 
 
                      className="
-    snap-start cursor-pointer bg-white border border-gray-200 rounded-xl
+    snap-start shrink-0 cursor-pointer bg-white border border-gray-200 rounded-xl
     shadow-[0_4px_12px_rgba(0,0,0,0.08)]
+    flex flex-col
 
     /* MOBILE */
+    w-[220px]
     min-w-[220px]
     p-3
     h-[260px]
 
     /* DESKTOP */
+    md:w-[260px]
     md:min-w-[260px]
     md:p-5
-    md:h-auto
+    md:h-[300px]
   "
                   >
                     {/* Top Tags */}
@@ -2187,20 +2386,20 @@ const HERO_TAGS = [
                     </div>
 
                     {/* Title */}
-                    <h3
-                      className="
+                 <h3
+  className="
     text-[14px]
     mb-3
-    leading-tight
-    truncate
-    whitespace-nowrap
+    leading-snug
     overflow-hidden
+    text-ellipsis
+    whitespace-nowrap
     max-w-full
   "
-                      title={course.name}
-                    >
-                      {course.name}
-                    </h3>
+  title={course.name}
+>
+  {course.name}
+</h3>
 
 
                     {/* Info Boxes */}
@@ -2221,7 +2420,7 @@ const HERO_TAGS = [
                       <div className="bg-gray-50 p-3 rounded-md border border-slate-100 flex flex-col">
                         <span className="text-gray-500 text-[11px]">Colleges</span>
                         <span className="font-semibold truncate">
-                          {course.colleges?.length || 0}
+                          {course.collegeCount ?? course.colleges?.length ?? 0}
                         </span>
                       </div>
 
@@ -2236,13 +2435,13 @@ const HERO_TAGS = [
                     </div>
 
                     {/* Footer */}
-                 <div className="flex justify-between items-center pt-2 border-t">
+                 <div className="mt-auto flex min-h-[44px] items-center justify-between gap-3 border-t pt-2">
 
-                      <button className="text-[#0A225A] text-[10px] md:text-[12px] font-semibold hover:underline">
+                      <button className="text-[#0A225A] text-[10px] md:text-[12px] font-semibold hover:underline whitespace-nowrap">
                         Course Overview →
                       </button>
 
-                      <button className="bg-green-500 text-white px-2 py-2 rounded-full text-[8px] md:text-[11px] font-semibold hover:bg-green-600">
+                      <button className="shrink-0 rounded-full bg-green-500 px-3 py-2 text-[8px] font-semibold text-white hover:bg-green-600 md:text-[11px]">
                         View Details
                       </button>
                     </div>
@@ -2760,7 +2959,7 @@ const HERO_TAGS = [
           <section className="py-24 sm:py-32 px-4 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">Our <span className="text-[orange]">Alumni</span> Success</h2>
+            <h2 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">Our <span className="text-[#f4a71d]">Alumni</span> Success</h2>
             <p className="text-slate-500 mt-5 text-base sm:text-xl">Students from our partner schools now at top global firms.</p>
           </div>
           <SuccessCarousel testimonials={TESTIMONIALS} />

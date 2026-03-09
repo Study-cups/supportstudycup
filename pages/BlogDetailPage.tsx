@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import EditorRenderer from "./EditorRenderer";
+const toBlogSlug = (blog: any) =>
+  blog.title
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^\w\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
 
-const BlogDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+const BlogDetailPage: React.FC<{ blogs: any[] }> = ({ blogs }) => {
+
+  const { blogSlug } = useParams<{ blogSlug: string }>();
+  const id = blogSlug; // Assuming slug is unique and can be used as ID for fetching
   const navigate = useNavigate();
 
   const [blog, setBlog] = useState<any>(null);
@@ -11,34 +20,41 @@ const BlogDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+  if (!blogSlug || !Array.isArray(blogs) || blogs.length === 0) return;
 
-    const fetchBlog = async () => {
-      try {
-        const res = await fetch(`https://studycupsbackend-wb8p.onrender.com/api/blogs/${id}`);
-        const json = await res.json();
+  const matchedBlog = blogs.find(
+    (b) => toBlogSlug(b) === blogSlug
+  );
+
+  if (!matchedBlog) {
+    setBlog(null);
+    setLoading(false);
+    return;
+  }
+
+  const fetchBlogById = async () => {
+    try {
+      const res = await fetch(
+        `https://studycupsbackend-wb8p.onrender.com/api/blogs/${matchedBlog.id}`
+      );
+      const json = await res.json();
+
+      if (json.success) {
         setBlog(json.data);
-      } catch (err) {
-        console.error("Blog fetch error", err);
+      } else {
+        setBlog(null);
       }
-    };
+    } catch (err) {
+      console.error("Blog API Error", err);
+      setBlog(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const fetchRelated = async () => {
-      try {
-        const res = await fetch("https://studycupsbackend-wb8p.onrender.com/api/blogs");
-        const json = await res.json();
-      const filtered = json.data.filter((b: any) => String(b.id) !== id);
+  fetchBlogById();
+}, [blogSlug, blogs]);
 
-        setRelatedBlogs(filtered.slice(0, 5));
-      } catch (err) {
-        console.error("Related blogs error", err);
-      }
-    };
-
-    Promise.all([fetchBlog(), fetchRelated()]).finally(() =>
-      setLoading(false)
-    );
-  }, [id]);
 
   if (loading) {
     return <p className="text-center py-32">Loading blog...</p>;

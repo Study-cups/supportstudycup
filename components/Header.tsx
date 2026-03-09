@@ -1,6 +1,6 @@
 import React, { useState , useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import type { View, College } from "../types";
+import type { College } from "../types";
 
 
 
@@ -18,24 +18,18 @@ const toSeoSlug = (text: string) =>
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-"); 
 
-const normalize = (text?: string | null) => {
-  if (!text) return "";
-
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/\([^)]*\)/g, "")
-    .replace(/[^a-z0-9]/g, "");
-};
-
-const Header: React.FC<HeaderProps> = ({ onOpenApplyNow  , colleges}) => {
+const Header: React.FC<HeaderProps> = ({ onOpenApplyNow  , colleges ,exams}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
   const [showCoursesMenu, setShowCoursesMenu] = useState(false);
+  const [showCollegesMenu, setShowCollegesMenu] = useState(false);
   // ===== MEGA MENU STATE =====
 const [menuCourses, setMenuCourses] = useState<any[]>([]);
 const [menuColleges, setMenuColleges] = useState<any[]>([]);
 const [menuExams, setMenuExams] = useState<any[]>([]);
+const [collegeMenuColleges, setCollegeMenuColleges] = useState<any[]>([]);
+const [collegeMenuCourses, setCollegeMenuCourses] = useState<any[]>([]);
+const [collegeMenuExams, setCollegeMenuExams] = useState<any[]>([]);
 const [loadingMenu, setLoadingMenu] = useState(false);
 
 // simple cache to avoid repeat calls
@@ -58,6 +52,49 @@ const COURSE_REGEX_MAP: Record<string, RegExp> = {
   "MCA": /(mca|computer application)/i,
   "B.Ed": /(b\.?\s?ed|education)/i,
 };
+const COURSE_EXAM_MAP: Record<string, string[]> = {
+  "MBA / PGDM": ["CAT", "XAT", "CMAT", "MAT", "GMAT"],
+  "B.E / B.Tech": ["JEE Main", "JEE Advanced", "GATE"],
+  "MBBS": ["NEET"],
+  "BCA": ["CUET"],
+  "B.Com": ["CUET"],
+  "B.Sc": ["CUET"],
+  "BA": ["CUET"],
+  "BBA": ["CUET"],
+  "M.E / M.Tech": ["GATE"],
+  "MCA": ["NIMCET"],
+  "B.Ed": ["CUET"],
+};
+const COURSE_CATEGORY_MAP: Record<string, string> = {
+  "B.E / B.Tech": "engineering",
+  "MBA / PGDM": "management",
+  "MBBS": "medical",
+  "BCA": "engineering",
+  "B.Com": "commerce",
+  "B.Sc": "science",
+  "BA": "arts",
+  "BBA": "management",
+  "M.E / M.Tech": "engineering",
+  "MCA": "engineering",
+  "B.Ed": "education",
+};
+
+const getExamsForCourse = (courseName: string) => {
+  const allowedExams = COURSE_EXAM_MAP[courseName];
+  if (!allowedExams || !Array.isArray(exams)) return [];
+
+  return exams
+    .filter((exam: any) =>
+      allowedExams.some(key =>
+        exam.name?.toLowerCase().includes(key.toLowerCase())
+      )
+    )
+    .map((exam: any) => ({
+      id: exam.id,
+      name: exam.name,
+      year: exam.year,
+    }));
+};
 
 
 
@@ -65,22 +102,97 @@ const [activeCourse, setActiveCourse] = useState<{
   name: string;
   stream: string;
 } | null>(null);  
+const [activeCollege, setActiveCollege] = useState<any | null>(null);
+const collegeLookupById = useMemo(() => {
+  const resultMap = new Map<number, any>();
+
+  colleges.forEach((college: any) => {
+    if (!college?.id || resultMap.has(college.id)) return;
+    resultMap.set(college.id, college);
+  });
+
+  return resultMap;
+}, [colleges]);
+
+const allMenuColleges = useMemo(() => {
+  const resultMap = new Map<number, any>();
+
+  colleges.forEach((college: any) => {
+    if (!college?.id || !college?.name || resultMap.has(college.id)) return;
+
+    resultMap.set(college.id, {
+      id: college.id,
+      name: college.name,
+      logoUrl: college.logoUrl,
+    });
+  });
+
+  return Array.from(resultMap.values());
+}, [colleges]);
+
+const allMenuExams = useMemo(() => {
+  const resultMap = new Map<string | number, any>();
+
+  if (!Array.isArray(exams)) return [];
+
+  exams.forEach((exam: any) => {
+    const examKey = exam?.id ?? `${exam?.name}-${exam?.year ?? ""}`;
+    if (!exam?.name || resultMap.has(examKey)) return;
+
+    resultMap.set(examKey, {
+      id: exam.id,
+      name: exam.name,
+      year: exam.year,
+    });
+  });
+
+  return Array.from(resultMap.values());
+}, [exams]);
+
 const getMenuCourses = () => {
   return Object.keys(COURSE_REGEX_MAP).map(name => ({
     name,
-    stream: "all",
+    stream: COURSE_CATEGORY_MAP[name] || "general",
   }));
 };
+
+const getMatchableCourseValues = (college: any) => {
+  const rawCourses = Array.isArray(college?.rawScraped?.courses)
+    ? college.rawScraped.courses
+    : [];
+  const listedCourses = Array.isArray(college?.courses) ? college.courses : [];
+  const fullTimeCourses = Array.isArray(college?.rawScraped?.courses_full_time)
+    ? college.rawScraped.courses_full_time
+    : [];
+
+  return [
+    college?.stream,
+    ...rawCourses.map((course: any) => course?.name || course?.course_name),
+    ...listedCourses.map((course: any) => course?.name || course?.course_name),
+    ...fullTimeCourses.map(
+      (course: any) => course?.name || course?.course_name || course?.title
+    ),
+  ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+};
+
 React.useEffect(() => {
   if (!showCoursesMenu) return;
 
   // frontend se hi courses set karo
   setMenuCourses(getMenuCourses());
+  setActiveCourse(null);
+  setMenuColleges(allMenuColleges);
+  setMenuExams(allMenuExams);
+}, [showCoursesMenu, allMenuColleges, allMenuExams]);
 
-  // initial colleges empty rakho
-  setMenuColleges([]);
-  setMenuExams([]);
-}, [showCoursesMenu]);
+React.useEffect(() => {
+  if (!showCollegesMenu) return;
+
+  setActiveCollege(null);
+  setCollegeMenuColleges(allMenuColleges);
+  setCollegeMenuCourses(getMenuCourses());
+  setCollegeMenuExams(allMenuExams);
+}, [showCollegesMenu, allMenuColleges, allMenuExams]);
 
 const getCollegesForCourse = (courseName: string) => {
   const regex = COURSE_REGEX_MAP[courseName];
@@ -89,12 +201,9 @@ const getCollegesForCourse = (courseName: string) => {
   const resultMap = new Map<number, any>();
 
   colleges.forEach((college: any) => {
-    const courseArr = college.rawScraped?.courses;
-    if (!Array.isArray(courseArr)) return;
+    const matchableValues = getMatchableCourseValues(college);
 
-    const matched = courseArr.some((c: any) =>
-      regex.test(c.name?.toLowerCase())
-    );
+    const matched = matchableValues.some((value) => regex.test(value.toLowerCase()));
 
     if (matched && !resultMap.has(college.id)) {
       resultMap.set(college.id, {
@@ -105,34 +214,74 @@ const getCollegesForCourse = (courseName: string) => {
     }
   });
 
-  return Array.from(resultMap.values()).slice(0, 12);
+  return Array.from(resultMap.values());
 };
+
+const getCoursesForCollege = (college: any) => {
+  const matchableValues = getMatchableCourseValues(college);
+  const matchedCourses = getMenuCourses().filter((course) =>
+    matchableValues.some((value) =>
+      COURSE_REGEX_MAP[course.name]?.test(value.toLowerCase())
+    )
+  );
+
+  const uniqueCourses = matchedCourses.filter(
+    (course, index, array) => array.findIndex((item) => item.name === course.name) === index
+  );
+
+  if (uniqueCourses.length > 0) {
+    return uniqueCourses;
+  }
+
+  if (typeof college?.stream === "string" && college.stream.trim()) {
+    return [
+      {
+        name: college.stream.trim(),
+        stream: COURSE_CATEGORY_MAP[college.stream.trim()] || "general",
+      },
+    ];
+  }
+
+  return [];
+};
+
+const getExamsForCollege = (college: any) => {
+  const resultMap = new Map<string | number, any>();
+
+  getCoursesForCollege(college).forEach((course) => {
+    getExamsForCourse(course.name).forEach((exam) => {
+      const examKey = exam?.id ?? `${exam?.name}-${exam?.year ?? ""}`;
+      if (resultMap.has(examKey)) return;
+
+      resultMap.set(examKey, exam);
+    });
+  });
+
+  return Array.from(resultMap.values());
+};
+
+
+
 
 
 const handleCourseHover = (course: { name: string; stream: string }) => {
   setActiveCourse(course);
 
-  const collegesMatched = getCollegesForCourse(course.name);
+  const collegesMatched = getCollegesForCourse(course.name); 
+  const examsMatched = getExamsForCourse(course.name); // ✅ ADD 
+
 
   setMenuColleges(collegesMatched);
-  setMenuExams([]); // exams optional
+  setMenuExams(examsMatched); // ✅ ADD 
 };
 
+const handleCollegeHover = (college: any) => {
+  const sourceCollege = collegeLookupById.get(college?.id) || college;
 
-React.useEffect(() => {
-  if (!showCoursesMenu) return;
-  if (menuCourses.length === 0) return;
-  if (activeCourse) return; // already selected
-
-  const firstCourse = menuCourses[0];
-
-  setActiveCourse(firstCourse);
-
-  const defaultColleges = getCollegesForCourse(firstCourse.name);
-  setMenuColleges(defaultColleges);
-  setMenuExams([]);
-}, [showCoursesMenu, menuCourses]);
-
+  setActiveCollege(sourceCollege);
+  setCollegeMenuCourses(getCoursesForCollege(sourceCollege));
+  setCollegeMenuExams(getExamsForCollege(sourceCollege));
+};
 
  const tabClass = (path: string) =>
   `relative pb-1 transition ${
@@ -140,8 +289,6 @@ React.useEffect(() => {
       ? "text-[#0F2D52] font-bold after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-[#0F2D52]"
       : "text-[#0F2D52] hover:text-[#062042]"
   }`;
-const streamSlug = normalize(activeCourse?.name); // example: mba
-
 const CoursesMegaMenu = () => {
   return (
     <div
@@ -163,26 +310,28 @@ const CoursesMegaMenu = () => {
         <div>
           <p className="font-bold text-[#0F2D52] mb-3">Courses</p>
 
-          {menuCourses.map(course => (
-            <p
-              key={course.name}
-              onMouseEnter={() => handleCourseHover(course)} 
-              
-             onClick={() =>
-  navigate(
-  `/courses/${streamSlug}/${toSeoSlug(course.name)}`
-)
-}
+          <div className="max-h-[360px] overflow-y-auto pr-1">
+            {menuCourses.map(course => (
+              <p
+                key={course.name}
+                onMouseEnter={() => handleCourseHover(course)} 
+                
+               onClick={() =>
+    navigate(
+    `/courses/${course.stream}/${toSeoSlug(course.name)}`
+  )
+  }
 
-              className={`text-sm py-1.5 cursor-pointer ${
-                activeCourse?.name === course.name
-                  ? "text-[#1E4A7A] font-semibold"
-                  : "text-slate-700 hover:text-[#1E4A7A]"
-              }`}
-            >
-              {course.name}
-            </p>
-          ))}
+                className={`text-sm py-1.5 cursor-pointer ${
+                  activeCourse?.name === course.name
+                    ? "text-[#1E4A7A] font-semibold"
+                    : "text-slate-700 hover:text-[#1E4A7A]"
+                }`}
+              >
+                {course.name}
+              </p>
+            ))}
+          </div>
 
           <button
             onClick={() => navigate("/courses")}
@@ -195,38 +344,55 @@ const CoursesMegaMenu = () => {
         {/* COLLEGES */}
         <div>
           <p className="font-bold text-[#0F2D52] mb-3">
-            {activeCourse ? "Colleges" : "Top Colleges"}
+            {activeCourse ? "Colleges" : "All Colleges"}
           </p>
 
-          {menuColleges.map(college => (
-            <p
-              key={college.id}
-           onClick={() =>
-  navigate(
-    `/university/${college.id}-${toSeoSlug(college.name)}`
-  )
-}
+          <div className="max-h-[360px] overflow-y-auto pr-1">
+            {menuColleges.length > 0 ? (
+              menuColleges.map(college => (
+                <p
+                  key={college.id}
+               onClick={() =>
+      navigate(
+        `/university/${college.id}-${toSeoSlug(college.name)}`
+      )
+    }
 
-              className="text-sm text-slate-700 py-1.5 cursor-pointer hover:text-[#1E4A7A]"
-            >
-              {college.name}
-            </p>
-          ))}
+                  className="text-sm text-slate-700 py-1.5 cursor-pointer hover:text-[#1E4A7A]"
+                >
+                  {college.name}
+                </p>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">No colleges found</p>
+            )}
+          </div>
         </div>
 
         {/* EXAMS */}
         <div>
-          <p className="font-bold text-[#0F2D52] mb-3">Exams</p>
+          <p className="font-bold text-[#0F2D52] mb-3">
+            {activeCourse ? "Exams" : "All Exams"}
+          </p>
 
-          {menuExams.map(exam => (
-            <p
-              key={exam.id}
-              onClick={() => navigate(`/exams/${exam.id}`)}
-              className="text-sm text-slate-700 py-1.5 cursor-pointer hover:text-[#1E4A7A]"
-            >
-              {exam.name}
-            </p>
-          ))}
+          <div className="max-h-[360px] overflow-y-auto pr-1">
+            {menuExams.length > 0 ? (
+              menuExams.map(exam => (
+                <p
+                  key={exam.id}
+                 onClick={() =>
+      navigate(`/exams/${toSeoSlug(exam.name)}${exam.year ? `-${exam.year}` : ""}`)
+    }
+
+                  className="text-sm text-slate-700 py-1.5 cursor-pointer hover:text-[#1E4A7A]"
+                >
+                  {exam.name}
+                </p>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">No exams found</p>
+            )}
+          </div>
         </div>
 
         {/* CTA */}
@@ -238,13 +404,115 @@ const CoursesMegaMenu = () => {
             Predict colleges based on your rank & score
           </p>
           <button
-            onClick={() => navigate("/predictor")}
+            onClick={() => navigate("/compare")}
             className="w-full bg-[#1E4A7A] text-white py-2 rounded-lg text-sm font-semibold hover:bg-[#163a63]"
           >
             Try Predictor →
           </button>
         </div>
 
+      </div>
+    </div>
+  );
+};
+
+const CollegesMegaMenu = () => {
+  return (
+    <div
+      className="
+        absolute left-1/2 top-full mt-4
+        -translate-x-1/2
+        w-[860px]
+        bg-white
+        rounded-2xl
+        shadow-[0_25px_60px_rgba(0,0,0,0.18)]
+        border border-slate-200
+        z-50
+        p-6
+      "
+    >
+      <div className="grid grid-cols-3 gap-6">
+        <div>
+          <p className="font-bold text-[#0F2D52] mb-3">Colleges</p>
+
+          <div className="max-h-[360px] overflow-y-auto pr-1">
+            {collegeMenuColleges.length > 0 ? (
+              collegeMenuColleges.map((college) => (
+                <p
+                  key={college.id}
+                  onMouseEnter={() => handleCollegeHover(college)}
+                  onClick={() =>
+                    navigate(`/university/${college.id}-${toSeoSlug(college.name)}`)
+                  }
+                  className={`text-sm py-1.5 cursor-pointer ${
+                    activeCollege?.id === college.id
+                      ? "text-[#1E4A7A] font-semibold"
+                      : "text-slate-700 hover:text-[#1E4A7A]"
+                  }`}
+                >
+                  {college.name}
+                </p>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">No colleges found</p>
+            )}
+          </div>
+
+          <button
+            onClick={() => navigate("/colleges")}
+            className="mt-3 text-sm text-blue-600 font-semibold"
+          >
+            View All Colleges
+          </button>
+        </div>
+
+        <div>
+          <p className="font-bold text-[#0F2D52] mb-3">
+            {activeCollege ? "Related Courses" : "All Courses"}
+          </p>
+
+          <div className="max-h-[360px] overflow-y-auto pr-1">
+            {collegeMenuCourses.length > 0 ? (
+              collegeMenuCourses.map((course) => (
+                <p
+                  key={course.name}
+                  onClick={() =>
+                    navigate(`/courses/${course.stream}/${toSeoSlug(course.name)}`)
+                  }
+                  className="text-sm text-slate-700 py-1.5 cursor-pointer hover:text-[#1E4A7A]"
+                >
+                  {course.name}
+                </p>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">No courses found</p>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <p className="font-bold text-[#0F2D52] mb-3">
+            {activeCollege ? "Exams" : "All Exams"}
+          </p>
+
+          <div className="max-h-[360px] overflow-y-auto pr-1">
+            {collegeMenuExams.length > 0 ? (
+              collegeMenuExams.map((exam) => (
+                <p
+                  key={exam.id}
+                  onClick={() =>
+                    navigate(`/exams/${toSeoSlug(exam.name)}${exam.year ? `-${exam.year}` : ""}`)
+                  }
+                  className="text-sm text-slate-700 py-1.5 cursor-pointer hover:text-[#1E4A7A]"
+                >
+                  {exam.name}
+                </p>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">No exams found</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -303,16 +571,33 @@ const CoursesMegaMenu = () => {
               Home
             </button>
 
-            <button
-              onClick={() => navigate("/colleges")}
-              className={tabClass("/colleges")+" cursor-pointer"}
+            <div
+              className="relative"
+              onMouseEnter={() => {
+                setShowCollegesMenu(true);
+                setShowCoursesMenu(false);
+              }}
+              onMouseLeave={() => {
+                setShowCollegesMenu(false);
+                setActiveCollege(null);
+              }}
             >
-              Colleges
-            </button>
+              <button
+                onClick={() => navigate("/colleges")}
+                className={tabClass("/colleges")+" cursor-pointer"}
+              >
+                Colleges
+              </button>
+
+              {showCollegesMenu && <CollegesMegaMenu />}
+            </div>
 
 <div
   className="relative"
-  onMouseEnter={() => setShowCoursesMenu(true)}
+  onMouseEnter={() => {
+    setShowCoursesMenu(true);
+    setShowCollegesMenu(false);
+  }}
   onMouseLeave={() => {
     setShowCoursesMenu(false);
     setActiveCourse(null);
@@ -377,7 +662,7 @@ const CoursesMegaMenu = () => {
 
             <button
               onClick={onOpenApplyNow}
-              className="bg-[#1E4A7A] text-white px-4 py-2 rounded-full font-semibold hover:bg-[orange]"
+              className="bg-[#1E4A7A] text-white px-4 py-2 rounded-full font-semibold hover:bg-[#f4a71d]"
             >
               Apply Now
             </button>

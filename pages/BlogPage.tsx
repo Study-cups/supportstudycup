@@ -80,7 +80,16 @@ const FeedbackSection = () => (
       </form>
     </div>
   </section>
-);
+); 
+
+const toBlogSlug = (blog: any) =>
+  blog.title
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^\w\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+
 
 /* ===================== MAIN PAGE ===================== */
 
@@ -196,7 +205,8 @@ const BlogPage: React.FC = () => {
   {articles.map(article => (
     <article
       key={article._id}
-      onClick={() => navigate(`/blog/${article.id}`)}
+      onClick={() => navigate(`/blog/${toBlogSlug(article)}`)}
+
       className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300"
     >
       {/* IMAGE */}

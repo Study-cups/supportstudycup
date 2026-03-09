@@ -132,17 +132,14 @@ const rankingText =
         </div>
 
         {/* FEES */}
-        <p className="text-blue-600 font-semibold text-sm mt-1">
-          ₹
-         {college.rawScraped?.feesRange?.min
-  ? Number(college.rawScraped.feesRange.min).toLocaleString("en-IN")
-  : "N/A"}
+      <p className="text-blue-600 font-semibold text-sm mt-1">
+  ₹
+  {college.feesRange?.min
+    ? Number(college.feesRange.min).toLocaleString("en-IN")
+    : "N/A"}
+  <span className="text-slate-500 font-normal"> / year</span>
+</p>
 
-          <span className="text-slate-500 font-normal">
-            {" "}
-            / year
-          </span>
-        </p>
 
       <p className="text-[12px] text-slate-500 mt-2 truncate">
   Ranked {rankingText}

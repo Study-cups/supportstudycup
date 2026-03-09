@@ -3,8 +3,10 @@ import type { View, College } from "../types";
 import { getCollegeImages } from "../collegeImages";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import FlexibleBlockRenderer from './FlexibleBlockRenderer'
-import {  toCourseSlug } from "./Seo"
+import { toCourseSlug, toSeoSlug } from "./Seo"
+import { Helmet } from "react-helmet-async"
 
 import {
   Monitor,
@@ -39,9 +41,76 @@ const FACILITY_ICON_MAP: Record<string, React.ReactNode> = {
   classrooms: <Users size={16} />
 };
 
+const TAB_SLUG_TO_KEY: Record<string, string> = {
+  basic: "basic",
+  info: "basic",
+  "courses-fees": "Courses & Fees",
+  admission: "admission",
+  placement: "placement",
+  cutoff: "cutoff",
+  scholarship: "scholarship",
+  ranking: "ranking",
+  faculty: "faculty",
+  qna: "qna",
+  reviews: "reviews",
+  gallery: "gallery"
+};
+
+const TAB_KEY_TO_SLUG: Record<string, string> = {
+  basic: "",
+  "Courses & Fees": "courses-fees",
+  admission: "admission",
+  placement: "placement",
+  cutoff: "cutoff",
+  scholarship: "scholarship",
+  ranking: "ranking",
+  faculty: "faculty",
+  qna: "qna",
+  reviews: "reviews",
+  gallery: "gallery"
+};
+
+const normalizeCollegeSlugSource = (text: string = "") => {
+  if (!text) return "";
+
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+
+  const withoutDescription =
+    normalized.split(/\s+(?:is|was|has|have|offers?|offering|ranked|established|founded|approved|affiliated|located|admission|note)\b/i)[0]?.trim() ||
+    normalized;
+
+  const firstChunk = withoutDescription.split(/[|,:;]+/)[0]?.trim() || withoutDescription;
+  return firstChunk.replace(/[-\s|,:;]+$/g, "").trim();
+};
+
+const extractCollegeNameFromAbout = (aboutText: string = "") => {
+  const cleaned = normalizeCollegeSlugSource(aboutText);
+  if (cleaned.length < 6) return "";
+  return cleaned;
+};
+
+const buildCollegeCodePrefix = (shortName: string = "") => {
+  const words = shortName
+    .replace(/\([^)]*\)/g, "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length < 2) return "";
+
+  const first = words[0].replace(/[^A-Za-z]/g, "");
+  const second = words[1].replace(/[^A-Za-z]/g, "");
+
+  if (!first || first !== first.toUpperCase() || first.length < 2) return "";
+  if (!second) return first.toLowerCase();
+
+  return `${first.toLowerCase()}${second[0].toLowerCase()}`;
+};
+
 
 interface DetailPageProps {
-  colleges: College[];
+
   compareList: string[];
   onCompareToggle: (id: string) => void;
   onOpenApplyNow: () => void;
@@ -326,7 +395,7 @@ const renderRankingCell = (value: any) => {
 
 
 const DetailPage: React.FC<DetailPageProps> = ({
-  colleges,
+
   compareList,
   onCompareToggle,
   setView,
@@ -334,18 +403,19 @@ const DetailPage: React.FC<DetailPageProps> = ({
   onOpenBrochure
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [activeTab, setActiveTab] = useState("basic");
   const [detail, setDetail] = useState<CollegeDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  const [suggestedColleges, setSuggestedColleges] = useState<College[]>([]);
+  const [courseOfferingColleges, setCourseOfferingColleges] = useState<College[]>([]);
+  const [loadingCourseOfferingColleges, setLoadingCourseOfferingColleges] = useState(false);
   const [showFullOverview, setShowFullOverview] = useState(false);
   const [newsOpen, setNewsOpen] = useState<boolean[]>([]);
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [showAllExpired, setShowAllExpired] = useState(false);
 
-  const upcoming = detail?.rawScraped?.important_dates?.upcoming_events || [];
-  const expired = detail?.rawScraped?.important_dates?.expired_events || [];
+ 
   const [showAllHighlights, setShowAllHighlights] = useState(false);
   const [showVisited, setShowVisited] = useState(false);
   const [showAllFeeNotes, setShowAllFeeNotes] = useState(false);
@@ -355,30 +425,51 @@ const DetailPage: React.FC<DetailPageProps> = ({
   const [showAllLikes, setShowAllLikes] = useState(false);
   const [showAllDislikes, setShowAllDislikes] = useState(false);
   const [showAllStudentLikes, setShowAllStudentLikes] = useState(false);
-  const [showAllStudentDislikes, setShowAllStudentDislikes] = useState(false); 
+  const [showAllStudentDislikes, setShowAllStudentDislikes] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [activeImage, setActiveImage] = useState<string | null>(null);
+  const [activeSubTab, setActiveSubTab] = useState(0);
+  const [courses, setCourses] = useState<any[]>([]);
+const [loadingCourses, setLoadingCourses] = useState(false);
 
 
 
-  const { collegeIdSlug } = useParams<{ collegeIdSlug: string }>();
+  const { collegeIdSlug, courseSlug } = useParams<{ collegeIdSlug: string; courseSlug?: string }>();
+  const [college, setCollege] = useState<any>(null);
+  const [loadingCollege, setLoadingCollege] = useState(true);
+  const isCourseRoute = location.pathname.includes("/course/");
 
-// URL example:
-// /university/25946-iiml-indian-institute-of-management-lucknow
-const collegeId = useMemo(() => {
-  if (!collegeIdSlug) return null;
-  return collegeIdSlug.split("-")[0]; // 🔥 ID always first
-}, [collegeIdSlug]);
+  const tabFromRoute = useMemo(() => {
+    if (!courseSlug || isCourseRoute) return null;
+    return TAB_SLUG_TO_KEY[courseSlug.toLowerCase()] || null;
+  }, [courseSlug, isCourseRoute]);
 
- 
+  const activeCourseSlug = useMemo(() => {
+    if (!courseSlug) return "";
+    if (isCourseRoute) return courseSlug;
+    if (tabFromRoute) return "";
+    return courseSlug;
+  }, [courseSlug, isCourseRoute, tabFromRoute]);
+
+
+  // URL example:
+  // /university/25946-iiml-indian-institute-of-management-lucknow
+  const collegeId = useMemo(() => {
+    if (!collegeIdSlug) return null;
+    return Number(collegeIdSlug.split("-")[0]);
+    // 🔥 ID always first
+  }, [collegeIdSlug]);
+
+
   const id = collegeId;
 
-  const college = useMemo(
-    () => colleges.find(c => String(c.id) === String(id)),
-    [colleges, id]
-  );
 
 
+ const upcoming =
+  college?.admission?.important_dates?.important_events || [];
+
+const expired =
+  college?.admission?.important_dates?.expired_events || [];
 
   const descriptionBlocks = useMemo(() => {
     return normalizeDescription(
@@ -426,7 +517,55 @@ const collegeId = useMemo(() => {
   const handleBack = () => {
     navigate(-1); // previous page (college listing)
   };
+ 
 
+useEffect(() => {
+  if (tabFromRoute) {
+    setActiveTab(tabFromRoute);
+    return;
+  }
+
+  if (activeCourseSlug) {
+    setActiveTab("Courses & Fees");
+    return;
+  }
+
+  setActiveTab("basic");
+}, [tabFromRoute, activeCourseSlug]);
+
+useEffect(() => {
+
+  if (activeTab !== "Courses & Fees") return;
+  if (!collegeId) return;
+
+  const loadCourses = async () => {
+
+    try {
+
+      setLoadingCourses(true);
+
+      const res = await fetch(
+        `https://studycupsbackend-wb8p.onrender.com/api/college-course/college/${collegeId}`
+      );
+
+      const json = await res.json();
+
+      if (json.success && json.data?.length) {
+  setCourses(json.data[0].courses || []);
+}
+console.log("COURSE API RESPONSE:", json);
+
+    } catch (err) {
+      console.error("Courses API error", err);
+    } finally {
+      setLoadingCourses(false);
+    }
+
+  };
+
+  loadCourses();
+
+}, [activeTab, collegeId]);
 
   const sliceForMobile = (arr: string[], count = 5) =>
     arr.slice(0, count);
@@ -438,15 +577,15 @@ const collegeId = useMemo(() => {
 
 
 
-const openLightbox = (img: string) => {
-  setActiveImage(img);
-  setLightboxOpen(true);
-};
+  const openLightbox = (img: string) => {
+    setActiveImage(img);
+    setLightboxOpen(true);
+  };
 
-const closeLightbox = () => {
-  setLightboxOpen(false);
-  setActiveImage(null);
-};
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+    setActiveImage(null);
+  };
 
 
 
@@ -459,11 +598,6 @@ const closeLightbox = () => {
       setQnaOpen(Array(detail.rawScraped.qna.length).fill(false));
     }
   }, [detail]);
-
-  const getRandomColleges = (list: College[], count = 4) => {
-    const shuffled = [...list].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, count);
-  };
 
   const cleanedAboutText = useMemo(() => {
     const raw =
@@ -484,60 +618,327 @@ const closeLightbox = () => {
   const nonTextBlocks = descriptionBlocks.filter(b => b.type !== "text");
 
   useEffect(() => {
-    if (!college) return;
+    if (!activeCourseSlug) {
+      setCourseOfferingColleges([]);
+      setLoadingCourseOfferingColleges(false);
+      return;
+    }
 
-    const fetchSuggestedColleges = async () => {
-      try {
-        const res = await fetch(
-          "https://studycupsbackend-wb8p.onrender.com/api/colleges"
+    let isCancelled = false;
+
+    const getRawValue = (value: any): string => {
+      if (typeof value === "string") return value;
+      if (value && typeof value === "object") return value.value || "";
+      return "";
+    };
+
+    const courseMatchesSlug = (items: any[] = []) =>
+      items.some((courseItem: any) => {
+        if (courseItem?.slug_url === activeCourseSlug) return true;
+
+        const subCourses = Array.isArray(courseItem?.sub_courses)
+          ? courseItem.sub_courses
+          : [];
+
+        return subCourses.some(
+          (subCourse: any) => getRawValue(subCourse?.slug_url) === activeCourseSlug
         );
-        const json = await res.json();
+      });
 
-        if (json.success) {
-          const filtered = json.data.filter(
-            (c: College) => c.id !== college.id
+    const fetchCourseOfferingColleges = async () => {
+      try {
+        setLoadingCourseOfferingColleges(true);
+
+        const pageSize = 100;
+        const collegesRes = await fetch(`https://studycupsbackend-wb8p.onrender.com/api/colleges?page=1&limit=${pageSize}`);
+        const collegesJson = await collegesRes.json();
+        const firstPageColleges = Array.isArray(collegesJson?.data)
+          ? collegesJson.data.filter((item: College) => item?.id)
+          : [];
+        const totalColleges = Number(collegesJson?.total) || firstPageColleges.length;
+        const totalPages = Math.max(1, Math.ceil(totalColleges / pageSize));
+
+        let allColleges = firstPageColleges;
+
+        if (totalPages > 1) {
+          const remainingPages = await Promise.all(
+            Array.from({ length: totalPages - 1 }, async (_unused, index) => {
+              const page = index + 2;
+              const pageRes = await fetch(
+                `https://studycupsbackend-wb8p.onrender.com/api/colleges?page=${page}&limit=${pageSize}`
+              );
+              const pageJson = await pageRes.json();
+
+              return Array.isArray(pageJson?.data)
+                ? pageJson.data.filter((item: College) => item?.id)
+                : [];
+            })
           );
-          setSuggestedColleges(getRandomColleges(filtered, 4));
+
+          allColleges = [...firstPageColleges, ...remainingPages.flat()];
         }
+
+        const matchedResults = await Promise.allSettled(
+          allColleges.map(async (collegeSummary: College) => {
+            const coursesRes = await fetch(
+              `https://studycupsbackend-wb8p.onrender.com/api/college-course/college/${collegeSummary.id}`
+            );
+            const coursesJson = await coursesRes.json();
+            const docs = Array.isArray(coursesJson?.data) ? coursesJson.data : [];
+
+            const hasMatch = docs.some((doc: any) =>
+              courseMatchesSlug(Array.isArray(doc?.courses) ? doc.courses : [])
+            );
+
+            return hasMatch ? collegeSummary : null;
+          })
+        );
+
+        if (isCancelled) return;
+
+        const matchedColleges = matchedResults.flatMap((result) =>
+          result.status === "fulfilled" && result.value ? [result.value] : []
+        );
+
+        const uniqueColleges = matchedColleges.filter(
+          (item, index, array) => array.findIndex((entry) => entry.id === item.id) === index
+        );
+
+        uniqueColleges.sort((a, b) => {
+          if (a.id === college?.id) return -1;
+          if (b.id === college?.id) return 1;
+          return (a.name || "").localeCompare(b.name || "");
+        });
+
+        setCourseOfferingColleges(uniqueColleges);
       } catch (err) {
-        console.error(err);
+        console.error("Course offering colleges API error", err);
+        if (!isCancelled) {
+          setCourseOfferingColleges([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoadingCourseOfferingColleges(false);
+        }
       }
     };
 
-    fetchSuggestedColleges();
+    fetchCourseOfferingColleges();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeCourseSlug, college?.id]); 
+
+ const schema = college
+  ? {
+      "@context": "https://schema.org",
+      "@type": "CollegeOrUniversity",
+
+      name: college?.basic?.name || "",
+      url: typeof window !== "undefined" ? window.location.href : "",
+
+      logo: college?.basic?.logo || "",
+
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: college?.basic?.city || "",
+        addressRegion: college?.basic?.state || "",
+        addressCountry: "India"
+      },
+
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: college?.basic?.rating || 0,
+        reviewCount: college?.basic?.reviews || 0
+      }
+    }
+  : null;
+  // ================= NORMALIZATION LAYER =================
+  // Converts new MongoDB schema → old rawScraped shape
+  // UI WILL NOT CHANGE
+
+  const normalizedCollege = useMemo(() => {
+    if (!college) return null;
+
+    return {
+      ...college,
+
+      rawScraped: {
+        // BASIC
+        college_name: college?.basic?.name,
+        logo: college?.basic?.logo,
+
+        // ABOUT
+        about_text: college?.about?.value,
+
+        // ADMISSION
+        admission: college?.admission?.toc_sections || [],
+
+        // RANKING
+        ranking_data: college?.ranking?.toc_sections || [],
+
+        // PLACEMENT
+        placement: {
+          about: college?.placement?.about || [],
+          toc_sections: college?.placement?.toc_sections || []
+        },
+
+        // REVIEWS
+        reviews_data: college?.reviews_page || {},
+
+        // GALLERY
+        gallery: college?.gallery?.map(g => g.src) || [],
+
+        // QNA
+        questions_answers: college?.qna?.map(q => ({
+          question: q.question,
+          answer_text: Array.isArray(q.answers)
+            ? q.answers.flatMap(a => a.answer).join(" ")
+            : ""
+        })) || []
+      }
+    };
+
   }, [college]);
+const getTabHeading = () => {
+  const name = college?.basic?.name || "College";
+
+  switch (activeTab) {
+
+    case "basic":
+      return `${name}: Admission 2026, Fees, Courses, Cutoff, Ranking, Placement`;
+
+    case "admission":
+      return `${name} Course Admission 2026: Dates, Fees, Eligibility, Application Process, Selection Criteria`;
+
+    case "placement":
+      return `${name} Placement 2025: Highest Package, Average Package, Top Recruiters`;
+
+    case "cutoff":
+      return `${name} Cutoff 2025: Check Category-wise and Round-wise Cutoff`;
+
+    case "scholarship":
+      return `${name} Scholarship 2026`;
+
+    case "ranking":
+      return `${name} Ranking 2025`;
+
+    case "faculty":
+      return `${name} Faculty`;
+
+    case "qna":
+      return `${name} Verified Answers`;
+
+    case "gallery":
+      return `${name} Gallery`;
+    
+      case "reviews":
+        return `${name} Student Reviews`;
+      case "Courses & Fees":
+        return `${name} Courses and Fees 2026`;
+    default:
+      return `${name} : Admission 2026, Fees, Courses, Cutoff, Ranking, Placement`;
+  }
+};
+
+  const canonicalCollegeIdSlug = useMemo(() => {
+    if (!collegeId) return collegeIdSlug || "";
+
+    const aboutBasedName = extractCollegeNameFromAbout(
+      college?.basic?.about?.value ||
+      college?.about?.value ||
+      ""
+    );
+    const shortName = normalizeCollegeSlugSource(
+      college?.basic?.name || college?.name || ""
+    );
+    const prefixCode = buildCollegeCodePrefix(shortName);
+
+    const longNameSource = [
+      college?.basic?.full_name,
+      college?.full_name,
+      aboutBasedName,
+      normalizedCollege?.rawScraped?.college_name,
+      shortName
+    ]
+      .map((value) => normalizeCollegeSlugSource(typeof value === "string" ? value : ""))
+      .find(Boolean) || shortName;
+    const longNameSlug = toSeoSlug(longNameSource);
+
+    if (longNameSlug) {
+      const fullSlug =
+        prefixCode && !longNameSlug.startsWith(`${prefixCode}-`)
+          ? `${prefixCode}-${longNameSlug}`
+          : longNameSlug;
+      return `${collegeId}-${fullSlug}`;
+    }
+
+    const rawSlug = typeof college?.slug === "string" ? college.slug.trim() : "";
+    if (rawSlug) {
+      const cleaned = rawSlug.replace(/^\/+|\/+$/g, "").toLowerCase();
+      const parts = cleaned.match(/^(.*)--(\d+)$/);
+      const slugPart =
+        parts && Number(parts[2]) === collegeId
+          ? parts[1]
+          : cleaned.replace(/^\d+-/, "");
+
+      const normalizedSlugPart = toSeoSlug(slugPart);
+      if (normalizedSlugPart) {
+        return `${collegeId}-${normalizedSlugPart}`;
+      }
+    }
+
+    const currentSlugPart = collegeIdSlug?.split("-").slice(1).join("-") || "";
+    if (currentSlugPart) return `${collegeId}-${toSeoSlug(currentSlugPart)}`;
+    return String(collegeId);
+  }, [collegeId, collegeIdSlug, college?.slug, college?.basic?.about?.value, college?.about?.value, college?.basic?.full_name, college?.full_name, college?.basic?.name, college?.name, normalizedCollege?.rawScraped?.college_name]);
+
+  const baseCollegePath = useMemo(() => {
+    const resolvedSlug = canonicalCollegeIdSlug || collegeIdSlug || (collegeId ? String(collegeId) : "");
+    return resolvedSlug ? `/university/${resolvedSlug}` : "/university";
+  }, [canonicalCollegeIdSlug, collegeIdSlug, collegeId]);
+
+  const buildUniversityPath = (tabKey: string = "basic", nextCourseSlug?: string) => {
+    if (nextCourseSlug) {
+      return `${baseCollegePath}/course/${nextCourseSlug}`;
+    }
+
+    const tabSlug = TAB_KEY_TO_SLUG[tabKey] || "";
+    return tabSlug ? `${baseCollegePath}/${tabSlug}` : baseCollegePath;
+  };
+
+  useEffect(() => {
+    if (!collegeIdSlug || !canonicalCollegeIdSlug || collegeIdSlug === canonicalCollegeIdSlug) return;
+
+    const target = activeCourseSlug
+      ? `/university/${canonicalCollegeIdSlug}/course/${activeCourseSlug}`
+      : tabFromRoute
+        ? buildUniversityPath(tabFromRoute)
+        : `/university/${canonicalCollegeIdSlug}`;
+
+    navigate(target, { replace: true });
+  }, [collegeIdSlug, canonicalCollegeIdSlug, activeCourseSlug, tabFromRoute, navigate]);
 
 
-  const slug = useMemo(() => {
-    if (!college?.name) return "";
-
-    return college.name
-      .toLowerCase()
-      .replace(/\([^)]*\)/g, "")
-      .replace(/[^a-z0-9\s-]/g, "")
-      .trim()
-      .replace(/\s+/g, "-");
-  }, [college?.name]);
-
-
-  const isCompared = college
-    ? compareList.includes(college.id)
+  const isCompared = normalizedCollege
+    ? compareList.includes(String(normalizedCollege.id))
     : false;
 
 
   const placementPercentage = useMemo(() => {
-    const highest = Number(college?.placements?.highestPackage);
-    const average = Number(college?.placements?.averagePackage);
+    const highest = Number(normalizedCollege?.placements?.highestPackage);
+    const average = Number(normalizedCollege?.placements?.averagePackage);
 
     if (!highest || !average) return null;
 
     return Math.round((average / highest) * 100);
-  }, [college]);
+  }, [normalizedCollege]);
 
   const alumni = useMemo(() => {
     const raw =
       detail?.rawScraped?.placement?.alumni ||
-      college?.rawScraped?.placement?.alumni ||
+      normalizedCollege?.rawScraped?.placement?.alumni ||
       [];
 
     if (!Array.isArray(raw)) return [];
@@ -553,47 +954,173 @@ const closeLightbox = () => {
         };
       })
       .filter(Boolean);
-  }, [detail, college]);
-
+  }, [detail, normalizedCollege]);
 
 
 
   useEffect(() => {
-    if (!college?.id) return;
+    if (!collegeId) return;
 
-    const load = async () => {
-      setLoading(true);
+    const loadCollege = async () => {
       try {
+        setLoadingCollege(true);
+
         const res = await fetch(
-          `https://studycupsbackend-wb8p.onrender.com/api/colleges/${college.id}`
+          `https://studycupsbackend-wb8p.onrender.com/api/colleges/${collegeId}`
         );
+
         const json = await res.json();
-        if (json.success) setDetail(json.data);
+
+        if (json.success) {
+          setCollege(json.data);
+          setDetail(json.data); // full rawScraped etc
+        }
+
       } catch (err) {
-        console.error(err);
+        console.error("Detail fetch error", err);
       } finally {
-        setLoading(false);
+        setLoadingCollege(false);
       }
     };
 
-    load();
-  }, [college]);
+    loadCollege();
+  }, [collegeId]);
+
+
 
 
   const handleDownloadBrochure = (collegeId: number) => {
     window.open(
-      `https://studycupsbackend-production.up.railway.app/api/colleges/${collegeId}/brochure`,
+      `https://studycupsbackend-wb8p.onrender.com/api/colleges/${collegeId}/brochure`,
       "_blank"
     );
   };
 
-  const tabs = [
-    "Overview",
+  const MAIN_TABS = [
+    "basic",
     "Courses & Fees",
-    "Placements",
-    "Reviews",
-    "Gallery",
+    "admission",
+    "placement",
+    "cutoff",
+    "scholarship",
+    "ranking",
+    "faculty",
+    "qna",
+    "reviews",
+    "gallery"
   ];
+
+  const TAB_PLACEHOLDER_VALUES = new Set([
+    "n/a",
+    "na",
+    "not available",
+    "null",
+    "undefined",
+  ]);
+
+  const hasMeaningfulText = (value: unknown) => {
+    if (typeof value !== "string") return false;
+    const normalized = value.trim().toLowerCase();
+    return !!normalized && !TAB_PLACEHOLDER_VALUES.has(normalized);
+  };
+
+  const hasTabContentValue = (value: any): boolean => {
+    if (Array.isArray(value)) {
+      return value.some((item) => hasTabContentValue(item));
+    }
+
+    if (typeof value === "string") {
+      return hasMeaningfulText(value);
+    }
+
+    if (typeof value === "number") {
+      return Number.isFinite(value) && value > 0;
+    }
+
+    if (value && typeof value === "object") {
+      if ("value" in value) {
+        return hasTabContentValue(value.value);
+      }
+
+      return Object.values(value).some((item) => hasTabContentValue(item));
+    }
+
+    return false;
+  };
+
+  const hasStructuredTabContent = (section: any) => {
+    if (!section || typeof section !== "object") return false;
+
+    return (
+      [
+        section?.about,
+        section?.about_highlights,
+        section?.about_highlight,
+        section?.about_highligh,
+      ].some((item) => hasTabContentValue(item)) ||
+      (Array.isArray(section?.toc_sections) &&
+        section.toc_sections.some((item: any) => hasTabContentValue(item?.content)))
+    );
+  };
+
+  const getFirstDisplayText = (...values: any[]) => {
+    for (const value of values) {
+      if (Array.isArray(value)) {
+        const match = value.find((item) =>
+          typeof item === "string" ? hasMeaningfulText(item) : false
+        );
+        if (typeof match === "string") return match.trim();
+        continue;
+      }
+
+      if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+        return String(value);
+      }
+
+      if (typeof value === "string" && hasMeaningfulText(value)) {
+        return value.trim();
+      }
+    }
+
+    return "";
+  };
+
+  const availableTabs = MAIN_TABS.filter((key) => {
+    if (key === "Courses & Fees") return true;
+    if (key === "basic") return true;
+    if (key === "reviews") {
+      return (
+        hasTabContentValue(college?.reviews_page?.overall_rating?.score) ||
+        hasTabContentValue(college?.reviews_page?.category_ratings) ||
+        hasTabContentValue(college?.reviews_page?.what_students_say?.likes) ||
+        hasTabContentValue(college?.reviews_page?.what_students_say?.dislikes) ||
+        hasTabContentValue(college?.reviews_page?.gallery)
+      );
+    }
+
+    if (key === "gallery") return hasTabContentValue(college?.gallery);
+    if (key === "faculty") return hasTabContentValue(college?.faculty?.members);
+    if (key === "qna") return hasTabContentValue(college?.qna);
+    if (key === "placement") {
+      return (
+        hasStructuredTabContent(college?.placement) ||
+        hasTabContentValue(detail?.rawScraped?.placement) ||
+        hasTabContentValue(detail?.rawScraped?.courses_full_time) ||
+        hasTabContentValue(detail?.rawScraped?.info_facilities) ||
+        hasTabContentValue(detail?.rawScraped?.info_faculty)
+      );
+    }
+
+    if (key === "ranking") {
+      return (
+        hasStructuredTabContent(college?.ranking) ||
+        hasTabContentValue(detail?.rawScraped?.ranking_data)
+      );
+    }
+
+    return hasStructuredTabContent(college?.[key]);
+  });
+
 
   const ratingDistribution = [
     { stars: 5, percent: 62 },
@@ -611,99 +1138,452 @@ const closeLightbox = () => {
     return [];
   }, [detail?.rawScraped?.ranking_data]);
 
- const deriveStream = (courseName: string) => {
-  const name = courseName.toLowerCase();
- 
+  const deriveStream = (courseName: string) => {
+    const name = courseName.toLowerCase();
 
 
 
-  /* ---------- DOCTORAL ---------- */
-  if (
-    name.includes("ph.d") ||
-    name.includes("phd") ||
-    name.includes("post doctoral") ||
-    name.includes("doctoral")
-  ) {
-    return "Doctoral";
-  }
 
-  /* ---------- MANAGEMENT ---------- */
-  if (
-    name.includes("mba") ||
-    name.includes("pgdm") ||
-    name.includes("management") ||
-    name.includes("leadership") ||
-    name.includes("strategy") ||
-    name.includes("executive")
-  ) {
-    return "Management";
-  }
+    /* ---------- DOCTORAL ---------- */
+    if (
+      name.includes("ph.d") ||
+      name.includes("phd") ||
+      name.includes("post doctoral") ||
+      name.includes("doctoral")
+    ) {
+      return "Doctoral";
+    }
 
-  /* ---------- ENGINEERING / TECH ---------- */
-  if (
-    name.includes("b.tech") ||
-    name.includes("btech") ||
-    name.includes("engineering") ||
-    name.includes("technology") ||
-    name.includes("data science") ||
-    name.includes("artificial intelligence") ||
-    name.includes("machine learning") ||
-    name.includes("computer") ||
-    name.includes("m.sc") ||
-    name.includes("msc")
-  ) {
-    return "Engineering";
-  }
+    /* ---------- MANAGEMENT ---------- */
+    if (
+      name.includes("mba") ||
+      name.includes("pgdm") ||
+      name.includes("management") ||
+      name.includes("leadership") ||
+      name.includes("strategy") ||
+      name.includes("executive")
+    ) {
+      return "Management";
+    }
 
-  /* ---------- MEDICAL ---------- */
-  if (
-    name.includes("mbbs") ||
-    name.includes("medical") ||
-    name.includes("healthcare")
-  ) {
-    return "Medical";
-  }
+    /* ---------- ENGINEERING / TECH ---------- */
+    if (
+      name.includes("b.tech") ||
+      name.includes("btech") ||
+      name.includes("engineering") ||
+      name.includes("technology") ||
+      name.includes("data science") ||
+      name.includes("artificial intelligence") ||
+      name.includes("machine learning") ||
+      name.includes("computer") ||
+      name.includes("m.sc") ||
+      name.includes("msc")
+    ) {
+      return "Engineering";
+    }
 
-  /* ---------- COMMERCE ---------- */
-  if (
-    name.includes("b.com") ||
-    name.includes("commerce") ||
-    name.includes("account") ||
-    name.includes("finance")
-  ) {
-    return "Commerce";
-  }
+    /* ---------- MEDICAL ---------- */
+    if (
+      name.includes("mbbs") ||
+      name.includes("medical") ||
+      name.includes("healthcare")
+    ) {
+      return "Medical";
+    }
 
-  /* ---------- ARTS / SOCIAL ---------- */
-  if (
-    name.includes("arts") ||
-    name.includes("humanities") ||
-    name.includes("social")
-  ) {
-    return "Arts";
-  }
+    /* ---------- COMMERCE ---------- */
+    if (
+      name.includes("b.com") ||
+      name.includes("commerce") ||
+      name.includes("account") ||
+      name.includes("finance")
+    ) {
+      return "Commerce";
+    }
 
-  return "General";
-};
-const getCategorySlugFromStream = (courseName: string) => {
-  return deriveStream(courseName)
-    .toLowerCase()
-    .replace(/\s+/g, "-");
-};
+    /* ---------- ARTS / SOCIAL ---------- */
+    if (
+      name.includes("arts") ||
+      name.includes("humanities") ||
+      name.includes("social")
+    ) {
+      return "Arts";
+    }
+
+    return "General";
+  };
+  const getCategorySlugFromStream = (courseName: string) => {
+    return deriveStream(courseName)
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+  };
+  const safeArray = (value: any) => (Array.isArray(value) ? value : []);
+
+  const mergeBasicBlocks = (basic: any) => {
+    return [
+      ...safeArray(basic?.about),
+      ...safeArray(basic?.about_highlight),
+      ...safeArray(basic?.about_highligh), // typo safe
+      ...safeArray(
+        basic?.toc_sections?.flatMap((s: any) => safeArray(s?.content))
+      ),
+    ];
+  };
+  const normalizeBlock = (block: any) => {
+    if (!block) return null;
+
+    // Determine block type
+    const blockType = block.type || block.format;
+
+    if (!blockType) return null;
+
+    // TEXT
+    if (blockType === "text") {
+      return {
+        type: "text",
+        value: block.value || "",
+      };
+    }
+
+    // LIST
+    if (blockType === "list") {
+      return {
+        type: "list",
+        value: block.value || block.items || [],
+      };
+    }
+
+    // TABLE
+    if (blockType === "table") {
+      return {
+        type: "table",
+        value: block.value || [],
+      };
+    }
 
 
+    // IMAGE
+    if (blockType === "image") {
+      return {
+        type: "image",
+        src: block.src || block.value || "",
+      };
+    }
+    
+    // VIDEO
+if (blockType === "video") {
+  return {
+    type: "video",
+    src: block.src || block.value || "",
+  };
+}
+// HEADING
+if (blockType === "heading") {
+  return {
+    type: "heading",
+    value: block.value || "",
+    level: block.level || "h3",
+  };
+}
+    return null;
+  };
+
+  const normalizeBlocksArray = (data: any) => {
+    if (!data) return [];
+
+    // If single object (like your about)
+    if (!Array.isArray(data)) {
+      const normalized = normalizeBlock(data);
+      return normalized ? [normalized] : [];
+    }
+
+    // If already array
+    return data
+      .map((b: any) => normalizeBlock(b))
+      .filter(Boolean);
+  };
+  const mergeBlocks = (section: any) => [
+    ...(section?.about ?? []),
+    ...(section?.toc_sections?.flatMap((s: any) => s.content) ?? []),
+  ];
+  const slugify = (text: string) =>
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+  const getTextValue = (value: any) => {
+    if (typeof value === "string") return value;
+    if (value && typeof value === "object") return value.value || "";
+    return "";
+  };
+
+  const getMetricValue = (value: any) => {
+    if (typeof value === "number") return String(value);
+    return getTextValue(value);
+  };
+
+  const getSubCourseMetricFallback = (
+    subCourse: any,
+    parentCourse: any,
+    metric: "rating" | "reviews"
+  ) => {
+    const directValue = getMetricValue(subCourse?.[metric]).trim();
+    if (directValue) return directValue;
+
+    const parentSections = Array.isArray(parentCourse?.course_detail?.toc_sections)
+      ? parentCourse.course_detail.toc_sections
+      : [];
+    const parentContent = parentSections.flatMap((section: any) =>
+      Array.isArray(section?.content) ? section.content : []
+    );
+    const subCourseUrl = getMetricValue(subCourse?.url).trim();
+    const subCourseSlug = getMetricValue(subCourse?.slug_url).trim();
+
+    const linkIndex = parentContent.findIndex((item: any) => {
+      if (item?.type !== "link" || typeof item?.href !== "string") return false;
+      if (subCourseUrl && item.href === subCourseUrl) return true;
+      if (subCourseSlug && item.href.includes(subCourseSlug)) return true;
+      return false;
+    });
+
+    if (linkIndex >= 0) {
+      const nextBlocks = parentContent.slice(linkIndex + 1, linkIndex + 4);
+
+      if (metric === "rating") {
+        const ratingBlock = nextBlocks.find((item: any) => {
+          const text = getMetricValue(item?.value || item).trim();
+          return /^\d+(\.\d+)?$/.test(text);
+        });
+
+        if (ratingBlock) {
+          return getMetricValue(ratingBlock?.value || ratingBlock).trim();
+        }
+      }
+
+      if (metric === "reviews") {
+        const reviewBlock = nextBlocks.find((item: any) => {
+          const text = getMetricValue(item?.label || item?.value || item).trim();
+          return /reviews?/i.test(text);
+        });
+
+        if (reviewBlock) {
+          const reviewText = getMetricValue(
+            reviewBlock?.label || reviewBlock?.value || reviewBlock
+          ).trim();
+          const reviewMatch = reviewText.match(/([\d.]+\s*[kK]?)/);
+
+          if (reviewMatch?.[1]) {
+            return reviewMatch[1].replace(/\s+/g, "");
+          }
+        }
+      }
+    }
+
+    return getMetricValue(parentCourse?.[metric]).trim();
+  };
+
+  const isLikelyAuthorMeta = (text: string) => {
+    return /(updated|strategist|editor|author|content|team|months|month|days|day|years|year|ago)/i.test(
+      text || ""
+    );
+  };
+
+  const extractAuthorProfile = (content: any[] = []) => {
+    if (!Array.isArray(content) || !content.length) {
+      return {
+        author: null,
+        remainingContent: content,
+      };
+    }
+
+    const imageIndex = content.findIndex(
+      (b: any) => b?.type === "image" && typeof b?.src === "string" && b.src.trim()
+    );
+
+    if (imageIndex === -1) {
+      return {
+        author: null,
+        remainingContent: content,
+      };
+    }
+
+    const imageBlock = content[imageIndex];
+    const nextBlock = content[imageIndex + 1];
+    const nextNextBlock = content[imageIndex + 2];
+
+    const nameText = getTextValue(nextBlock?.value || nextBlock);
+    const metaText = getTextValue(nextNextBlock?.value || nextNextBlock);
+
+    const hasProfileKeywordInUrl = /(profile|author|avatar|user)/i.test(imageBlock?.src || "");
+    const looksLikeName = !!nameText && nameText.length <= 80;
+    const looksLikeMeta = !!metaText && isLikelyAuthorMeta(metaText);
+
+    const isAuthorProfile = hasProfileKeywordInUrl || (looksLikeName && looksLikeMeta);
+
+    if (!isAuthorProfile) {
+      return {
+        author: null,
+        remainingContent: content,
+      };
+    }
+
+    const remainingContent = content.filter(
+      (_: any, idx: number) => idx !== imageIndex && idx !== imageIndex + 1 && idx !== imageIndex + 2
+    );
+
+    return {
+      author: {
+        image: imageBlock?.src || "",
+        name: nameText,
+        meta: metaText,
+      },
+      remainingContent,
+    };
+  };
+
+  const selectedCourse = useMemo(() => {
+    if (!activeCourseSlug) return null;
+
+    for (const course of courses) {
+      if (course?.slug_url === activeCourseSlug) return course;
+
+      const subCourses = Array.isArray(course?.sub_courses) ? course.sub_courses : [];
+      const subCourse = subCourses.find(
+        (sc: any) => getTextValue(sc?.slug_url) === activeCourseSlug
+      );
+
+      if (subCourse) {
+        return {
+          ...subCourse,
+          course_name: getTextValue(subCourse?.name) || course?.course_name,
+          rating: getTextValue(subCourse?.rating) || course?.rating,
+          reviews: getTextValue(subCourse?.reviews) || course?.reviews,
+          total_fees: getTextValue(subCourse?.fees) || course?.total_fees,
+          application_date:
+            getTextValue(subCourse?.application_date) || course?.application_date,
+          course_detail: subCourse?.course_detail || course?.course_detail,
+        };
+      }
+    }
+
+    return null;
+  }, [courses, activeCourseSlug]);
 
   const renderTabContent = () => {
     switch (activeTab) {
       case "Courses & Fees":
-        const courseData = detail?.rawScraped?.courses?.length
-          ? detail.rawScraped.courses
-          : [];
-
+        const courseData = courses;
+         if (loadingCourses) {
+  return (
+    <div className="bg-white border rounded-xl p-6 text-center">
+      Loading courses...
+    </div>
+  );
+}
         return (
           <div className="space-y-6 ">
+            {activeCourseSlug && (
+              <div className="bg-white border rounded-2xl p-6 shadow-sm">
+                {selectedCourse ? (
+                  <div className="space-y-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="text-2xl font-bold text-blue-900">
+                          {selectedCourse.course_name}
+                        </h2>
 
-            {courseData.map((course: any, index: number) => (
+                        <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-600">
+                          {selectedCourse.rating && (
+                            <span className="font-semibold text-yellow-600">⭐ {selectedCourse.rating}</span>
+                          )}
+                          {selectedCourse.reviews && <span>{selectedCourse.reviews} Reviews</span>}
+                          {selectedCourse.duration && <span>{selectedCourse.duration}</span>}
+                          {selectedCourse.mode && <span>{selectedCourse.mode}</span>}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => navigate(buildUniversityPath("Courses & Fees"))}
+                        className="text-sm text-blue-600 hover:underline whitespace-nowrap"
+                      >
+                        View All Courses
+                      </button>
+                    </div>
+
+                    <div className="text-sm text-slate-700 space-y-1">
+                      {selectedCourse.eligibility && (
+                        <p>
+                          <span className="font-semibold text-slate-900">Eligibility:</span>{" "}
+                          {selectedCourse.eligibility}
+                        </p>
+                      )}
+                      {selectedCourse.application_date && (
+                        <p>
+                          <span className="font-semibold text-slate-900">Application Date:</span>{" "}
+                          {selectedCourse.application_date}
+                        </p>
+                      )}
+                      {selectedCourse.total_fees && (
+                        <p className="text-xl font-bold text-green-600">{selectedCourse.total_fees}</p>
+                      )}
+                    </div>
+
+                    {Array.isArray(selectedCourse?.course_detail?.toc_sections) &&
+                      selectedCourse.course_detail.toc_sections.map((section: any, idx: number) => (
+                        <div key={`${section?.section || "section"}-${idx}`} className="border rounded-xl p-4">
+                          <h3 className="text-lg font-bold text-slate-900 mb-3">
+                            {section?.section || "Details"}
+                          </h3>
+
+                          {(() => {
+                            const sectionContent = Array.isArray(section?.content) ? section.content : [];
+                            const { author, remainingContent } = extractAuthorProfile(sectionContent);
+
+                            return (
+                              <div className="space-y-4">
+                                {author && (
+                                  <div className="flex items-center gap-3">
+                                    {author.image ? (
+                                      <img
+                                        src={author.image}
+                                        alt={author.name || "Author"}
+                                        className="h-10 w-10 rounded-full object-cover border"
+                                        loading="lazy"
+                                      />
+                                    ) : (
+                                      <div className="h-10 w-10 rounded-full bg-slate-200" />
+                                    )}
+
+                                    <div className="leading-tight">
+                                      {author.name && (
+                                        <p className="text-base font-semibold text-[#f97316]">
+                                          {author.name}
+                                        </p>
+                                      )}
+                                      {author.meta && (
+                                        <p className="text-xs text-slate-600">{author.meta}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                <FlexibleBlockRenderer
+                                  blocks={normalizeBlocksArray(remainingContent)}
+                                />
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">Course detail not found for this college.</p>
+                )}
+              </div>
+            )}
+   
+            {!activeCourseSlug && courseData.map((course: any, index: number) => (
               <div
                 key={index}
                 className="
@@ -719,13 +1599,12 @@ const getCategorySlugFromStream = (courseName: string) => {
               >
                 {/* Course Name */}
                 <h3
-                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        const categorySlug = getCategorySlugFromStream(course.name);
-                                        const courseSlug = toCourseSlug(course.name);
-                                    
-                                        navigate(`/courses/${categorySlug}/${courseSlug}`);
-                                      }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const courseSlug = course?.slug_url || toCourseSlug(course?.course_name || "");
+                    if (!courseSlug) return;
+                    navigate(buildUniversityPath("Courses & Fees", courseSlug));
+                  }}
                   className="
     text-lg
     md:text-xl
@@ -735,7 +1614,7 @@ const getCategorySlugFromStream = (courseName: string) => {
     cursor-pointer
   "
                 >
-                  {course.name}
+                  {course.course_name}
                 </h3>
 
 
@@ -749,11 +1628,11 @@ const getCategorySlugFromStream = (courseName: string) => {
                   )}
 
                   {course.reviews && (
-                    <span>{course.reviews}</span>
+                    <span>{course.reviews} Reviews</span> 
                   )}
 
-                  {course.course_count && (
-                    <span>{course.course_count}</span>
+                  {course.sub_course_count && (
+                    <span>{course.sub_course_count} Sub-Courses</span>
                   )}
 
                   {course.duration && (
@@ -779,30 +1658,29 @@ const getCategorySlugFromStream = (courseName: string) => {
                       {course.eligibility || "N/A"}
                     </p>
 
-                    {course.application_dates && (
+                    {course.application_date && (
                       <p className="mt-1">
                         <span className="font-semibold text-slate-900">
                           Application Dates:
                         </span>{" "}
-                        {course.application_dates}
+                        {course.application_date}
                       </p>
                     )}
                   </div>
 
                   <div className="text-right">
                     <p className="text-xl font-bold text-green-600">
-                      {course.fees || "N/A"}
+                      {course.total_fees || "N/A"}
                     </p>
 
                     <p
                       className="text-xs text-blue-600 cursor-pointer hover:underline"
-                           onClick={(e) => {
-                                        e.stopPropagation();
-                                        const categorySlug = getCategorySlugFromStream(course.name);
-                                        const courseSlug = toCourseSlug(course.name);
-                                    
-                                        navigate(`/courses/${categorySlug}/${courseSlug}`);
-                                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const courseSlug = course?.slug_url || toCourseSlug(course?.course_name || "");
+                        if (!courseSlug) return;
+                        navigate(buildUniversityPath("Courses & Fees", courseSlug));
+                      }}
                     >
                       Check Detailed Fees ›
                     </p>
@@ -821,61 +1699,115 @@ const getCategorySlugFromStream = (courseName: string) => {
                     Apply Now
                   </button>
 
-                </div>
-                {course.sub_courses?.length > 0 && (
-                  <button
-                    onClick={() =>
-                      setOpenSubCourseIndex(
-                        openSubCourseIndex === index ? null : index
-                      )
-                    }
-                    className="mt-3 text-blue-600 text-sm font-semibold flex items-center gap-1"
-                  >
-                    {openSubCourseIndex === index ? "Hide" : "View"}{" "}
-                    {course.sub_courses.length} Courses
-                    <span className="text-xs">
-                      {openSubCourseIndex === index ? "▲" : "▼"}
-                    </span>
-                    {openSubCourseIndex === index &&
-                      course.sub_courses?.length > 0 && (
-                        <div className="mt-4 border rounded-xl overflow-hidden">
+                </div> 
+                
+              {course.sub_courses?.length > 0 && (
+  <div className="mt-4">
 
-                          <table className="w-full border-collapse text-sm">
-                            <thead className="bg-slate-100">
-                              <tr>
-                                <th className="border p-3 text-left font-semibold">
-                                  Specialisation
-                                </th>
-                                <th className="border p-3 text-right font-semibold">
-                                  Fees
-                                </th>
-                              </tr>
-                            </thead>
+    {/* Arrow toggle */}
+    <button
+      onClick={() =>
+        setOpenSubCourseIndex(
+          openSubCourseIndex === index ? null : index
+        )
+      }
+      className="text-blue-600 text-sm font-semibold flex items-center gap-1"
+    >
+      {openSubCourseIndex === index ? "Hide" : "View"}{" "}
+      {course.sub_courses.length} Courses
+      <span className="text-xs">
+        {openSubCourseIndex === index ? "▲" : "▼"}
+      </span>
+    </button>
 
-                            <tbody>
-                              {course.sub_courses.map((sc: any, i: number) => (
-                                <tr
-                                  key={i}
-                                  className="hover:bg-slate-50 transition"
-                                >
-                                  <td className="border p-3 text-slate-800">
-                                    {sc.name?.replace(/₹.*$/g, "").trim()}
-                                  </td>
+    {/* TABLE */}
+    {openSubCourseIndex === index && (
+      <div className="mt-4 border rounded-xl overflow-hidden">
 
-                                  <td className="border p-3 text-right font-semibold text-green-700">
-                                    {sc.fees || "—"}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+        <table className="w-full text-sm border-collapse">
 
-                        </div>
-                      )}
+          <thead className="bg-slate-100">
+            <tr>
+              <th className="border p-3 text-left font-semibold">
+  {course.course_name?.split("[")[0].trim()} Courses
+</th>
 
-                  </button>
+              <th className="border p-3 text-left font-semibold">
+                Fees
+              </th>
 
-                )}
+              <th className="border p-3 text-left font-semibold">
+                Application Date
+              </th>
+
+              <th className="border p-3 text-left font-semibold">
+                Cutoff
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {course.sub_courses.map((sc: any, i: number) => {
+              const subCourseRating = getSubCourseMetricFallback(sc, course, "rating");
+              const subCourseReviews = getSubCourseMetricFallback(sc, course, "reviews");
+
+              return (
+                <tr
+                key={i}
+                className="hover:bg-slate-50 transition"
+              >
+
+                {/* Course name */}
+                <td
+                  className="border p-3 text-blue-700 font-semibold cursor-pointer hover:underline"
+                  onClick={() => {
+                    const subCourseSlug = sc?.slug_url?.value || sc?.slug_url || "";
+                    if (!subCourseSlug) return;
+                    navigate(buildUniversityPath("Courses & Fees", subCourseSlug));
+                  }}
+                >
+                  {sc.name?.value || "—"}
+
+                  <div className="text-xs text-slate-500 mt-1">
+                    {`\u2605 ${subCourseRating || "\u2014"} (${subCourseReviews || 0} Reviews)`}
+                  </div>
+                </td>
+
+                {/* Fees */}
+                <td className="border p-3 font-semibold text-green-700">
+                  {sc.fees?.value || "—"}
+
+                  <div className="text-xs text-blue-600 cursor-pointer hover:underline">
+                    Check Details
+                  </div>
+                </td>
+
+                {/* Application date */}
+                <td className="border p-3">
+                  {sc.application_date?.value || "—"}
+                </td>
+
+                {/* Cutoff */}
+                <td className="border p-3">
+                  {sc.cutoff?.value || "—"}
+
+                  <div className="text-xs text-blue-600 cursor-pointer hover:underline">
+                    Check Details
+                  </div>
+                </td>
+
+                </tr>
+              );
+            })}
+          </tbody>
+
+        </table>
+
+      </div>
+    )}
+
+  </div>
+)}
 
               </div>
             ))}
@@ -1114,1674 +2046,866 @@ const getCategorySlugFromStream = (courseName: string) => {
           </div>
         );
 
+      case "admission": {
+        const admissionData = college?.admission ?? {};
 
-      case "Placements":
+        const aboutBlocks = [
+          ...normalizeBlocksArray(admissionData?.about),
+          ...normalizeBlocksArray(admissionData?.about_highlights),
+        ];
+
+        const tocSections = admissionData?.toc_sections ?? [];
 
         return (
-          <div className="bg-white rounded-2xl overflow-hiddenborder p-6 space-y-6">
 
-            {/* ================= ALUMNI DISTRIBUTION ================= */}
-            {alumni.length > 0 && (
-              <div className="bg-white rounded-2xl border p-6 mt-4 shadow-sm">
+          <div className="bg-white border rounded-2xl p-6 space-y-8">
 
-                <h4 className="text-xl font-bold mb-4 text-blue-900">
-                  Alumni Distribution by Sector
-                </h4>
-
-                {(() => {
-                  // Convert percentage strings to numbers
-                  const values = alumni.map((a: any) =>
-                    parseInt(a.percentage.replace("%", ""))
-                  );
-
-                  // find largest percentage
-                  const max = Math.max(...values);
-
-                  return (
-                    <div className="space-y-4">
-
-                      {alumni.map((item: any, i: number) => {
-
-                        const value = parseInt(item.percentage.replace("%", ""));
-                        const barWidth = (value / max) * 100;
-
-                        return (
-                          <div key={i}>
-
-                            {/* title + value */}
-                            <div className="flex justify-between text-sm font-semibold text-slate-800">
-                              <span>{item.sector}</span>
-                              <span className="text-blue-700">{item.percentage}</span>
-                            </div>
-
-                            {/* bar */}
-                            <div className="w-full bg-orange-200 h-2 rounded-full overflow-hidden mt-1">
-                              <div
-                                className="h-full bg-orange-600 rounded-full transition-all duration-700"
-                                style={{ width: `${barWidth}%` }}
-                              />
-                            </div>
-
-                          </div>
-                        );
-                      })}
-
-                    </div>
-                  );
-                })()}
-
-              </div>
+          
+          
+            {/* ABOUT SECTION */}
+            {aboutBlocks.length > 0 && (
+              <FlexibleBlockRenderer blocks={aboutBlocks} />
             )}
-
-
-            {/* ================= HIGHLIGHTS SECTION ================= */}
-            {college?.highlights?.length > 0 && (
-              <div className="bg-white rounded-2xl border p-6 shadow-sm">
-
-                <h4 className="text-xl font-bold mb-4 text-blue-900">
-                  Key Highlights
-                </h4>
-
-                {/* Highlight Boxes */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-                  {(showAllHighlights
-                    ? college.highlights
-                    : college.highlights.slice(0, 6)
-                  ).map((item: string, i: number) => (
-                    <div
-                      key={i}
-                      className="
-            flex items-start gap-3
-            bg-blue-50 border border-blue-200
-            rounded-xl
-            px-4 py-3
-            text-sm font-medium
-            text-slate-700
-            leading-snug
-            hover:shadow transition
-          "
-                    >
-                      <span
-                        className="
-              mt-1 w-2 h-2 rounded-full
-              bg-blue-600 flex-shrink-0
-            "
-                      />
-                      <p>{item.replace(/Read More/gi, "")}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* READ MORE / LESS BUTTON */}
-                {college.highlights.length > 6 && (
-                  <button
-                    onClick={() => setShowAllHighlights(!showAllHighlights)}
-                    className="mt-4 text-blue-700 font-semibold text-sm underline"
+              {/* TABLE OF CONTENTS */}
+              {tocSections.length > 0 && (
+              <div className="flex gap-4 flex-col pb-2 mb-6  bg-[#eee] border p-4 rounded-xl"> 
+              <h2 className="text-lg font-bold text-slate-900">Table of Contents</h2>
+                {tocSections.map((sec: any, i: number) => (
+                  <a
+                    key={i}
+                    href={`#${slugify(sec.section)}`}
+                    className="text-sm font-semibold whitespace-nowrap text-blue-600 hover:underline"
                   >
-                    {showAllHighlights ? "Read Less" : "Read More"}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* ================= Visited Companies ================= */}
-            {detail?.rawScraped?.placement?.companies?.length > 0 && (
-              <div className="bg-white rounded-2xl border p-6 mt-8 shadow-sm">
-
-                <h4 className="text-xl font-bold mb-4 text-blue-900">
-                  Companies That Visited Campus
-                </h4>
-
-                <div
-                  className="
-        grid grid-cols-2
-        sm:grid-cols-3
-        md:grid-cols-4
-        lg:grid-cols-6
-        gap-3
-      "
-                >
-                  {(showVisited
-                    ? detail.rawScraped.placement.companies
-                    : detail.rawScraped.placement.companies.slice(0, 12)
-                  ).map((name: string, i: number) => (
-                    <div
-                      key={i}
-                      className="
-    flex items-center justify-center
-    h-[72px]
-    px-3
-    text-center
-    rounded-xl
-    bg-white
-    border border-slate-200
-    text-[13px]
-    font-semibold
-    text-slate-800
-    shadow-sm
-    hover:shadow-md
-    hover:border-blue-400
-    transition
-    leading-snug 
-    overflow-y-auto no-scrollbar
-  "
-                    >
-                      {name}
-                    </div>
-                  ))}
-                </div>
-
-                {detail.rawScraped.placement.companies.length > 12 && (
-                  <button
-                    onClick={() => setShowVisited(!showVisited)}
-                    className="mt-4 text-blue-700 font-semibold text-sm underline"
-                  >
-                    {showVisited ? "View Less" : "View All"}
-                  </button>
-                )}
-
-              </div>
-            )}
-            {detail?.rawScraped?.admission?.length > 0 && (
-              <div className="bg-white border rounded-2xl p-6 mt-10 space-y-6">
-
-                {detail.rawScraped.admission.map((section: any, idx: number) => (
-                  <div key={idx} className="space-y-5">
-
-                    {/* ================= TITLE ================= */}
-                    <h3 className="text-xl font-bold text-blue-900">
-                      {section.title}
-                    </h3>
-
-                    {/* ================= PARAGRAPHS ================= */}
-                    {Array.isArray(section.paragraphs) && section.paragraphs.length > 0 && (
-                      <div
-                        className={`
-    space-y-3
-    text-sm
-    leading-relaxed
-    text-slate-600
-    break-words
-    overflow-hidden
-    ${showFullAdmissionText ? "" : "max-h-[160px]"}
-    md:max-h-none
-  `}
-                        style={{
-                          wordBreak: "break-word",
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-
-                        {(showFullAdmissionText
-                          ? section.paragraphs
-                          : sliceForMobile(section.paragraphs, 6)
-                        ).map((p: string, i: number) => (
-                          <p
-                            key={i}
-                            className="break-words"
-                            style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
-                          >
-                            {p}
-                          </p>
-
-                        ))}
-                      </div>
-                    )}
-
-                    {/* READ MORE – PARAGRAPH (MOBILE ONLY) */}
-                    {section.paragraphs?.length > 6 && (
-                      <button
-                        onClick={() => setShowFullAdmissionText(!showFullAdmissionText)}
-                        className="md:hidden text-blue-600 text-sm font-semibold"
-                      >
-                        {showFullAdmissionText ? "Read Less" : "Read More"}
-                      </button>
-                    )}
-
-                    {/* ================= BULLETS ================= */}
-                    {Array.isArray(section.bullets) && section.bullets.length > 0 && (
-                      <div className="space-y-2">
-
-                        <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
-                          {(showAllAdmissionBullets
-                            ? section.bullets
-                            : section.bullets.slice(0, 6)
-                          ).map((b: string, i: number) => (
-                            <li
-                              key={i}
-                              className="break-words"
-                              style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
-                            >
-                              {b}
-                            </li>
-
-                          ))}
-                        </ul>
-
-                        {section.bullets.length > 6 && (
-                          <button
-                            onClick={() => setShowAllAdmissionBullets(!showAllAdmissionBullets)}
-                            className="text-blue-600 text-sm font-semibold"
-                          >
-                            {showAllAdmissionBullets ? "View Less" : "View More"}
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {/* ================= TABLES ================= */}
-                    {Array.isArray(section.tables) && section.tables.length > 0 && (
-                      <div className="space-y-6">
-
-                        {section.tables.map((table: any[], tIndex: number) => {
-                          const headers = table[0];
-                          const rows = table.slice(1);
-
-                          return (
-                            <div
-                              key={tIndex}
-                              className="overflow-x-auto border rounded-xl"
-                            >
-                              <table className="w-full min-w-[700px] border-collapse text-sm">
-
-                                <thead className="bg-slate-100">
-                                  <tr>
-                                    {headers.map((h: string, i: number) => (
-                                      <th
-                                        key={i}
-                                        className="border p-3 text-left font-semibold text-slate-700"
-                                      >
-                                        {h}
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-
-                                <tbody>
-                                  {rows.map((row: string[], rIndex: number) => (
-                                    <tr
-                                      key={rIndex}
-                                      className="hover:bg-slate-50 transition"
-                                    >
-                                      {row.map((cell: string, cIndex: number) => (
-                                        <td
-                                          key={cIndex}
-                                          className="border p-3 text-slate-700"
-                                        >
-                                          {cell}
-                                        </td>
-                                      ))}
-                                    </tr>
-                                  ))}
-                                </tbody>
-
-                              </table>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                  </div>
+                    {sec.section}
+                  </a>
                 ))}
-
               </div>
             )}
 
+            {/* TOC SECTIONS */}
+          
+              {tocSections.map((section: any, index: number) => (
+  <div
+    key={index}
+    id={slugify(section.section)}
+    className="mt-8 scroll-mt-24"
+  >
 
+                {section?.section && (
+                  <h4 className="text-lg font-bold text-slate-900 mb-4">
+                    {section.section}
+                  </h4>
+                )}
+
+                <FlexibleBlockRenderer
+                  blocks={normalizeBlocksArray(section?.content)}
+                />
+
+              </div>
+            ))}
 
           </div>
-
-
         );
+      }
+    case "placement": {
+  const placementData = college?.placement ?? {};
 
-      case "Reviews":
-        return (
-          <div className="space-y-4">
-            {detail?.rawScraped?.reviews_data?.summary && (
-              <div className="bg-white border rounded-2xl p-6 mt-10">
+  const blocks = mergeBlocks(placementData);
 
-                <h3 className="text-xl font-bold mb-6 text-slate-900">
-                  What Students Say
-                </h3>
+  const tocSections = placementData?.toc_sections ?? [];
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  if (!blocks.length) {
+    return (
+      <div className="bg-white border rounded-2xl p-6">
+        <p className="text-slate-500 text-sm">
+          No placement data available.
+        </p>
+      </div>
+    );
+  }
 
-                  {/* ================= LIKES ================= */}
-                  {Array.isArray(detail.rawScraped.reviews_data.summary.likes) && (
-                    <div className="border border-green-200 bg-green-50 rounded-xl p-5">
+  return (
+    <div className="bg-white border rounded-2xl p-6">
 
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-green-600 text-lg">👍</span>
-                        <h4 className="font-semibold text-green-800">Likes</h4>
-                      </div>
+      {/* TABLE OF CONTENTS */}
+      {tocSections.length > 0 && (
+        <div className="flex gap-4 flex-col pb-2 mb-6 bg-[#eee] border p-4 rounded-xl">
+          <h2 className="text-lg font-bold text-slate-900">
+            Table of Contents
+          </h2>
 
-                      <ul className="space-y-2 text-sm text-slate-700">
-                        {sliceSix(
-                          detail.rawScraped.reviews_data.summary.likes,
-                          showAllLikes
-                        ).map((item: string, i: number) => (
-                          <li key={i} className="flex gap-2">
-                            <span className="text-green-600 font-bold">•</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
+          {tocSections.map((sec: any, i: number) => (
+            <a
+              key={i}
+              href={`#${slugify(sec.section)}`}
+              className="text-sm font-semibold text-blue-600 hover:underline"
+            >
+              {sec.section}
+            </a>
+          ))}
+        </div>
+      )}
 
-                      {detail.rawScraped.reviews_data.summary.likes.length > 6 && (
-                        <button
-                          onClick={() => setShowAllLikes(!showAllLikes)}
-                          className="mt-3 text-green-700 text-sm font-semibold"
-                        >
-                          {showAllLikes ? "Show Less" : "+ More"}
-                        </button>
-                      )}
-                    </div>
-                  )}
+     {placementData?.toc_sections?.map((section: any, index: number) => (
+  <div
+    key={index}
+    id={slugify(section.section)}
+    className="mt-8 scroll-mt-24"
+  >
+    {section.section && (
+      <h4 className="text-lg font-bold text-slate-900 mb-4">
+        {section.section}
+      </h4>
+    )}
 
-                  {/* ================= DISLIKES ================= */}
-                  {Array.isArray(detail.rawScraped.reviews_data.summary.dislikes) && (
-                    <div className="border border-red-200 bg-red-50 rounded-xl p-5">
+    <FlexibleBlockRenderer
+      blocks={normalizeBlocksArray(section?.content)}
+    />
+  </div>
+))}
 
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-red-600 text-lg">👎</span>
-                        <h4 className="font-semibold text-red-800">Dislikes</h4>
-                      </div>
+    </div>
+  );
+}
 
-                      <ul className="space-y-2 text-sm text-slate-700">
-                        {sliceSix(
-                          detail.rawScraped.reviews_data.summary.dislikes,
-                          showAllDislikes
-                        ).map((item: string, i: number) => (
-                          <li key={i} className="flex gap-2">
-                            <span className="text-red-600 font-bold">•</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
+      case "ranking": {
+  const rankingData = college?.ranking ?? {};
 
-                      {detail.rawScraped.reviews_data.summary.dislikes.length > 6 && (
-                        <button
-                          onClick={() => setShowAllDislikes(!showAllDislikes)}
-                          className="mt-3 text-red-700 text-sm font-semibold"
-                        >
-                          {showAllDislikes ? "Show Less" : "+ More"}
-                        </button>
-                      )}
-                    </div>
-                  )}
+  const tocSections = rankingData?.toc_sections ?? [];
 
-                </div>
+  return (
+    <div className="bg-white border rounded-2xl p-6 space-y-8">
 
-                {/* FOOT NOTE */}
-                <p className="text-xs text-slate-500 mt-4">
-                  These insights are automatically extracted from student reviews
-                </p>
+      {/* TABLE OF CONTENTS */}
+      {tocSections.length > 0 && (
+        <div className="flex gap-4 flex-col pb-2 mb-6 bg-[#eee] border p-4 rounded-xl">
+          <h2 className="text-lg font-bold text-slate-900">
+            Table of Contents
+          </h2>
 
+          {tocSections.map((sec: any, i: number) => (
+            <a
+              key={i}
+              href={`#${slugify(sec.section)}`}
+              className="text-sm font-semibold text-blue-600 hover:underline"
+            >
+              {sec.section}
+            </a>
+          ))}
+        </div>
+      )}
 
+      {/* RANKING SECTIONS */}
+      {tocSections.map((section: any, index: number) => (
+        <div
+          key={index}
+          id={slugify(section.section)}
+          className="mt-8 scroll-mt-24"
+        >
+          {section.section && (
+            <h4 className="text-lg font-bold text-slate-900 mb-4">
+              {section.section}
+            </h4>
+          )}
 
-              </div>
-            )}
+          <FlexibleBlockRenderer
+            blocks={normalizeBlocksArray(section?.content)}
+          />
+        </div>
+      ))}
 
-            <div className="bg-white border rounded-2xl shadow p-6">
+    </div>
+  );
+}
+     case "cutoff": {
+  const cutoffData = college?.cutoff ?? {};
 
-              {/* =============== Gallery Carousel =============== */}
-              <h3 className="text-xl font-bold mb-4">Campus Gallery</h3>
+  const aboutBlocks = normalizeBlocksArray(cutoffData?.about);
 
-              <div className="relative flex gap-4 overflow-hidden">
+  const tocSections = cutoffData?.toc_sections ?? [];
 
-                {detail?.gallery?.slice(0, 4).map((img, index) => (
-                  <img
-                    key={index}
-                    src={img}
-                    className="w-1/2 h-44 rounded-xl object-cover border"
-                  />
-                ))}
+  return (
+    <div className="bg-white border rounded-2xl p-6 space-y-8">
 
-              </div>
+      {/* INTRO / ABOUT */}
+      {aboutBlocks.length > 0 && (
+        <FlexibleBlockRenderer blocks={aboutBlocks} />
+      )}
 
-              {/* =============== Rating Title =============== */}
-              <div className="mt-6">
-                <p className="text-3xl font-bold text-slate-900">
-                  {detail?.rating || college.rating}
-                </p>
+      {/* TABLE OF CONTENTS (MIDDLE) */}
+      {tocSections.length > 0 && (
+        <div className="flex gap-4 flex-col pb-2 mb-6 bg-[#eee] border p-4 rounded-xl">
+          <h2 className="text-lg font-bold text-slate-900">
+            Table of Contents
+          </h2>
 
-                <p className="flex items-center gap-1 text-yellow-500 mt-1">
-                  {Array(5).fill(null).map((_, i) => (
-                    <span key={i}>
-                      {i < Math.round(college.rating) ? "★" : "☆"}
-                    </span>
-                  ))}
-                </p>
+          {tocSections.map((sec: any, i: number) => (
+            <a
+              key={i}
+              href={`#${slugify(sec.section)}`}
+              className="text-sm font-semibold text-blue-600 hover:underline"
+            >
+              {sec.section}
+            </a>
+          ))}
+        </div>
+      )}
 
-                <p
-                  className="text-blue-600 text-sm font-semibold underline cursor-pointer"
-                >
-                  ({college.reviewCount} Verified Reviews)
-                </p>
-              </div>
+      {/* SECTIONS */}
+      {tocSections.map((section: any, index: number) => (
+        <div
+          key={index}
+          id={slugify(section.section)}
+          className="mt-8 scroll-mt-24"
+        >
+          {section.section && (
+            <h4 className="text-lg font-bold text-slate-900 mb-4">
+              {section.section}
+            </h4>
+          )}
 
-              {/* =============== Rating Bars =============== */}
-              <div className="mt-6 space-y-3">
+          <FlexibleBlockRenderer
+            blocks={normalizeBlocksArray(section?.content)}
+          />
+        </div>
+      ))}
 
-                {ratingDistribution.map(item => (
-                  <div key={item.stars} className="flex items-center gap-3 text-sm text-slate-700">
+    </div>
+  );
+}
+      case "scholarship": {
+  const scholarshipData = college?.scholarship ?? {};
 
-                    <span className="w-8 font-semibold">{item.stars}★</span>
+  const aboutBlocks = normalizeBlocksArray(scholarshipData?.about);
 
-                    <div className="w-full h-2 bg-slate-200 rounded-full">
-                      <div
-                        className="h-full bg-yellow-500 rounded-full transition-all"
-                        style={{ width: `${item.percent}%` }}
-                      />
-                    </div>
+  const tocSections = scholarshipData?.toc_sections ?? [];
 
-                    <span className="w-16 text-right text-slate-500">
-                      ({item.percent}%)
-                    </span>
+  return (
+    <div className="bg-white border rounded-2xl p-6 space-y-8">
 
-                  </div>
-                ))}
+      {/* INTRO / ABOUT */}
+      {aboutBlocks.length > 0 && (
+        <FlexibleBlockRenderer blocks={aboutBlocks} />
+      )}
 
+      {/* TABLE OF CONTENTS (MIDDLE) */}
+      {tocSections.length > 0 && (
+        <div className="flex gap-4 flex-col pb-2 mb-6 bg-[#eee] border p-4 rounded-xl">
+          <h2 className="text-lg font-bold text-slate-900">
+            Table of Contents
+          </h2>
 
-              </div>
+          {tocSections.map((sec: any, i: number) => (
+            <a
+              key={i}
+              href={`#${slugify(sec.section)}`}
+              className="text-sm font-semibold text-blue-600 hover:underline"
+            >
+              {sec.section}
+            </a>
+          ))}
+        </div>
+      )}
 
-              {/* =============== Category Ratings =============== */}
-              <div className="mt-6 grid grid-cols-3 md:grid-cols-6 gap-4">
+      {/* SCHOLARSHIP SECTIONS */}
+      {tocSections.map((section: any, index: number) => (
+        <div
+          key={index}
+          id={slugify(section.section)}
+          className="mt-8 scroll-mt-24"
+        >
+          {section.section && (
+            <h4 className="text-lg font-bold text-slate-900 mb-4">
+              {section.section}
+            </h4>
+          )}
 
-                {Array.isArray(detail?.rawScraped?.rating_categories) &&
-                  detail.rawScraped.rating_categories.slice(0, 6).map((item: any, i: number) => (
-                    <div key={i} className="flex flex-col items-center p-2 text-center">
-                      <p className="text-[12px] text-slate-500">{item.label}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">
-                        {item.rating}★
-                      </p>
-                    </div>
-                  ))}
+          <FlexibleBlockRenderer
+            blocks={normalizeBlocksArray(section?.content)}
+          />
+        </div>
+      ))}
 
+    </div>
+  );
+}
+     case "faculty": {
+  const facultyMembers = college?.faculty?.members ?? [];
 
-              </div>
+  if (!facultyMembers.length) {
+    return (
+      <div className="bg-white border rounded-2xl p-6">
+        <p className="text-sm text-slate-500">
+          No faculty information available.
+        </p>
+      </div>
+    );
+  }
 
+  return (
+    <div className="bg-white border rounded-2xl p-6">
+
+      <h3 className="text-xl font-bold mb-6">
+        Faculty Members
+      </h3>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+
+        {facultyMembers.map((f: any, i: number) => (
+          <div
+            key={i}
+            className="border rounded-xl p-6 text-center shadow-sm hover:shadow-md transition bg-white"
+          >
+
+            {/* Avatar */}
+            <div className="w-16 h-16 mx-auto rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-lg">
+              {f.name?.charAt(0)}
             </div>
-            {detail?.rawScraped?.info_faculty?.length > 0 && (
-              <div className="bg-white border rounded-2xl p-6 mt-10">
-                <h3 className="text-xl font-bold mb-4 text-blue-900">
-                  Faculty
-                </h3>
 
-                {/* MOBILE: horizontal scroll | DESKTOP: grid */}
+            {/* Name */}
+            <p className="mt-4 font-semibold text-sm text-slate-900">
+              {f.name}
+            </p>
+
+            {/* Designation */}
+            <p className="text-xs text-slate-600 mt-1">
+              {f.designation || "Faculty Member"}
+            </p>
+
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
+
+
+  case "qna": {
+
+  const questions = college?.qna ?? [];
+
+  if (!questions.length) {
+    return (
+      <div className="bg-white border rounded-2xl p-6">
+        <p className="text-slate-500 text-sm">
+          No Q&A available.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+
+    <div className="space-y-6">
+
+      {questions.map((q: any, qi: number) => (
+
+        <div
+          key={qi}
+          className="bg-white border rounded-2xl p-6"
+        >
+
+          {/* QUESTION */}
+
+          <h3 className="text-lg font-bold text-blue-700 mb-6">
+            {q.question}
+          </h3>
+
+
+          {/* ANSWERS */}
+
+          <div className="space-y-8">
+
+            {q.answers?.map((ans: any, ai: number) => {
+
+              const initials =
+                ans.author?.charAt(0)?.toUpperCase() ?? "A";
+
+              return (
+
                 <div
-                  className="
-        flex gap-4  overflow-x-auto no-scrollbar pb-2
-        md:grid md:grid-cols-4 lg:grid-cols-5
-        md:overflow-visible
-      "
+                  key={ai}
+                  className="flex gap-4"
                 >
-                  {detail.rawScraped.info_faculty.map(
-                    (f: any, i: number) => (
-                      <div
-                        key={i}
-                        className="
-              min-w-[180px]
-              md:min-w-0
-              border rounded-xl
-              p-4
-              text-center
-              shadow-sm
-              hover:shadow-md
-              transition
-              bg-white
-            "
-                      >
-                        {/* Avatar */}
-                        <div
-                          className="
-                w-16 h-16
-                mx-auto
-                rounded-full
-                bg-slate-200
-                flex items-center justify-center
-                text-slate-500
-                font-bold
-                text-lg
-              "
-                        >
-                          {f.name?.charAt(0)}
-                        </div>
 
-                        {/* Name */}
-                        <p className="mt-3 font-semibold text-sm text-slate-900">
-                          {f.name}
-                        </p>
+                  {/* AUTHOR DP */}
 
-                        {/* Designation / Qualification */}
-                        <p className="text-xs text-slate-600 mt-1">
-                          {f.designation || f.qualification || "Faculty Member"}
-                        </p>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            )}
-            {detail?.rawScraped?.info_student_review && (
-              <div className="bg-white border rounded-2xl p-6 mt-10">
-
-                <h3 className="text-xl font-bold mb-6 text-slate-900">
-                  What Students Say
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                  {/* ================= LIKES ================= */}
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-5">
-
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-green-600 text-lg">👍</span>
-                      <h4 className="font-semibold text-green-800">
-                        Likes
-                      </h4>
-                    </div>
-
-                    <div className="space-y-4">
-                      {(showAllStudentLikes
-                        ? detail.rawScraped.info_student_review.likes
-                        : detail.rawScraped.info_student_review.likes.slice(0, 4)
-                      ).map((item: any, i: number) => (
-                        <ReviewCard
-                          key={i}
-                          content={item.content}
-                          username={item.username}
-                          color="green"
-                        />
-                      ))}
-                    </div>
-
-                    {detail.rawScraped.info_student_review.likes.length > 4 && (
-                      <button
-                        onClick={() => setShowAllStudentLikes(!showAllStudentLikes)}
-                        className="mt-4 text-green-700 font-semibold text-sm"
-                      >
-                        {showAllStudentLikes ? "Show Less" : "View More"}
-                      </button>
-                    )}
+                  <div
+                    className="
+                    h-10 w-10
+                    rounded-full
+                    bg-blue-600
+                    text-white
+                    flex items-center justify-center
+                    font-bold text-sm
+                  "
+                  >
+                    {initials}
                   </div>
 
-                  {/* ================= DISLIKES ================= */}
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-5">
 
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-red-600 text-lg">👎</span>
-                      <h4 className="font-semibold text-red-800">
-                        Dislikes
-                      </h4>
+                  {/* ANSWER BODY */}
+
+                  <div className="flex-1">
+
+                    {/* AUTHOR INFO */}
+
+                    <div className="mb-2">
+
+                      <p className="font-semibold text-slate-900 text-sm">
+                        {ans.author}
+                      </p>
+
+                      {ans.qualification && (
+                        <p className="text-xs text-slate-500">
+                          {ans.qualification}
+                        </p>
+                      )}
+
+                      {ans.posted_on && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          Answered on {ans.posted_on}
+                        </p>
+                      )}
+
                     </div>
 
-                    <div className="space-y-4">
-                      {(showAllStudentDislikes
-                        ? detail.rawScraped.info_student_review.dislikes
-                        : detail.rawScraped.info_student_review.dislikes.slice(0, 4)
-                      ).map((item: any, i: number) => (
-                        <ReviewCard
-                          key={i}
-                          content={item.content}
-                          username={item.username}
-                          color="red"
-                        />
+
+                    {/* ANSWER TEXT */}
+
+                    <div className="space-y-3 text-sm text-slate-700 leading-relaxed">
+
+                      {ans.answer?.map((para: string, pi: number) => (
+
+                        <p key={pi}>
+                          {para}
+                        </p>
+
                       ))}
+
                     </div>
 
-                    {detail.rawScraped.info_student_review.dislikes.length > 4 && (
-                      <button
-                        onClick={() => setShowAllStudentDislikes(!showAllStudentDislikes)}
-                        className="mt-4 text-red-700 font-semibold text-sm"
-                      >
-                        {showAllStudentDislikes ? "Show Less" : "View More"}
-                      </button>
-                    )}
                   </div>
 
                 </div>
 
-                <p className="text-xs text-slate-500 mt-5">
-                  Reviews are shared by verified students and alumni
+              );
+
+            })}
+
+          </div>
+
+        </div>
+
+      ))}
+
+    </div>
+
+  );
+}
+
+
+    case "reviews": {
+
+  const reviews = college?.reviews_page ?? {};
+
+  const overall = reviews?.overall_rating ?? {};
+  const categories = reviews?.category_ratings ?? {};
+  const say = reviews?.what_students_say ?? {};
+
+  const likes = say?.likes ?? [];
+  const dislikes = say?.dislikes ?? [];
+
+  /* ================= IMAGE LOGIC ================= */
+
+  const reviewImages = (() => {
+
+    const reviewGallery = reviews?.gallery ?? [];
+
+    if (Array.isArray(reviewGallery) && reviewGallery.length > 0) {
+      return reviewGallery.slice(0, 3);
+    }
+
+    const mainGallery =
+  college?.gallery ||
+  college?.rawScraped?.gallery ||
+  [];
+
+    if (Array.isArray(mainGallery)) {
+      return mainGallery.slice(0, 3);
+    }
+
+    return [];
+
+  })();
+
+
+  return (
+
+    <div className="space-y-8">
+
+      {/* ================= IMAGE SECTION ================= */}
+
+    {reviewImages.map((img: any, i: number) => {
+
+  const imageUrl =
+    typeof img === "string"
+      ? img
+      : img?.src || img?.url || "";
+
+  if (!imageUrl) return null;
+
+  return (
+    <img
+      key={i}
+      src={imageUrl}
+      alt="Campus"
+      className="h-[170px] w-full object-cover rounded-lg"
+    />
+  );
+
+})}
+
+      {/* ================= OVERALL RATING ================= */}
+
+      <div className="bg-white border rounded-2xl p-6">
+
+        <h3 className="text-xl text-red-600 font-bold mb-6">
+          Reviews & Rating
+        </h3>
+
+        <div className="flex items-center gap-6">
+
+          <div>
+            <p className="text-4xl font-bold text-slate-900">
+              {overall.score ?? "N/A"}
+            </p>
+
+            <p className="text-sm text-slate-600">
+              ({overall.total_reviews ?? 0} Verified Reviews)
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* ================= CATEGORY RATINGS ================= */}
+
+      {Object.keys(categories).length > 0 && (
+
+        <div className="bg-white border rounded-2xl p-6">
+
+          <h3 className="text-lg font-bold mb-4">
+            Category Ratings
+          </h3>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+            {Object.entries(categories).map(([label, rating], i) => (
+
+              <div
+                key={i}
+                className="border rounded-xl p-4 text-center"
+              >
+
+                <p className="text-sm text-slate-600">
+                  {label}
+                </p>
+
+                <p className="text-lg font-bold text-yellow-600 ">
+                  {rating} ★
                 </p>
 
               </div>
+
+            ))}
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {/* ================= WHAT STUDENTS SAY ================= */}
+
+      {(likes.length > 0 || dislikes.length > 0) && (
+
+        <div className="bg-white border rounded-2xl p-6">
+
+          <h3 className="text-lg font-bold mb-6">
+            What Students Say
+          </h3>
+
+          <div className="grid md:grid-cols-2 gap-6">
+
+            {/* LIKES */}
+
+            {likes.length > 0 && (
+
+              <div className="border border-green-200 bg-green-50 rounded-xl p-5">
+
+                <h4 className="font-semibold text-green-800 mb-3">
+                  👍 Likes
+                </h4>
+
+                <ul className="space-y-2 text-sm">
+
+                  {likes.slice(0, 5).map((item: string, i: number) => (
+
+                    <li key={i} className="flex gap-2">
+
+                      <span className="text-green-600">•</span>
+                      {item}
+
+                    </li>
+
+                  ))}
+
+                </ul>
+
+              </div>
+
+            )}
+
+            {/* DISLIKES */}
+
+            {dislikes.length > 0 && (
+
+              <div className="border border-red-200 bg-red-50 rounded-xl p-5">
+
+                <h4 className="font-semibold text-red-800 mb-3">
+                  👎 Dislikes
+                </h4>
+
+                <ul className="space-y-2 text-sm">
+
+                  {dislikes.slice(0, 5).map((item: string, i: number) => (
+
+                    <li key={i} className="flex gap-2">
+
+                      <span className="text-red-600">•</span>
+                      {item}
+
+                    </li>
+
+                  ))}
+
+                </ul>
+
+              </div>
+
             )}
 
           </div>
-        );
 
-      case "Gallery":
-  const images =
-    detail?.gallery?.length ? detail.gallery : getCollegeImages(slug);
+          <p className="text-xs text-slate-500 mt-4">
+            Insights automatically extracted from student reviews
+          </p>
+
+        </div>
+
+      )}
+
+    </div>
+  );
+}
+     case "gallery": {
+
+  const images = college?.gallery ?? [];
+
+  if (!images.length) {
+    return (
+      <div className="bg-white border rounded-2xl p-6">
+        <p className="text-slate-500 text-sm">
+          No gallery images available.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>
-      <div
-        className="
-          columns-2
-          md:columns-3
-          gap-4
-          space-y-4
-          pb-4
-        "
-      >
-        {images.map((src, i) => (
-          <img
-            key={i}
-            src={src}
-            onClick={() => openLightbox(src)}
-            className="
-              w-full
-              rounded-xl
-              object-cover
-              border
-              break-inside-avoid
-              cursor-pointer
-              hover:opacity-90
-              transition
-            "
-          />
-        ))}
+      <div className="columns-2 md:columns-3 gap-4 space-y-4">
+
+        {images.map((img: any, i: number) => {
+
+          const src =
+            typeof img === "string"
+              ? img
+              : img?.src || img?.url;
+
+          if (!src) return null;
+
+          return (
+            <img
+              key={i}
+              src={src}
+              onClick={() => {
+                setActiveImage(src);
+                setLightboxOpen(true);
+              }}
+              className="w-full rounded-xl object-cover border break-inside-avoid cursor-pointer hover:opacity-90 transition"
+            />
+          );
+        })}
+
       </div>
 
-      {/* ===== LIGHTBOX POPUP ===== */}
       {lightboxOpen && activeImage && (
         <div
-          onClick={closeLightbox}
-          className="
-            fixed inset-0 z-[9999]
-            bg-black/80
-            flex items-center justify-center
-            p-4
-          "
+          onClick={() => setLightboxOpen(false)}
+          className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
             className="relative max-w-5xl w-full"
           >
-            {/* Close Button */}
             <button
-              onClick={closeLightbox}
-              className="
-                absolute -top-10 right-0
-                text-white text-3xl
-                font-bold
-              "
+              onClick={() => setLightboxOpen(false)}
+              className="absolute -top-10 right-0 text-white text-3xl font-bold"
             >
               ×
             </button>
 
-            {/* Image */}
             <img
               src={activeImage}
-              className="
-                w-full
-                max-h-[85vh]
-                object-contain
-                rounded-xl
-                shadow-2xl
-                bg-black
-              "
+              className="w-full max-h-[85vh] object-contain rounded-xl shadow-2xl bg-black"
             />
           </div>
         </div>
       )}
     </>
   );
+}
+      default: {
+  const basicData =
+    college?.basic ??
+    college?.overview ??
+    college?.rawScraped?.basic ??
+    {};
 
-      default:
-        const feeInfo = detail?.rawScraped?.info_course_fee;
-        const feeTable = feeInfo?.course_fee_table || [];
-        const feeNotes = Array.isArray(feeInfo?.course_fee_note)
-          ? feeInfo.course_fee_note
-          : [];
-        // Detect fee table type
-        const isTermWise =
-          feeTable.length > 0 &&
-          Object.keys(feeTable[0]).some(k => k.startsWith("col_"));
+  const tocSections = Array.isArray(basicData?.toc_sections)
+    ? basicData.toc_sections
+    : [];
 
-        const isProgramWise =
-          feeTable.length > 0 &&
-          !isTermWise;
+  const aboutBlocks = [
+    ...normalizeBlocksArray(basicData?.about),
+    ...normalizeBlocksArray(basicData?.about_highlights),
+    ...normalizeBlocksArray(basicData?.about_highlight),
+    ...normalizeBlocksArray(basicData?.about_highligh),
+  ];
 
+  return (
+    <div className="space-y-8">
 
+      <div className="bg-white border rounded-2xl p-6">
 
-        const formatAnswer = (text: string, full: boolean) => {
-          if (!text) return "";
+        <h3 className="text-xl font-bold mb-6">
+          About {college?.name ?? "College"}
+        </h3>
 
-          let replaced = text.replace(/collegedunia/gi, "Studycups");
+        {/* ABOUT */}
+        {aboutBlocks.length > 0 && (
+          <FlexibleBlockRenderer blocks={aboutBlocks} />
+        )}
 
-          if (full) return replaced;
+        {/* TABLE OF CONTENTS */}
+        {tocSections.length > 0 && (
+          <div className="flex gap-4 flex-col pb-2 mb-6 mt-8 bg-[#eee] border p-4 rounded-xl">
+            <h2 className="text-lg font-bold text-slate-900">
+              Table of Contents
+            </h2>
 
-          if (replaced.length > 350) {
-            return replaced.substring(0, 350) + "...";
-          }
-
-          return replaced;
-        };
-
-        return (
-          <div className="space-y-6">
-
-
-            <div className="bg-white border border-slate-200 rounded-2xl p-6">
-              <h3 className="text-xl font-bold mb-4">
-                About {college.name}
-              </h3>
-
-              {/* ================= TEXT (COLLAPSIBLE ONLY) ================= */}
-              {textBlocks.length > 0 && (
-                <div
-                  className={`relative overflow-hidden transition-all duration-300
-        ${showFullOverview ? "max-h-none" : "max-h-[7.5rem]"}
-      `}
-                >
-                  <div className="space-y-4 text-sm text-slate-700 leading-relaxed">
-                    {textBlocks.map((block, i) => (
-                      <p key={i}>
-                        {block.content.replace(/collegedunia/gi, "Studycups")}
-                      </p>
-                    ))}
-                  </div>
-
-                  {!showFullOverview && (
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent" />
-                  )}
-                </div>
-              )}
-
-              {/* READ MORE / LESS */}
-              {textBlocks.length > 0 && (
-                <button
-                  onClick={() => setShowFullOverview(!showFullOverview)}
-                  className="mt-3 text-blue-600 font-semibold text-sm"
-                >
-                  {showFullOverview ? "Read Less" : "Read More"}
-                </button>
-              )}
-
-              {/* ================= NON-TEXT BLOCKS (ALWAYS VISIBLE) ================= */}
-              <div className="mt-6 space-y-6">
-
-                {nonTextBlocks.map((block, i) => {
-
-                  /* ===== LIST ===== */
-                  if (block.type === "list") {
-                    return (
-                      <ul key={i} className="list-disc pl-6 text-sm text-slate-700 space-y-1">
-                        {block.items.map((item, idx) => (
-                          <li key={idx}>{item}</li>
-                        ))}
-                      </ul>
-                    );
-                  }
-
-                  /* ===== TABLE ===== */
-                  if (block.type === "table") {
-                    return (
-                      <div key={i} className="overflow-x-auto border rounded-xl">
-                        <table className="w-full border-collapse text-sm">
-                          <thead className="bg-slate-100">
-                            <tr>
-                              {block.columns.map((col, idx) => (
-                                <th
-                                  key={idx}
-                                  className="border p-3 text-left font-semibold"
-                                >
-                                  {col}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-
-                          <tbody>
-                            {block.rows.map((row, rIdx) => (
-                              <tr key={rIdx} className="hover:bg-slate-50">
-                                {row.map((cell, cIdx) => (
-                                  <td key={cIdx} className="border p-3">
-                                    {cell}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  }
-
-                  return null;
-                })}
-              </div>
-
-              {/* ================= BASIC INFO ================= */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8 text-sm">
-                <InfoRow label="Established" value={college.established} />
-                <InfoRow label="Type" value={detail?.type || college.type || "N/A"} />
-                <InfoRow label="Location" value={college.location} />
-                <InfoRow
-                  label="Rating"
-                  value={`${college.rating}/5 (${college.reviewCount})`}
-                />
-              </div>
-            </div>
-
-
-
-
-            {/* ================= Ranking ================= */}
-            {rankingDataArray.length > 0 && (
-
-              <div className="bg-white border rounded-2xl p-6 mt-10 overflow-x-auto">
-                <h3 className="text-xl font-bold mb-4">Ranking Overview</h3>
-
-                {(() => {
-                  const { years, table } = buildRankingTable(rankingDataArray);
-
-
-
-
-                  return (
-                    <table className="w-full border-collapse text-sm">
-                      <thead>
-                        <tr className="bg-slate-100">
-                          <th className="border p-2 text-left">Stream</th>
-
-                          {years.map((year) => (
-                            <th
-                              key={year}
-                              className="border p-2 text-center"
-                            >
-                              {year}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {Object.keys(table).map(stream => (
-                          <tr key={stream}>
-                            <td className="border p-2 font-semibold">
-                              {stream}
-                            </td>
-
-                            {years.map(year => (
-                              <td key={year} className="border p-2 align-top">
-                                {table[stream][year] ? (
-                                  <>
-                                    <div className="font-semibold text-slate-800">
-                                      {table[stream][year].main}
-                                    </div>
-
-                                    {table[stream][year].state && (
-                                      <div className="text-xs text-slate-500 mt-1">
-                                        {table[stream][year].state}
-                                      </div>
-                                    )}
-                                  </>
-                                ) : (
-                                  "-"
-                                )}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-
-
-                    </table>
-                  );
-                })()}
-              </div>
-            )}
-
-            <aside className="space-y-5 lg:sticky lg:top-[120px] w-full block lg:hidden">
-
-
-              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-5">
-                <h3 className="font-bold text-lg">Apply Now</h3>
-                <p className="text-sm opacity-90 mt-1">
-                  Get expert admission guidance
-                </p>
-                <button
-                  onClick={onOpenApplyNow}
-                  className="mt-4 w-full bg-white text-blue-700 py-2.5 rounded-lg font-semibold"
-                >
-                  Apply Now
-                </button>
-              </div>
-
-              <div className="bg-white border rounded-2xl p-5 space-y-3">
-                <InfoRow
-                  label="Highest Package"
-                  value={
-                    detail?.rawScraped?.placement?.highest ||
-                    college?.rawScraped?.placement?.highest_package ||
-                    "N/A"
-                  }
-                />
-
-                <InfoRow
-                  label="Placement Rate"
-                  value={placementRateValue}
-                />
-
-
-
-                <InfoRow label="Type" value={detail?.type || college.type || "N/A"} />
-              </div>
-
-              <button
-                onClick={() => college && onCompareToggle(college.id)}
-                className={`w-full py-2.5 rounded-xl font-semibold ${isCompared
-                  ? "bg-green-100 text-green-700"
-                  : "bg-slate-100"
-                  }`}
+            {tocSections.map((sec: any, i: number) => (
+              <a
+                key={i}
+                href={`#${slugify(sec.section)}`}
+                className="text-sm font-semibold text-blue-600 hover:underline"
               >
-                {isCompared ? "Added to Compare" : "Compare College"}
-              </button>
-
-
-              {/* ================= Latest News ================= */}
-              {activeTab === "Overview" &&
-                detail?.rawScraped?.latest_news?.length > 0 && (
-                  <div className="bg-white border rounded-2xl p-6 mt-10">
-
-                    <h3 className="text-xl font-bold mb-4">
-                      {college.name} Latest News & Updates
-                    </h3>
-
-                    {detail.rawScraped.latest_news.map((news: any, index: number) => {
-
-                      const fullContent = news.content || "";
-                      const shortText = fullContent.slice(0, 250);
-                      const open = newsOpen[index];
-
-                      const toggle = () => {
-                        const x = [...newsOpen];
-                        x[index] = !x[index];
-                        setNewsOpen(x);
-                      };
-
-                      return (
-                        <div key={index} className="pb-5 border-b">
-                          <p className="text-red-500 font-bold text-[14px]">
-                            {news.date}
-                          </p>
-
-                          <p className="font-semibold text-slate-900 text-[15px] mt-1">
-                            {news.headline}
-                          </p>
-
-                          <p className="text-[14px] text-slate-600 mt-2 leading-[1.45rem]">
-                            {open
-                              ? fullContent
-                              : shortText + (fullContent.length > 250 ? "..." : "")}
-
-                            {fullContent.length > 250 && (
-                              <button
-                                onClick={toggle}
-                                className="ml-2 text-blue-600 font-semibold text-xs"
-                              >
-                                {open ? "Read Less" : "Read More"}
-                              </button>
-                            )}
-                          </p>
-                        </div>
-                      );
-                    })}
-
-                  </div>
-                )}
-
-
-
-              {/* ================= IMPORTANT DATES SECTION ================= */}
-              {(upcoming.length > 0 || expired.length > 0) && (
-                <div className="bg-white border rounded-2xl p-6 mt-10 overflow-x-auto">
-
-                  <h3 className="text-xl font-bold mb-4">
-                    Important Dates & Admission Events
-                  </h3>
-
-                  {/* TABS */}
-                  <div className="flex gap-3 mb-6">
-                    <button
-                      onClick={() => {
-                        setShowAllUpcoming(false);
-                        setShowAllExpired(false);
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-semibold"
-                    >
-                      Upcoming
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowAllUpcoming(false);
-                        setShowAllExpired(true);
-                      }}
-                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-full text-sm font-semibold"
-                    >
-                      Expired
-                    </button>
-                  </div>
-
-                  {/* UPCOMING ===================== */}
-                  {upcoming.length > 0 && !showAllExpired && (
-                    <div className="w-full overflow-auto">
-                      <table className="w-full border-collapse text-sm">
-                        <thead>
-                          <tr className="bg-slate-100">
-                            <th className="border p-2 text-left w-3/4">Event</th>
-                            <th className="border p-2 text-center w-1/4">Date</th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {(showAllUpcoming ? upcoming : upcoming.slice(0, 3)).map(
-                            (ev: any, i: number) => (
-                              <tr key={i} className="hover:bg-slate-50">
-                                <td className="border p-2 font-medium">{ev.event}</td>
-                                <td className="border p-2 text-center text-blue-700 font-semibold">
-                                  {ev.date}
-                                </td>
-                              </tr>
-                            )
-                          )}
-                        </tbody>
-                      </table>
-
-                      {/* VIEW ALL BTN */}
-                      {upcoming.length > 3 && (
-                        <button
-                          onClick={() => setShowAllUpcoming(!showAllUpcoming)}
-                          className="text-blue-600 mt-3 font-semibold text-sm"
-                        >
-                          {showAllUpcoming ? "View Less" : "View All"}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* EXPIRED ===================== */}
-                  {expired.length > 0 && showAllExpired && (
-                    <div className="w-full overflow-auto">
-                      <table className="w-full border-collapse text-sm">
-                        <thead>
-                          <tr className="bg-slate-100">
-                            <th className="border p-2 text-left w-3/4">Event</th>
-                            <th className="border p-2 text-center w-1/4">Date</th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {(showAllExpired ? expired : expired.slice(0, 3)).map(
-                            (ev: any, i: number) => (
-                              <tr key={i} className="hover:bg-slate-50">
-                                <td className="border p-2 font-medium">{ev.event}</td>
-                                <td className="border p-2 text-center text-red-500 font-semibold">
-                                  {ev.date}
-                                </td>
-                              </tr>
-                            )
-                          )}
-                        </tbody>
-                      </table>
-
-                      {expired.length > 3 && (
-                        <button
-                          onClick={() => setShowAllExpired(!showAllExpired)}
-                          className="text-blue-600 mt-3 font-semibold text-sm"
-                        >
-                          {showAllExpired ? "View Less" : "View All"}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                </div>
-              )}
-
-
-            </aside>
-
-            {/* ================= Fee ================= */}
-            <div className="bg-white border border-slate-200 rounded-2xl p-6">
-              <h3 className="font-bold mb-3">Fee Structure</h3>
-              <p className="text-lg font-bold text-green-700">
-                {college?.feesRange ? (
-                  <>
-                    ₹{college.feesRange.min.toLocaleString("en-IN")} – ₹
-                    {college.feesRange.max.toLocaleString("en-IN")}
-                  </>
-                ) : (
-                  "N/A"
-                )}
-
-              </p>
-              <p className="text-xs text-slate-500 mt-1">Per year</p>
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-2xl shadow p-6">
-
-              {/* =============== Gallery Carousel =============== */}
-              <h3 className="text-xl font-bold mb-4">Campus Gallery</h3>
-
-              <div className="relative flex gap-4 overflow-hidden">
-
-                {detail?.gallery?.slice(0, 4).map((img, index) => (
-                  <img
-                    key={index}
-                    src={img}
-                    className="w-1/2 h-44 rounded-xl object-cover border"
-                  />
-                ))}
-
-              </div>
-
-              {/* =============== Rating Title =============== */}
-              <div className="mt-6">
-                <p className="text-3xl font-bold text-slate-900">
-                  {detail?.rating || college.rating}
-                </p>
-
-                <p className="flex items-center gap-1 text-yellow-500 mt-1">
-                  {Array(5).fill(null).map((_, i) => (
-                    <span key={i}>
-                      {i < Math.round(college.rating) ? "★" : "☆"}
-                    </span>
-                  ))}
-                </p>
-
-                <p
-                  className="text-blue-600 text-sm font-semibold underline cursor-pointer"
-                >
-                  ({college.reviewCount} Verified Reviews)
-                </p>
-              </div>
-
-              {/* =============== Rating Bars =============== */}
-              <div className="mt-6 space-y-3">
-
-                {ratingDistribution.map(item => (
-                  <div key={item.stars} className="flex items-center gap-3 text-sm text-slate-700">
-
-                    <span className="w-8 font-semibold">{item.stars}★</span>
-
-                    <div className="w-full h-2 bg-slate-200 rounded-full">
-                      <div
-                        className="h-full bg-yellow-500 rounded-full transition-all"
-                        style={{ width: `${item.percent}%` }}
-                      />
-                    </div>
-
-                    <span className="w-16 text-right text-slate-500">
-                      ({item.percent}%)
-                    </span>
-
-                  </div>
-                ))}
-
-
-              </div>
-
-              {/* =============== Category Ratings =============== */}
-              <div className="mt-6 grid grid-cols-3 md:grid-cols-6 gap-4">
-
-                {Array.isArray(detail?.rawScraped?.rating_categories) &&
-                  detail.rawScraped.rating_categories.slice(0, 6).map((item: any, i: number) => (
-                    <div key={i} className="flex flex-col items-center p-2 text-center">
-                      <p className="text-[12px] text-slate-500">{item.label}</p>
-                      <p className="text-sm font-bold text-slate-900 mt-1">
-                        {item.rating}★
-                      </p>
-                    </div>
-                  ))}
-
-
-
-              </div>
-
-            </div>
-
-            {/* ================= Facilities ================= */}
-            {detail?.rawScraped?.info_facilities?.length > 0 && (
-              <div className="bg-white border rounded-2xl p-6">
-                <h3 className="text-xl font-bold mb-4 text-blue-900">
-                  Facilities
-                </h3>
-
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                  {detail.rawScraped.info_facilities.map(
-                    (f: any, i: number) => (
-                      <div
-                        key={i}
-                        className="
-              flex flex-col items-center
-              gap-2
-              text-center
-              text-sm
-              text-slate-700
-            "
-                      >
-                        <div
-                          className="
-                p-3
-                border
-                rounded-xl
-                bg-white
-                shadow-sm
-                hover:shadow-md
-                transition
-              "
-                        >
-                          {FACILITY_ICON_MAP[f.icon_key] ?? null}
-                        </div>
-
-                        <span className="text-[12px] leading-tight">
-                          {f.name}
-                        </span>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            )}
-
-
-
-            {/* ================= Course & Fee Structure ================= */}
-            {feeInfo && feeTable.length > 0 && (
-              <div className="bg-white border border-slate-200 rounded-2xl p-6 mt-10">
-
-                {/* HEADING */}
-                <h3 className="text-xl font-bold text-blue-900 mb-2">
-                  Courses & Fee Structure
-                </h3>
-
-                {feeInfo.course_fee_heading && (
-                  <p className="text-sm text-slate-600 mb-6 leading-relaxed">
-                    {feeInfo.course_fee_heading}
-                  </p>
-                )}
-
-                {/* =====================================================
-        TERM WISE TABLE  (IIM Rohtak type)
-       ===================================================== */}
-                {isTermWise && (
-                  <div className="overflow-x-auto border border-slate-200 rounded-xl ">
-                    <table className="w-full min-w-[600px] border-collapse border-slate-200 text-sm">
-
-                      <thead className="bg-slate-100 text-slate-700">
-                        <tr>
-                          <th className="border p-3 text-left font-semibold">
-                            Course / Term
-                          </th>
-                          <th className="border p-3 text-left font-semibold">
-                            Fees
-                          </th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {feeTable.map((row: any, i: number) => {
-
-                          /* PROGRAM HEADER (PGP I / PGP II) */
-                          if (row.col_0 && row.col_2) {
-                            return (
-                              <tr key={i} className="bg-blue-50">
-                                <td
-                                  colSpan={2}
-                                  className="border p-3 font-bold text-blue-900"
-                                >
-                                  {row.col_0}
-                                </td>
-                              </tr>
-                            );
-                          }
-
-                          /* TOTAL ROW */
-                          if (
-                            row.col_0 &&
-                            row.col_0.toLowerCase().includes("total")
-                          ) {
-                            return (
-                              <tr key={i} className="bg-green-50">
-                                <td className="border p-3 font-semibold">
-                                  Total Fees
-                                </td>
-                                <td className="border p-3 font-bold text-green-700">
-                                  {row.col_1}
-                                </td>
-                              </tr>
-                            );
-                          }
-
-                          /* NORMAL TERM ROW */
-                          return (
-                            <tr key={i} className="hover:bg-slate-50">
-                              <td className="border p-3">
-                                {row.col_0 || "-"}
-                              </td>
-                              <td className="border p-3">
-                                {row.col_1 || "-"}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    {/* ================= FEE NOTES ================= */}
-                    {feeNotes.length > 0 && (
-                      <div className="mt-6">
-
-                        <h4 className="font-semibold text-slate-900 mb-3">
-                          Important Fee Notes
-                        </h4>
-
-                        {/* NOTES LIST */}
-                        <div
-                          className={`
-        space-y-2
-        text-sm
-        md:text-slate-500
-        bg-red-50
-
-        ${showAllFeeNotes
-                              ? "max-h-none"
-                              : "max-h-[140px] overflow-hidden"
-                            }
-
-        md:max-h-none
-        md:overflow-visible
-      `}
-                        >
-                          {feeNotes.map((note: string, i: number) => (
-                            <div
-                              key={i}
-                              className="
-            flex gap-2
-            bg-slate-50
-            border border-slate-200
-            rounded-lg
-            px-4 py-2
-            leading-relaxed
-          "
-                            >
-                              <span className="text-orange-500 font-bold">•</span>
-                              <span>{note}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* READ MORE / LESS — MOBILE ONLY */}
-                        <div className="md:hidden mt-3">
-                          <button
-                            onClick={() => setShowAllFeeNotes(!showAllFeeNotes)}
-                            className="text-blue-600 font-semibold text-sm"
-                          >
-                            {showAllFeeNotes ? "Read Less" : "Read More"}
-                          </button>
-                        </div>
-
-                      </div>
-                    )}
-
-                  </div>
-                )}
-
-                {/* =====================================================
-        PROGRAM WISE TABLE  (IIM Lucknow type)
-       ===================================================== */}
-                {isProgramWise && (
-                  <div className="overflow-x-auto border rounded-xl">
-                    <table className="w-full min-w-[700px] border-collapse text-sm">
-
-                      <thead className="bg-slate-100 text-slate-700">
-                        <tr>
-                          {Object.keys(feeTable[0]).map((key, i) => (
-                            <th
-                              key={i}
-                              className="border p-3 text-left font-semibold"
-                            >
-                              {key}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {feeTable.map((row: any, i: number) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            {Object.keys(row).map((key, j) => (
-                              <td
-                                key={j}
-                                className={`border p-3 ${key.toLowerCase().includes("total")
-                                  ? "font-bold text-green-700"
-                                  : ""
-                                  }`}
-                              >
-                                {String(row[key]).trim() || "-"}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-
-                    </table>
-                    {feeNotes.length > 0 && (
-                      <div className="mt-6">
-
-                        <h4 className="font-semibold text-slate-900 mb-3">
-                          Important Fee Notes
-                        </h4>
-
-                        {/* NOTES LIST */}
-                        <div
-                          className={`
-        space-y-2
-        text-sm
-        md:text-slate-500
-
-        ${showAllFeeNotes
-                              ? "max-h-none"
-                              : "max-h-[140px] overflow-hidden"
-                            }
-
-        md:max-h-none
-        md:overflow-visible
-      `}
-                        >
-                          {feeNotes.map((note: string, i: number) => (
-                            <div
-                              key={i}
-                              className="
-            flex gap-2
-            bg-slate-50
-            border border-slate-200
-            rounded-lg
-            px-4 py-2
-            leading-relaxed
-            bg-red-50
-          "
-                            >
-                              <span className="text-orange-500 font-bold">•</span>
-                              <span>{note}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* READ MORE / LESS — MOBILE ONLY */}
-                        <div className="md:hidden mt-3">
-                          <button
-                            onClick={() => setShowAllFeeNotes(!showAllFeeNotes)}
-                            className="text-red-600 font-semibold text-sm"
-                          >
-                            {showAllFeeNotes ? "Read Less" : "Read More"}
-                          </button>
-                        </div>
-
-                      </div>
-                    )}
-                  </div>
-                )}
-
-              </div>
-            )}
-
-
-
-
-            {/* ================= Faculty ================= */}
-            {detail?.rawScraped?.info_faculty?.length > 0 && (
-              <div className="bg-white border rounded-2xl p-6 mt-10">
-                <h3 className="text-xl font-bold mb-4 text-blue-900">
-                  Faculty
-                </h3>
-
-                {/* MOBILE: horizontal scroll | DESKTOP: grid */}
-                <div
-                  className="
-        flex gap-4  overflow-x-auto no-scrollbar pb-2
-        md:grid md:grid-cols-4 lg:grid-cols-5
-        md:overflow-visible
-      "
-                >
-                  {detail.rawScraped.info_faculty.map(
-                    (f: any, i: number) => (
-                      <div
-                        key={i}
-                        className="
-              min-w-[180px]
-              md:min-w-0
-              border rounded-xl
-              p-4
-              text-center
-              shadow-sm
-              hover:shadow-md
-              transition
-              bg-white
-            "
-                      >
-                        {/* Avatar */}
-                        <div
-                          className="
-                w-16 h-16
-                mx-auto
-                rounded-full
-                bg-slate-200
-                flex items-center justify-center
-                text-slate-500
-                font-bold
-                text-lg
-              "
-                        >
-                          {f.name?.charAt(0)}
-                        </div>
-
-                        {/* Name */}
-                        <p className="mt-3 font-semibold text-sm text-slate-900">
-                          {f.name}
-                        </p>
-
-                        {/* Designation / Qualification */}
-                        <p className="text-xs text-slate-600 mt-1">
-                          {f.designation || f.qualification || "Faculty Member"}
-                        </p>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-            )}
-
-
-            {/* ================= QNA ================= */}
-            {detail?.rawScraped?.questions_answers?.length > 0 && (
-
-              <div className="bg-white border rounded-2xl p-6 mt-10">
-                <h3 className="text-xl font-bold mb-4">
-                  Frequently Asked Questions
-                </h3>
-
-                <div className="space-y-4">
-                  {detail.rawScraped.questions_answers.map((item: any, i: number) => {
-
-                    const open = qnaOpen[i];
-
-                    const toggle = () => {
-                      const copy = [...qnaOpen];
-                      copy[i] = !copy[i];
-                      setQnaOpen(copy);
-                    };
-
-                    return (
-                      <div
-                        key={i}
-                        className="border rounded-xl overflow-hidden shadow-sm"
-                      >
-                        <div
-                          onClick={toggle}
-                          className="
-                cursor-pointer
-                px-4 py-3
-                text-blue-700
-                font-semibold
-                bg-blue-50
-                hover:bg-blue-100
-                transition
-                text-sm
-              "
-                        >
-                          {item.question}
-                        </div>
-
-                        <div className="px-4 py-3 text-slate-700 bg-white leading-relaxed text-sm">
-                          {formatAnswer(item.answer_text, open)}
-
-                          {!open && item.answer_text.length > 350 && (
-                            <button
-                              onClick={toggle}
-                              className="text-blue-600 text-xs font-semibold ml-1"
-                            >
-                              Read More
-                            </button>
-                          )}
-
-                          {open && (
-                            <button
-                              onClick={toggle}
-                              className="text-red-600 text-xs font-semibold ml-1"
-                            >
-                              Read Less
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                {sec.section}
+              </a>
+            ))}
           </div>
-        );
+        )}
+
+        {/* SECTIONS */}
+        {tocSections.map((section: any, index: number) => (
+          <div
+            key={index}
+            id={slugify(section.section)}
+            className="mt-8 scroll-mt-24"
+          >
+            {section?.section && (
+              <h4 className="text-lg font-bold text-slate-900 mb-4">
+                {section.section}
+              </h4>
+            )}
+
+            <FlexibleBlockRenderer
+              blocks={normalizeBlocksArray(section?.content)}
+            />
+          </div>
+        ))}
+
+        {/* BASIC INFO */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-10 text-sm">
+
+          {college?.established && (
+            <InfoRow label="Established" value={college.established} />
+          )}
+
+          {(college?.type || detail?.type) && (
+            <InfoRow
+              label="Type"
+              value={detail?.type ?? college?.type}
+            />
+          )}
+
+          {college?.location && (
+            <InfoRow label="Location" value={college.location} />
+          )}
+
+          {college?.rating && (
+            <InfoRow
+              label="Rating"
+              value={`${college.rating}/5 (${college.reviewCount ?? 0})`}
+            />
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
     }
   };
   // ✅ SAFE RENDER GUARD — AFTER ALL HOOKS
-  if (!college) {
+  if (loadingCollege) {
     return (
       <div className="mt-[120px] text-center text-slate-500">
         Loading college details...
       </div>
     );
-  } 
+  }
 
-  
+  if (!college) {
+    return (
+      <div className="mt-[120px] text-center text-red-500">
+        College not found
+      </div>
+    );
+  }
+
+
+
 
 
   /* ===================== PAGE JSX RETURN ===================== */
@@ -2805,8 +2929,39 @@ const getCategorySlugFromStream = (courseName: string) => {
     return `${rate}%`;
   })();
 
+  const establishedYearLabel = getFirstDisplayText(
+    college?.basic?.established_year,
+    detail?.basic?.established_year,
+    college?.established_year,
+    detail?.established_year,
+    college?.established
+  );
 
-  return (
+  const accreditationLabel = getFirstDisplayText(
+    college?.accreditation,
+    detail?.accreditation,
+    college?.basic?.accreditation,
+    detail?.basic?.accreditation
+  );
+
+  const affiliationLabel = getFirstDisplayText(
+    college?.affiliations,
+    detail?.affiliations,
+    college?.basic?.affiliations,
+    detail?.basic?.affiliations
+  );
+ 
+
+  return ( 
+    <> 
+   {schema && (
+  <Helmet>
+    <script type="application/ld+json">
+      {JSON.stringify(schema)}
+    </script>
+  </Helmet>
+)}
+   
     <div>
       {/* HERO */}
       <div className="relative mt-[90px] w-full max-w-7xl mx-auto px-3 sm:px-4">
@@ -2843,7 +2998,7 @@ const getCategorySlugFromStream = (courseName: string) => {
 
 
           <img
-            src={college.imageUrl}
+            src={college.heroImages}
             alt={college.name}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
@@ -2856,47 +3011,58 @@ const getCategorySlugFromStream = (courseName: string) => {
               <div className="max-w-4xl text-white">
                 <div className="flex items-center gap-4 mb-0">
                   <img
-                    src={college.logoUrl}
+                    src={college.basic.logo
+                    }
                     alt={college.name}
                     className="h-14 w-14 rounded-full bg-white p-2 shadow"
                   />
 
-                  <h1 className="text-xl sm:text-1xl md:text-3xl font-extrabold leading-tight">
-
-                    {college.rawScraped.college_name}
-                  </h1>
+                  <h2 className="text-2xl font-bold mt-6 mb-4">
+  {getTabHeading()}
+</h2>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 text-sm sm:text-base text-white/90">
                   <span className="flex items-center gap-1 text-[14px]">
-                    ⭐ {college.rating}
+                    ⭐ {college.basic.rating}
                   </span>
 
                   <span className="opacity-60">|</span>
 
                   <span className="flex items-center gap-1 text-[14px]">
-                    🏫 {detail?.type || college.type || "N/A"}
+                    🏫 {detail?.type || college.basic.college_type || "N/A"}
                   </span>
 
-                  <span className="opacity-60">|</span>
-
-                  <span className="flex items-center gap-1 text-[14px]">
-                    📅 Estd. {college.established}
-                  </span>
-
-                  {college.accreditation?.length > 0 && (
+                  {establishedYearLabel && (
                     <>
                       <span className="opacity-60">|</span>
                       <span className="flex items-center gap-1 text-[14px]">
-                        🏅 {college.accreditation[0]}
+                        📅 Estd. {establishedYearLabel}
                       </span>
                     </>
                   )}
 
+                  {accreditationLabel && (
+                    <>
+                      <span className="opacity-60">|</span>
+                      <span className="flex items-center gap-1 text-[14px]">
+                        🏅 {accreditationLabel}
+                      </span>
+                    </>
+                  )}
+
+                  {affiliationLabel && (
+                    <>
+                      <span className="opacity-60">|</span>
+                      <span className="flex items-center gap-1 text-[14px]">
+                        🔗 {affiliationLabel}
+                      </span>
+                    </>
+                  )}
                   <span className="opacity-60">|</span>
 
                   <span className="flex items-center gap-1 text-[14px]">
-                    📍 {college.location}
+                    📍 {college.basic.city}, {college.basic.state}
                   </span>
                 </div>
               </div>
@@ -2968,31 +3134,34 @@ const getCategorySlugFromStream = (courseName: string) => {
 
         <div className="max-w-7xl mx-auto px-4 flex gap-6 overflow-x-auto no-scrollbar whitespace-nowrap">
 
-          {tabs.map((tab) => (
+          {availableTabs.map((key) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`py-4 font-semibold text-sm ${activeTab === tab
-                ? "text-[--primary-medium] border-b-4 border-[--primary-medium]"
+              key={key}
+              onClick={() => {
+                setActiveTab(key);
+                navigate(buildUniversityPath(key));
+              }}
+              className={`py-4 font-semibold text-sm ${activeTab === key
+                ? "text-blue-600 border-b-4 border-blue-600"
                 : "text-slate-500"
                 }`}
             >
-              {tab}
+              {key.charAt(0).toUpperCase() + key.slice(1)}
             </button>
           ))}
         </div>
       </div>
 
       {/* LAYOUT */}
-      <div className="container max-w-7xl md:max-w-9xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
 
         <div className="lg:col-span-2">{renderTabContent()}</div>
 
-        <aside className="space-y-5 lg:sticky lg:top-[120px] w-full hidden lg:block">
+       <aside className="space-y-5 w-full hidden lg:block lg:sticky lg:top-[110px] self-start">
 
 
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl p-5">
+          <div className="bg-[#1E4A7A] to-indigo-600 text-white rounded-2xl p-5">
             <h3 className="font-bold text-lg">Apply Now</h3>
             <p className="text-sm opacity-90 mt-1">
               Get expert admission guidance
@@ -3005,7 +3174,7 @@ const getCategorySlugFromStream = (courseName: string) => {
             </button>
           </div>
 
-          <div className="bg-white border rounded-2xl p-5 space-y-3">
+          {/*  <div className="bg-white border rounded-2xl p-5 space-y-3">
             <InfoRow
               label="Highest Package"
               value={
@@ -3024,9 +3193,9 @@ const getCategorySlugFromStream = (courseName: string) => {
 
             <InfoRow label="Type" value={detail?.type || college.type || "N/A"} />
           </div>
-
+*/}
           <button
-            onClick={() => onCompareToggle(college.id)}
+            onClick={() => onCompareToggle(String(college.id))}
             className={`w-full py-2.5 rounded-xl font-semibold ${isCompared
               ? "bg-green-100 text-green-700"
               : "bg-slate-100"
@@ -3037,89 +3206,43 @@ const getCategorySlugFromStream = (courseName: string) => {
 
 
           {/* ================= Latest News ================= */}
-          {activeTab === "Overview" &&
-            detail?.rawScraped?.latest_news?.length > 0 && (
-              <div className="bg-white border rounded-2xl p-6 mt-10">
 
-                <h3 className="text-xl font-bold mb-4">
-                  {college.name} Latest News & Updates
-                </h3>
-
-                {detail.rawScraped.latest_news.map((news: any, index: number) => {
-
-                  const fullContent = news.content || "";
-                  const shortText = fullContent.slice(0, 250);
-                  const open = newsOpen[index];
-
-                  const toggle = () => {
-                    const x = [...newsOpen];
-                    x[index] = !x[index];
-                    setNewsOpen(x);
-                  };
-
-                  return (
-                    <div key={index} className="pb-5 border-b">
-                      <p className="text-red-500 font-bold text-[14px]">
-                        {news.date}
-                      </p>
-
-                      <p className="font-semibold text-slate-900 text-[15px] mt-1">
-                        {news.headline}
-                      </p>
-
-                      <p className="text-[14px] text-slate-600 mt-2 leading-[1.45rem]">
-                        {open
-                          ? fullContent
-                          : shortText + (fullContent.length > 250 ? "..." : "")}
-
-                        {fullContent.length > 250 && (
-                          <button
-                            onClick={toggle}
-                            className="ml-2 text-blue-600 font-semibold text-xs"
-                          >
-                            {open ? "Read Less" : "Read More"}
-                          </button>
-                        )}
-                      </p>
-                    </div>
-                  );
-                })}
-
-              </div>
-            )}
 
 
 
           {/* ================= IMPORTANT DATES SECTION ================= */}
-          {(upcoming.length > 0 || expired.length > 0) && (
-            <div className="bg-white border rounded-2xl p-6 mt-10 overflow-x-auto bg-white p-6 rounded-xl shadow-sm border sticky top-24">
+
+         {(upcoming.length > 0 || expired.length > 0) && (
+            <div className="bg-white border rounded-2xl p-6 mt-10 overflow-x-auto bg-white p-6 rounded-xl shadow-sm border ">
 
               <h3 className="text-xl font-bold mb-4">
                 Important Dates & Admission Events
               </h3>
 
               {/* TABS */}
-              <div className="flex gap-3 mb-6">
-                <button
-                  onClick={() => {
-                    setShowAllUpcoming(false);
-                    setShowAllExpired(false);
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-semibold"
-                >
-                  Upcoming
-                </button>
+         <div className="flex gap-2 mb-4">
+      <button
+        onClick={() => setShowAllExpired(false)}
+        className={`px-4 py-1.5 rounded-full text-xs font-semibold ${
+          !showAllExpired
+            ? "bg-blue-600 text-white"
+            : "bg-slate-200 text-slate-700"
+        }`}
+      >
+        Upcoming
+      </button>
 
-                <button
-                  onClick={() => {
-                    setShowAllUpcoming(false);
-                    setShowAllExpired(true);
-                  }}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-full text-sm font-semibold"
-                >
-                  Expired
-                </button>
-              </div>
+      <button
+        onClick={() => setShowAllExpired(true)}
+        className={`px-4 py-1.5 rounded-full text-xs font-semibold ${
+          showAllExpired
+            ? "bg-blue-600 text-white"
+            : "bg-slate-200 text-slate-700"
+        }`}
+      >
+        Expired
+      </button>
+    </div>
 
               {/* UPCOMING ===================== */}
               {upcoming.length > 0 && !showAllExpired && (
@@ -3195,12 +3318,121 @@ const getCategorySlugFromStream = (courseName: string) => {
               )}
 
             </div>
-          )}
+          )} 
+          {/* ================= COURSE PAGE SIDEBAR ================= */}
 
+{activeCourseSlug && selectedCourse?.sub_courses?.length > 0 && (
+  <div className="bg-white border rounded-2xl p-5">
 
-        </aside>
-      </div>
+    <h3 className="font-bold text-lg mb-4">
+      Related Courses
+    </h3>
+
+    <div className="space-y-3">
+
+      {selectedCourse.sub_courses.map((sc:any,i:number)=>{
+
+        const subSlug = sc?.slug_url?.value || sc?.slug_url
+        const subCourseRating = getSubCourseMetricFallback(sc, selectedCourse, "rating");
+        const subCourseReviews = getSubCourseMetricFallback(sc, selectedCourse, "reviews");
+
+        return (
+          <div
+            key={i}
+            className="flex items-center gap-3 border rounded-xl p-3 hover:bg-slate-50 cursor-pointer"
+            onClick={() => {
+              if (!subSlug) return;
+              navigate(buildUniversityPath("Courses & Fees", subSlug));
+            }}
+          >
+
+            <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold">
+              {sc.name?.value?.charAt(0)}
+            </div>
+
+            <div>
+              <p className="text-sm font-semibold text-blue-700">
+                {sc.name?.value}
+              </p>
+
+              <p className="text-xs text-slate-500">
+                {`\u2605 ${subCourseRating || "-"} (${subCourseReviews || 0})`}
+              </p>
+            </div>
+
+          </div>
+        )
+
+      })}
+
     </div>
+
+  </div>
+)}
+{activeCourseSlug && (
+  <div className="bg-white border rounded-2xl p-5">
+
+    <h3 className="font-bold text-lg mb-4">
+      Colleges Offering this Course
+    </h3>
+
+    {loadingCourseOfferingColleges ? (
+      <p className="text-sm text-slate-500">Loading colleges...</p>
+    ) : courseOfferingColleges.length > 0 ? (
+      <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+
+        {courseOfferingColleges.map((c:any,i:number)=>(
+        <div
+          key={`${c.id || c.name || "college"}-${i}`}
+          className="flex items-center gap-3 border rounded-xl p-3 hover:bg-slate-50 cursor-pointer"
+          onClick={() =>
+            navigate(
+              c?.id
+                ? `/university/${c.id}-${toSeoSlug(c.name || "")}`
+                : "/university"
+            )
+          }
+        >
+
+          <img
+            src={c?.logoUrl || "/no-image.jpg"}
+            className="w-9 h-9 rounded-full object-contain bg-white border"
+          />
+
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              {c?.name || "College"}
+            </p>
+
+            {c?.location && (
+              <p className="text-[11px] text-slate-500">
+                {c.location}
+              </p>
+            )}
+
+            <p className="text-xs text-blue-600">
+              View Details →
+            </p>
+          </div>
+
+        </div>
+        ))}
+
+      </div>
+    ) : (
+      <p className="text-sm text-slate-500">
+        No colleges found for this course.
+      </p>
+    )}
+
+  </div>
+)}
+
+        </aside> 
+      
+      </div>
+    </div> 
+     </>
   );
 };
 

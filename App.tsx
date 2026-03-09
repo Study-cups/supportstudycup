@@ -5,7 +5,8 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ApplyNowModal from "./components/ApplyNowModal";
-import LandingApp from "./LandingPage/LandingApp";
+import LandingApp from "./LandingPage/LandingApp"; 
+
 /* ===== PAGES ===== */
 import HomePage from "./pages/HomePage";
 import ListingPage from "./pages/ListingPage";
@@ -17,7 +18,8 @@ import BlogPage from "./pages/BlogPage";
 import BlogDetailPage from "./pages/BlogDetailPage";
 import ComparePage from "./pages/ComparePage";
 import DetailPage from "./pages/DetailPage";
-import ErrorBoundary from "./pages/ErrorBoundary";
+import ErrorBoundary from "./pages/ErrorBoundary"; 
+import ChatbotWidget from "./components/ChatWidget";
 
 /* ===== TYPES ===== */
 import type { College } from "./types";
@@ -57,8 +59,9 @@ const OldCollegesRedirect = ({ withLocation }: { withLocation?: boolean }) => {
 
 
 
-/* ===== API ===== */
-const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
+/* ===== API ===== 
+const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api"; */
+const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api"; // LOCAL DEV
 
 const canShowPopup = (pathname: string) => {
   const pagePopupKey = getPopupKeyForRoute(pathname);
@@ -84,15 +87,27 @@ const App: React.FC = () => {
   const [applyMode, setApplyMode] = useState<"apply" | "brochure">("apply");
   const location = useLocation();
   const isLanding = location.pathname.startsWith("/registration");
+  const hideNewsletterOnMobile =
+    location.pathname === "/colleges" || location.pathname.includes("top-colleges");
 
 
 
-  const handleCompareToggle = (id: string) => {
-    setCompareList((prev) =>
-      prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : [...prev, id]
-    );
+  const handleCompareToggle = (id: string | number) => {
+    const normalizedId = String(id);
+
+    setCompareList((prev) => {
+      const normalizedPrev = prev.map((value) => String(value));
+
+      if (normalizedPrev.includes(normalizedId)) {
+        return normalizedPrev.filter((value) => value !== normalizedId);
+      }
+
+      if (normalizedPrev.length >= 3) {
+        return normalizedPrev;
+      }
+
+      return [...normalizedPrev, normalizedId];
+    });
   };
 
   const handleApplyNow = () => {
@@ -118,7 +133,7 @@ const App: React.FC = () => {
   /* 🔥 GLOBAL DATA – FAST (ONLY ONCE) */
   useEffect(() => {
     Promise.all([
-      fetch(`${API_BASE}/colleges`).then(r => r.json()),
+      fetch(`${API_BASE}/colleges?all=true`).then(r => r.json()),
       fetch(`${API_BASE}/exams`).then(r => r.json()),
       fetch(`${API_BASE}/blogs`).then(r => r.json()),
     ])
@@ -256,7 +271,7 @@ useEffect(() => {
           path="/courses/:categorySlug/:courseSlug"
           element={
             <CourseDetailPage
-              colleges={colleges}
+            
               onOpenApplyNow={handleApplyNow}
               onOpenBrochure={handleBrochureSimple}
             />
@@ -355,34 +370,60 @@ useEffect(() => {
             />
           }
         />
-
+      
 
         <Route
           path="/courses"
-          element={<CoursesPage colleges={colleges} />}
+          element={<CoursesPage />}
         />
 
-
+      <Route
+  path="/university/:collegeIdSlug/:courseSlug"
+  element={
+    <DetailPage
+      colleges={colleges}
+      compareList={compareList}
+      onCompareToggle={handleCompareToggle}
+      onOpenApplyNow={handleApplyNow}
+      onOpenBrochure={handleBrochure}
+    />
+  }
+/>
+      <Route
+  path="/university/:collegeIdSlug/course/:courseSlug"
+  element={
+    <DetailPage
+      colleges={colleges}
+      compareList={compareList}
+      onCompareToggle={handleCompareToggle}
+      onOpenApplyNow={handleApplyNow}
+      onOpenBrochure={handleBrochure}
+    />
+  }
+/>
 
         <Route
           path="/exams"
           element={<ExamsPage exams={exams} />}
         />
 
+       
         <Route
-          path="/exam/:id"
-          element={<ExamDetailPage />}
-        />
+  path="/exams/:examSlug"
+  element={<ExamDetailPage exams={exams} />}
+/>
+
 
         <Route
           path="/blog"
           element={<BlogPage blogs={blogs} />}
         />
 
-        <Route
-          path="/blog/:id"
-          element={<BlogDetailPage />}
-        />
+       <Route
+  path="/blog/:blogSlug"
+  element={<BlogDetailPage blogs={blogs} />}
+/>
+
 
         <Route
           path="/compare"
@@ -408,8 +449,14 @@ useEffect(() => {
       />
 
       {/* ================= FOOTER ================= */}
-      {!isLanding && <Footer exams={exams} colleges={colleges} />}
-
+      {!isLanding && (
+        <Footer
+          exams={exams}
+          colleges={colleges}
+          hideNewsletterOnMobile={hideNewsletterOnMobile}
+        />
+      )}
+  <ChatbotWidget />
     </>
   );
 

@@ -1,627 +1,1137 @@
-import React, { useMemo, useState } from "react";
-import type { View, College } from "../types";
-import { useParams, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { on } from "events";
+import React, { useEffect, useMemo, useState } from "react";
+import { Helmet } from "react-helmet-async";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import FlexibleBlockRenderer from "./FlexibleBlockRenderer";
 
 interface CourseDetailPageProps {
-  colleges: College[];
   onOpenApplyNow: () => void;
   onOpenBrochure: () => void;
 }
 
+type CourseTab = "Overview" | "Syllabus" | "Top Colleges";
 
-const formatCourseTitle = (title: string = "") => {
-  return title
-    .toLowerCase()
-    .replace(/\(([^)]+)\)/g, (_, p1) => `(${p1.toUpperCase()})`)
-    .replace(/\b\w/g, char => char.toUpperCase());
+const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
+
+const CTA_TEXTS = new Set([
+  "apply now",
+  "check eligibility",
+  "get updates",
+]);
+
+const getTextValue = (value: unknown): string => {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object" && "value" in value) {
+    return String((value as { value?: unknown }).value ?? "").trim();
+  }
+  return "";
 };
-const toSeoSlug = (text: string = "") =>
+
+const replaceBrand = (text = "") => text.replace(/collegedunia/gi, "StudyCups");
+
+const normalizeText = (text = "") =>
+  text
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+const shouldHideText = (text = "") => {
+  const normalized = normalizeText(text);
+  return !normalized || CTA_TEXTS.has(normalized);
+};
+
+const slugify = (text = "") =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+const toSeoSlug = (text = "") =>
   text
     .toLowerCase()
     .trim()
-    .replace(/\([^)]*\)/g, "")          // remove brackets content
-    .replace(/[^a-z0-9\s-]/g, "")       // remove symbols
-    .replace(/\s+/g, "-")               // spaces → dash
-    .replace(/-+/g, "-");               // clean dashes
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 
+const formatCourseTitle = (title = "") => title.replace(/\s+/g, " ").trim();
 
-const normalize = (text?: string | null) => {
-  if (!text) return "";
+const formatHeroCourseTitle = (title = "") =>
+  formatCourseTitle(title)
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/\[.*?\]/g, "")      // remove [PGP-FABM]
-    .replace(/\([^)]*\)/g, "")    // remove (PGPM)
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]/g, "");
+const formatFees = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return "₹" + value.toLocaleString("en-IN");
+  }
+
+  if (typeof value === "string" && value.trim()) return value.trim();
+
+  return "N/A";
 };
 
+const formatFeeLabel = (value: unknown) => {
+  const formatted = formatFees(value);
+  return formatted.startsWith("INR ") ? formatted : formatted.replace(/^â‚¹/, "INR ");
+};
 
-console.log("✅ CourseDetailPage MOUNTED");
+const getTextList = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => getTextList(item)).filter(Boolean);
+  }
 
+  const text = getTextValue(value);
+  return text ? [text] : [];
+};
 
-const CourseDetailPage = ({
-  colleges,
-  onOpenApplyNow, 
-  onOpenBrochure
-}: CourseDetailPageProps) => {
+const pickFirstText = (...values: unknown[]) =>
+  values.flatMap((value) => getTextList(value)).find(Boolean) || "";
 
+const startCaseFromSlug = (value = "") =>
+  value
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const getCourseFamily = (...parts: string[]) => {
+  const combined = parts.join(" ").toLowerCase();
+
+  if (/(mba|pgdm|management|business|executive|bba)/.test(combined)) {
+    return "management";
+  }
+
+  if (
+    /(b\.?tech|btech|m\.?tech|mtech|engineering|technology|computer|data science|artificial intelligence|machine learning)/.test(
+      combined
+    )
+  ) {
+    return "engineering";
+  }
+
+  if (/(mbbs|medical|health|nursing|dental|pharma)/.test(combined)) {
+    return "medical";
+  }
+
+  if (/(llb|llm|law|legal)/.test(combined)) {
+    return "law";
+  }
+
+  if (/(b\.?com|commerce|account|finance|economics)/.test(combined)) {
+    return "commerce";
+  }
+
+  if (/(ba|arts|humanities|social|psychology|journalism)/.test(combined)) {
+    return "arts";
+  }
+
+  return "general";
+};
+
+const getDerivedCourseLevel = (title = "") => {
+  const lowerTitle = title.toLowerCase();
+
+  if (
+    /(mba|pgdm|master|postgraduate|post-graduate|m\.?tech|mca|msc|m\.?com|ma|llm)/.test(
+      lowerTitle
+    )
+  ) {
+    return "Postgraduate";
+  }
+
+  if (
+    /(bachelor|undergraduate|under-graduate|b\.?tech|btech|bca|bba|b\.?com|ba|bsc|mbbs|llb)/.test(
+      lowerTitle
+    )
+  ) {
+    return "Undergraduate";
+  }
+
+  return "Program";
+};
+
+const COURSE_EXAM_NAMES = [
+  "CAT",
+  "XAT",
+  "MAT",
+  "CMAT",
+  "SNAP",
+  "GMAT",
+  "NMAT",
+  "ATMA",
+  "CUET",
+  "JEE Main",
+  "JEE Advanced",
+  "GATE",
+  "NEET",
+  "CLAT",
+  "AILET",
+  "NIMCET",
+  "NBSAT",
+];
+
+const getAcceptedExams = (course: any, title = "", categorySlug = "") => {
+  const textSources = [
+    course?.exams_accepted,
+    course?.exam_accepted,
+    course?.accepted_exams,
+    course?.accepted_exam,
+    course?.entrance_exam,
+    course?.entrance_exams,
+    course?.eligibility,
+  ]
+    .flatMap((value) => getTextList(value))
+    .map((value) => normalizeText(value));
+
+  const matchedExams = COURSE_EXAM_NAMES.filter((exam) =>
+    textSources.some((text) => text.includes(normalizeText(exam)))
+  );
+
+  if (matchedExams.length > 0) {
+    return Array.from(new Set(matchedExams)).join(" / ");
+  }
+
+  const family = getCourseFamily(
+    title,
+    pickFirstText(course?.stream, course?.course_stream, course?.stream_name),
+    categorySlug
+  );
+  const lowerTitle = title.toLowerCase();
+
+  switch (family) {
+    case "management":
+      return "CAT / XAT / MAT / CMAT / SNAP";
+    case "engineering":
+      return /(m\.?tech|mtech)/.test(lowerTitle)
+        ? "GATE"
+        : "JEE Main / JEE Advanced";
+    case "medical":
+      return "NEET";
+    case "law":
+      return /llm/.test(lowerTitle) ? "CLAT PG" : "CLAT / AILET";
+    default:
+      return "Entrance / merit based";
+  }
+};
+
+const getDefaultEligibility = (title = "", family = "general", level = "") => {
+  const lowerTitle = title.toLowerCase();
+  const normalizedLevel = level.toLowerCase();
+
+  switch (family) {
+    case "management":
+      return "Graduation from a recognized university";
+    case "engineering":
+      return /(m\.?tech|mtech)/.test(lowerTitle)
+        ? "B.E. / B.Tech in a relevant discipline"
+        : "Class 12 with PCM from a recognized board";
+    case "medical":
+      return "Class 12 with PCB from a recognized board";
+    case "law":
+      return /llm/.test(lowerTitle)
+        ? "LLB from a recognized university"
+        : "Class 12 from a recognized board";
+    default:
+      return normalizedLevel.includes("post")
+        ? "Graduation from a recognized university"
+        : "Class 12 from a recognized board";
+  }
+};
+
+const getStudyCupsOffer = (family = "general") => {
+  switch (family) {
+    case "management":
+      return "Up to INR 1 Lakh scholarship + counselling";
+    case "engineering":
+      return "Free counselling and college shortlist";
+    case "medical":
+      return "Admission guidance and counselling support";
+    case "law":
+      return "Application guidance and shortlist support";
+    default:
+      return "Free counselling and admission support";
+  }
+};
+
+const buildHeroDescription = (course: any, title = "", totalColleges = 0) => {
+  const customDescription = pickFirstText(
+    course?.short_description,
+    course?.description,
+    course?.overview,
+    course?.summary
+  );
+
+  if (customDescription) {
+    return replaceBrand(customDescription);
+  }
+
+  const details = [
+    pickFirstText(course?.duration),
+    pickFirstText(course?.mode),
+    totalColleges > 0 ? `${totalColleges}+ colleges` : "",
+  ].filter(Boolean);
+
+  const detailText = details.length ? ` with ${details.join(", ")}.` : ".";
+
+  return `Explore ${title} admission 2026 with fees, eligibility, syllabus, and colleges offering this course${detailText}`;
+};
+
+const formatCollegeFeeLabel = (value: number) => {
+  if (!Number.isFinite(value) || value <= 0) return "N/A";
+
+  const lakhs = Math.round((value / 100000) * 100) / 100;
+  return `INR ${lakhs}L`;
+};
+
+const getCollegeTypeLabel = (college: any) =>
+  [
+    college?.college_type,
+    college?.basic?.college_type,
+    college?.rawScraped?.basic?.college_type,
+    college?.type,
+  ]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .find(Boolean) || "";
+
+const getCollegeRoute = (college: any) =>
+  `/university/${college.id}-${toSeoSlug(college.name || "")}`;
+
+const normalizeTableRows = (value: unknown): string[][] => {
+  if (!Array.isArray(value) || value.length === 0) return [];
+
+  if (Array.isArray(value[0])) {
+    return value
+      .map((row) =>
+        Array.isArray(row)
+          ? row.map((cell) => replaceBrand(getTextValue(cell))).filter(Boolean)
+          : [replaceBrand(getTextValue(row))].filter(Boolean)
+      )
+      .filter((row) => row.length > 0);
+  }
+
+  return [
+    value
+      .map((cell) => replaceBrand(getTextValue(cell)))
+      .filter(Boolean),
+  ].filter((row) => row.length > 0);
+};
+
+const normalizeBlock = (block: any) => {
+  if (!block) return null;
+
+  const blockType =
+    typeof block?.type === "string" ? block.type.toLowerCase() : "text";
+
+  if (blockType === "text") {
+    const value = replaceBrand(getTextValue(block?.value ?? block));
+    if (shouldHideText(value)) return null;
+    return { type: "text", value };
+  }
+
+  if (blockType === "list") {
+    const value = (Array.isArray(block?.value) ? block.value : [])
+      .map((item: unknown) => replaceBrand(getTextValue(item)))
+      .filter((item: string) => !shouldHideText(item));
+
+    return value.length ? { type: "list", value } : null;
+  }
+
+  if (blockType === "table") {
+    const value = normalizeTableRows(block?.value);
+    return value.length ? { type: "table", value } : null;
+  }
+
+  if (blockType === "image") {
+    const src = getTextValue(block?.src || block?.value);
+    return src ? { type: "image", src } : null;
+  }
+
+  if (blockType === "video") {
+    const src = getTextValue(block?.src || block?.value);
+    return src ? { type: "video", src } : null;
+  }
+
+  if (blockType === "heading") {
+    const value = replaceBrand(getTextValue(block?.value));
+    return value ? { type: "heading", value, level: block?.level || "h3" } : null;
+  }
+
+  const fallback = replaceBrand(getTextValue(block));
+  return shouldHideText(fallback) ? null : { type: "text", value: fallback };
+};
+
+const normalizeBlocksArray = (data: unknown) => {
+  if (!data) return [];
+
+  if (!Array.isArray(data)) {
+    const normalized = normalizeBlock(data);
+    return normalized ? [normalized] : [];
+  }
+
+  return data.map(normalizeBlock).filter(Boolean);
+};
+
+const stripDuplicateHeading = (blocks: any[], heading = "") => {
+  if (!blocks.length || !heading) return blocks;
+
+  const firstBlock = blocks[0];
+  if (
+    firstBlock?.type === "text" &&
+    normalizeText(firstBlock.value) === normalizeText(heading)
+  ) {
+    return blocks.slice(1);
+  }
+
+  if (
+    firstBlock?.type === "heading" &&
+    normalizeText(firstBlock.value) === normalizeText(heading)
+  ) {
+    return blocks.slice(1);
+  }
+
+  return blocks;
+};
+
+const hasStructuredContent = (data: any) => {
+  if (!data) return false;
+
+  if (normalizeBlocksArray(data?.about).length > 0) {
+    return true;
+  }
+
+  if (Array.isArray(data?.toc_sections)) {
+    return data.toc_sections.some(
+      (section: any) => normalizeBlocksArray(section?.content).length > 0
+    );
+  }
+
+  return normalizeBlocksArray(data).length > 0;
+};
+
+const StructuredCourseContent: React.FC<{
+  title: string;
+  data: any;
+  emptyMessage: string;
+}> = ({ title, data, emptyMessage }) => {
+  const aboutBlocks = useMemo(() => normalizeBlocksArray(data?.about), [data]);
+  const tocSections = useMemo(
+    () => (Array.isArray(data?.toc_sections) ? data.toc_sections : []),
+    [data]
+  );
+
+  if (!aboutBlocks.length && tocSections.length === 0) {
+    return (
+      <section className="bg-white border rounded-2xl p-6 shadow-sm">
+        <p className="text-sm text-slate-500">{emptyMessage}</p>
+      </section>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {aboutBlocks.length > 0 && (
+        <section className="bg-white border rounded-2xl p-6 shadow-sm">
+          <h2 className="text-xl md:text-2xl font-bold text-blue-900 mb-4">
+            {title}
+          </h2>
+          <FlexibleBlockRenderer blocks={aboutBlocks as any} />
+        </section>
+      )}
+
+      {tocSections.length > 1 && (
+        <section className="bg-white border rounded-2xl p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-slate-900 mb-4">
+            Table of Contents
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {tocSections.map((section: any, index: number) => {
+              const sectionTitle = getTextValue(section?.section);
+              if (!sectionTitle) return null;
+
+              return (
+                <a
+                  key={`${sectionTitle}-${index}`}
+                  href={`#${slugify(sectionTitle)}`}
+                  className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 hover:border-blue-200 hover:text-blue-700"
+                >
+                  {sectionTitle}
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {tocSections.map((section: any, index: number) => {
+        const sectionTitle = getTextValue(section?.section) || `Section ${index + 1}`;
+        const blocks = stripDuplicateHeading(
+          normalizeBlocksArray(section?.content),
+          sectionTitle
+        );
+
+        if (!blocks.length) return null;
+
+        return (
+          <section
+            key={`${sectionTitle}-${index}`}
+            id={slugify(sectionTitle)}
+            className="bg-white border rounded-2xl p-6 shadow-sm scroll-mt-28"
+          >
+            <h3 className="text-lg md:text-xl font-bold text-slate-900 mb-4">
+              {sectionTitle}
+            </h3>
+            <FlexibleBlockRenderer blocks={blocks as any} />
+          </section>
+        );
+      })}
+    </div>
+  );
+};
+
+const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) => {
   const { categorySlug, courseSlug } = useParams<{
     categorySlug: string;
     courseSlug: string;
   }>();
-  console.log("🧭 URL PARAMS:", {
-    categorySlug,
-    courseSlug,
-  });
-
-
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("About");
-  const [showFullText, setShowFullText] = useState(false);
-  const [showFullAdmissionText, setShowFullAdmissionText] = useState(false);
-  const [showAllAdmissionBullets, setShowAllAdmissionBullets] = useState(false);
-  const sliceForMobile = (arr: string[], count = 5) =>
-    arr.slice(0, count);
-  // ✅ ROUTER PARAM (ONLY THIS WILL BE USED)
+  const location = useLocation();
 
+  const [activeTab, setActiveTab] = useState<CourseTab>("Overview");
+  const [course, setCourse] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [comparedCollegeIds, setComparedCollegeIds] = useState<string[]>([]);
 
-  const matchedCourses = useMemo(() => {
-    if (!courseSlug) return [];
+  const exactName = useMemo(
+    () => new URLSearchParams(location.search).get("name") || "",
+    [location.search]
+  );
 
-    const target = normalize(courseSlug);
-    const result: any[] = [];
+  useEffect(() => {
+    setActiveTab("Overview");
+    setComparedCollegeIds([]);
+  }, [courseSlug]);
 
-    colleges.forEach((college: any) => {
-      const courses = college.rawScraped?.courses;
-      if (!Array.isArray(courses)) return;
+  useEffect(() => {
+    if (!courseSlug) {
+      setCourse(null);
+      setLoading(false);
+      return;
+    }
 
-      courses.forEach((course: any) => {
-        const dbName = normalize(course.name);
-        console.log("🔍 CHECKING COURSE:", {
-          dbName,
-          target,
-          originalName: course.name,
-        });
+    setLoading(true);
 
-        if (dbName === target) {
-          console.log("✅ MATCH FOUND:", course.name);
-          result.push({
-            ...course,
-            collegeId: college.id,
-            collegeName: college.name,
-            collegeLogo: college.logoUrl,
-            collegeRaw: college.rawScraped,
+    const requestUrl = exactName
+      ? `${API_BASE}/course/${courseSlug}?name=${encodeURIComponent(exactName)}`
+      : `${API_BASE}/course/${courseSlug}`;
+
+    fetch(requestUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error("API failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (data?.success && data?.course) {
+          setCourse({
+            ...data.course,
+            collegesOffering: Array.isArray(data.collegesOffering)
+              ? data.collegesOffering
+              : [],
+            allCollegesData: Array.isArray(data.allCollegesData)
+              ? data.allCollegesData
+              : [],
           });
+          return;
         }
-      });
-    });
 
-    console.log("🔍 Total matches:", result.length);
-    return result;
-  }, [courseSlug, colleges]);
+        setCourse(null);
+      })
+      .catch((err) => {
+        console.error("Course detail API error:", err);
+        setCourse(null);
+      })
+      .finally(() => setLoading(false));
+  }, [courseSlug, exactName]);
 
+  const collegesOffering = useMemo(() => {
+    const source = Array.isArray(course?.collegesOffering) ? course.collegesOffering : [];
+    return [...new Map(source.map((item: any) => [String(item?.id), item])).values()];
+  }, [course?.collegesOffering]);
+  const hasSyllabusContent = useMemo(
+    () => hasStructuredContent(course?.syllabus_detail),
+    [course?.syllabus_detail]
+  );
+  const availableTabs = useMemo(() => {
+    const tabs: CourseTab[] = ["Overview"];
+    if (hasSyllabusContent) tabs.push("Syllabus");
+    tabs.push("Top Colleges");
+    return tabs;
+  }, [hasSyllabusContent]);
 
+  useEffect(() => {
+    if (activeTab === "Syllabus" && !hasSyllabusContent) {
+      setActiveTab("Overview");
+    }
+  }, [activeTab, hasSyllabusContent]);
 
-
-
-  const course = matchedCourses[0] || null;
-
-
-
-  const collegesOfferingCourse = useMemo(() => {
-    const map = new Map();
-
-    matchedCourses.forEach((c: any) => {
-      if (!map.has(c.collegeId)) {
-        map.set(c.collegeId, {
-          id: c.collegeId,
-          name: c.collegeName,
-          logoUrl: c.collegeLogo,
-        });
-      }
-    });
-
-    return Array.from(map.values());
-  }, [matchedCourses]);
-
-
-  const replaceBrand = (text: string = "") =>
-    text.replace(/collegedunia/gi, "Studycups");
-
-  const openApplyNow = () => {
-    // ✅ App.tsx को signal भेजो (same as before)
-    const event = new CustomEvent("open-apply-modal", {
-      detail: {
-        course: course.name,
-        college: course.collegeName
-      }
-    });
-    window.dispatchEvent(event);
+  const toggleComparedCollege = (collegeId: string) => {
+    setComparedCollegeIds((prev) =>
+      prev.includes(collegeId)
+        ? prev.filter((id) => id !== collegeId)
+        : [...prev, collegeId]
+    );
   };
 
+  const courseTitle = course?.course_name || course?.name || "Course";
+  const avgRating = Number(course?.avgRating || 0);
+  const totalColleges = Number(course?.totalColleges ?? course?.total_college_count ?? 0) || 0;
+  const streamLabel = replaceBrand(
+    pickFirstText(
+      course?.stream,
+      course?.course_stream,
+      course?.stream_name,
+      categorySlug ? startCaseFromSlug(categorySlug) : ""
+    ) || "General Program"
+  );
+ const rawLevelLabel = pickFirstText(course?.course_level, course?.level);
+ const levelLabel =
+  rawLevelLabel && !["n/a", "na", "not available"].includes(normalizeText(rawLevelLabel))
+    ? rawLevelLabel
+    : getDerivedCourseLevel(courseTitle);
+  const courseFamily = getCourseFamily(courseTitle, streamLabel, categorySlug || "");
+  const acceptedExams = getAcceptedExams(course, courseTitle, categorySlug || "");
+  const eligibilityText = replaceBrand(
+    pickFirstText(course?.eligibility, course?.min_eligibility, course?.eligibility_text) ||
+      getDefaultEligibility(courseTitle, courseFamily, levelLabel)
+  );
+  const studyCupsOffer = getStudyCupsOffer(courseFamily);
+  const heroDescription = buildHeroDescription(course, courseTitle, totalColleges);
+  const quickFactsTitle = formatCourseTitle(courseTitle);
+  const courseQuickFacts = [
+    { label: "Duration", value: pickFirstText(course?.duration) || "N/A" },
+    { label: "Level", value: replaceBrand(levelLabel) || "N/A" },
+    { label: "Min. Eligibility", value: eligibilityText || "N/A" },
+    { label: "Main Exams", value: acceptedExams || "N/A" },
+    { label: "Fee Range", value: formatFeeLabel(course?.avg_fees ?? course?.fees) },
+    { label: "Partner Colleges", value: totalColleges > 0 ? `${totalColleges}+` : "N/A" },
+    { label: "StudyCups Offer", value: studyCupsOffer || "N/A" },
+  ];
+  const currentContent =
+    activeTab === "Syllabus" && hasSyllabusContent
+      ? course?.syllabus_detail
+      : course?.course_detail;
 
-  // ✅ SAFE GUARD — AFTER ALL HOOKS
-  if (!course) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
-        loading course details...
+        Loading course data...
       </div>
     );
   }
 
+  if (!course) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-500">
+        Course not found
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 pt-10">
+      <Helmet>
+        <title>{`${courseTitle} 2026 | Fees, Syllabus, Colleges | StudyCups`}</title>
+        <meta
+          name="description"
+          content={`Explore ${courseTitle} including fees, duration, syllabus, course details and colleges offering this course.`}
+        />
+      </Helmet>
 
+      <section className="relative overflow-hidden bg-[linear-gradient(120deg,#041a31_0%,#072746_62%,#10273d_100%)]">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-[-8%] top-[14%] h-56 w-56 rounded-full bg-[#0ea5b7]/12 blur-3xl" />
+          <div className="absolute bottom-[-10%] right-[-4%] h-72 w-72 rounded-full bg-[#f3a11c]/12 blur-3xl" />
+        </div>
 
-      {/* HEADER */}
-      <div className="relative bg-[var(--primary-dark)]
- mt-5">
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_360px] lg:items-start">
+            <div className="max-w-[760px] text-white">
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <span className="inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-cyan-200">
+  {replaceBrand(levelLabel)}
+</span>
+                <span className="inline-flex rounded-full border border-[#f3a11c]/35 bg-[#f3a11c]/8 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#f3a11c]">
+                  {streamLabel}
+                </span>
+              </div>
+
+              <div className="mt-4">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-white/60">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/")}
+                    className="transition hover:text-white"
+                  >
+                    Home
+                  </button>
+                  <span className="text-white/30">&lt;</span>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/courses")}
+                    className="transition hover:text-white"
+                  >
+                    Course
+                  </button>
+                  <span className="text-white/30">&lt;</span>
+                  <span className="font-medium text-[#f3a11c]">
+                    {formatCourseTitle(courseTitle)}
+                  </span>
+                </div>
+
+                <h1
+                  className="mt-5 text-[2.35rem] leading-[0.98] text-white md:text-[3.35rem]"
+                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                >
+                  {formatHeroCourseTitle(courseTitle)}
+                </h1>
+                <p
+                  className="text-[2.15rem] italic leading-none text-[#f3a11c] md:text-[3rem]"
+                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                >
+                  Admission 2026
+                </p>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/80">
+                {avgRating > 0 && (
+                  <span className="font-semibold text-yellow-300">
+                    Star {avgRating.toFixed(1)} Avg Rating
+                  </span>
+                )}
+                {course?.duration && <span>{course.duration}</span>}
+                {course?.mode && <span>{course.mode}</span>}
+              </div>
+
+              <p className="mt-4 max-w-[620px] text-sm leading-7 text-white/75 md:text-[0.98rem]">
+                {heroDescription}
+              </p>
+
+              <div className="mt-6 grid max-w-[720px] grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">
+                    Duration
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-white">
+                    {pickFirstText(course?.duration) || "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">
+                    Avg Fees
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-white">
+                    {formatFeeLabel(course?.avg_fees ?? course?.fees)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">
+                    Colleges
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-white">{totalColleges || 0}</p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">
+                    Mode
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-white">
+                    {pickFirstText(course?.mode, course?.study_mode) || "N/A"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full lg:max-w-[360px]">
+              <div className="rounded-[28px] border border-[#0b6675]/60 bg-[linear-gradient(180deg,rgba(27,58,82,0.96)_0%,rgba(26,47,67,0.92)_100%)] p-5 shadow-[0_24px_50px_rgba(4,20,38,0.24)] backdrop-blur">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-white/45">
+                  Course Snapshot
+                </p>
+
+                <div className="mt-5 rounded-2xl border border-[#0b6675]/60 bg-[#0d4253]/35 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-cyan-100/70">
+                    StudyCups guidance
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-white/82">
+                    Verified admission support for your course, budget, and shortlist.
+                  </p>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {[
+                    { label: "Exam", value: acceptedExams },
+                    { label: "Eligibility", value: eligibilityText },
+                    { label: "StudyCups Offer", value: studyCupsOffer },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3"
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-white/55">
+                        {item.label}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-white">
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {false && (
+
+      <div className="relative bg-[var(--primary-dark)] mt-5">
         <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-8 text-white">
-
           <button
-            onClick={() => window.history.back()}
-
-
+            onClick={() => navigate(-1)}
             className="mb-4 mt-12 inline-flex items-center gap-2 text-sm font-semibold hover:opacity-90"
           >
-            <span className="inline-block rounded bg-white/10 px-2 py-1">
-              ←
-            </span>
+            <span className="inline-block rounded bg-white/10 px-2 py-1">←</span>
             Back to Courses
           </button>
 
           <h1 className="text-3xl sm:text-4xl lg:text-3xl font-extrabold tracking-tight drop-shadow-sm">
-            {formatCourseTitle(course.name)}
-
+            {formatCourseTitle(courseTitle)}
           </h1>
 
-
-          <div className="flex items-center gap-6">
-
-            {/* Rating number + stars */}
-            <div className="flex flex-col text-center">
-              <span className="text-3xl font-bold pt-2 text-[orange]">
-                {course.rating || "N/A"}
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/90">
+            {avgRating > 0 && (
+              <span className="font-semibold text-yellow-300">
+                ⭐ {avgRating.toFixed(1)} Avg Rating
               </span>
-
-              {/* stars */}
-              <span className="text-yellow-400 text-sm">
-                {Array(5)
-                  .fill("")
-                  .map((_, i) => (
-                    <span key={i}>
-                      {i < (course.rating || 0) ? "★" : "☆"}
-                    </span>
-                  ))}
-              </span>
-            </div>
-
-            {/* Review count */}
-            <button
-              className="text-sm font-semibold underline text-white/90 hover:text-white"
-              onClick={() => setActiveTab("Statistics")}
-            >
-              {course.reviews || 0}
-            </button>
-
+            )}
+            {course?.stream && <span>{replaceBrand(course.stream)}</span>}
+            {course?.duration && <span>{course.duration}</span>}
+            {course?.mode && <span>{course.mode}</span>}
           </div>
 
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-
-
             <div className="rounded-xl bg-white/10 px-4 py-3">
               <p className="text-xs text-white/80">Duration</p>
-              <p className="text-lg font-bold">
-                {course.duration || "N/A"}
-              </p>
+              <p className="text-lg font-bold">{course?.duration || "N/A"}</p>
             </div>
 
             <div className="rounded-xl bg-white/10 px-4 py-3">
-              <p className="text-xs text-white/80">Fees</p>
-              <p className="text-lg font-bold">
-                {course.fees || "N/A"}
-              </p>
+              <p className="text-xs text-white/80">Avg Fees</p>
+              <p className="text-lg font-bold">{formatFees(course?.avg_fees ?? course?.fees)}</p>
             </div>
 
             <div className="rounded-xl bg-white/10 px-4 py-3">
-              <p className="text-xs text-white/80">Eligibility</p>
-              <p className="text-[18px] font-bold">
-                {course.eligibility || "N/A"}
+              <p className="text-xs text-white/80">Course Level</p>
+              <p className="text-lg font-bold">
+                {course?.course_level ?? course?.level ?? 0}
               </p>
             </div>
 
             <div className="rounded-xl bg-white/10 px-4 py-3">
               <p className="text-xs text-white/80">Mode</p>
-              <p className="text-lg font-bold">
-                {course.mode || "N/A"}
-              </p>
+              <p className="text-lg font-bold">{course?.mode || "N/A"}</p>
             </div>
+          </div>
+        </div>
+      </div>
+      )}
 
+      <div className="sticky top-[74px] z-40 border-b border-[#d9d4ca] bg-[#f2efe8] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-6 overflow-x-auto no-scrollbar">
+            {availableTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`whitespace-nowrap border-b-2 px-2 py-4 text-sm font-semibold transition ${
+                  activeTab === tab
+                    ? "border-[#0f7a83] text-[#0f7a83]"
+                    : "border-transparent text-slate-500 hover:text-[#0f7a83]"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <main className="lg:col-span-2 space-y-6">
+            {activeTab === "Top Colleges" ? (
+              <section className="bg-white border rounded-2xl p-6 shadow-sm">
+                <h2 className="text-xl md:text-2xl font-bold text-blue-900">
+                  Colleges Offering This Course
+                </h2>
 
-      {/* BODY */}
-   <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {collegesOffering.length > 0 ? (
+                  <div className="mt-5 space-y-4">
+                    {collegesOffering.map((college: any) => {
+                      const collegeId = String(college?.id ?? "");
+                      const collegeType = getCollegeTypeLabel(college);
+                      const annualFee = formatCollegeFeeLabel(
+                        Number(college?.feesRange?.min ?? course?.avg_fees ?? course?.fees ?? 0)
+                      );
+                      const ratingValue = Number(college?.rating ?? 0);
+                      const catLikePercent = ratingValue > 0 ? `${Math.round(ratingValue * 20)}+` : "N/A";
+                      const totalReviews = Number(college?.reviewCount ?? college?.reviews ?? 0);
+                      const reviewsLabel =
+                        Number.isFinite(totalReviews) && totalReviews > 0
+                          ? totalReviews.toLocaleString("en-IN")
+                          : "0";
+                      const cardLabel = formatHeroCourseTitle(courseTitle) || streamLabel;
+                      const collegeLogo =
+                        college?.logo ||
+                        college?.logoUrl ||
+                        college?.image ||
+                        college?.rawScraped?.logo ||
+                        "/no-image.jpg";
+                      const isCompared = comparedCollegeIds.includes(collegeId);
 
-        <main className="lg:col-span-2 space-y-8">
-          <section className="
-  bg-white 
-  p-4 sm:p-6
-  rounded-xl shadow-sm border 
-  space-y-4
-">
-
-
-            {course.details ? (
-
-              <div className="space-y-4">
-
-                {/* Heading */}
-                <h3 className="text-[20px] font-bold text-blue-900">
-                  {course.details.heading}
-                </h3>
-
-                {/* Overview Short / Full Text */}
-                <p className="text-slate-700 text-[15px] leading-relaxed">
-                  {showFullText
-                    ? replaceBrand(course.details.overview_full_text)
-                    : `${replaceBrand(course.details.overview_full_text)?.slice(0, 280)}...`}
-                </p>
-
-                {/* Overview bullet points */}
-                {course.details.overview_paragraphs?.length > 0 && (
-                  <ul className="space-y-2 pl-5 mt-2">
-                    {course.details.overview_paragraphs
-                      .slice(0, 4)
-                      .map((item: string, i: number) => (
-                        <li
-                          key={i}
-                          className="list-disc text-[15px] text-slate-700"
+                      return (
+                        <article
+                          key={college.id}
+                          className="overflow-hidden rounded-2xl border border-[#d8d2c5] bg-white"
                         >
-                          {replaceBrand(item)}
-                        </li>
-                      ))}
-                  </ul>
+                          <div className="border-l-4 border-[#148d99] p-4 md:p-5">
+                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4">
+                              <div>
+                                <div className="flex items-start gap-4">
+                                  <img
+                                    src={collegeLogo}
+                                    alt={college.name || "College"}
+                                    className="h-14 w-14 rounded-xl border border-[#ddd5c8] bg-[#f4f1ea] object-contain p-2"
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-[#167f8b] md:text-sm">
+                                      {cardLabel || "Courses Available"}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate(getCollegeRoute(college))}
+                                      className="mt-0.5 block text-left text-lg font-semibold leading-tight text-[#10233e] hover:underline md:text-[28px]"
+                                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                                    >
+                                      {college.name}
+                                    </button>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                      {college.location || "Location not available"}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 grid grid-cols-3 overflow-hidden rounded-xl border border-[#d7d1c5] text-center">
+                                  <div className="border-r border-[#d7d1c5] py-2">
+                                    <p className="font-serif text-[18px] leading-none text-[#10233e] md:text-[20px]">
+                                      {annualFee}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-slate-500">Annual Fee</p>
+                                  </div>
+                                  <div className="border-r border-[#d7d1c5] py-2">
+                                    <p className="font-serif text-[18px] leading-none text-[#10233e] md:text-[20px]">
+                                      {catLikePercent}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-slate-500">CAT %ile</p>
+                                  </div>
+                                  <div className="py-2">
+                                    <p className="font-serif text-[18px] leading-none text-[#10233e] md:text-[20px]">
+                                      {reviewsLabel}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-slate-500">Total Reviews</p>
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  <span className="rounded-full border border-[#d8d2c5] bg-[#f6f2e9] px-3 py-1 text-xs text-[#10233e]">
+                                    {ratingValue > 0 ? `${ratingValue.toFixed(1)} Rating` : "Rating N/A"}
+                                  </span>
+                                  {collegeType && (
+                                    <span className="rounded-full border border-[#d8d2c5] bg-[#f6f2e9] px-3 py-1 text-xs text-[#10233e]">
+                                      {collegeType}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex gap-2 xl:min-w-[170px] xl:flex-col xl:justify-center">
+                                <button
+                                  type="button"
+                                  onClick={onOpenApplyNow}
+                                  className="rounded-xl bg-[#ee9b16] px-5 py-2.5 text-sm font-semibold text-[#10233e]"
+                                >
+                                  Get Guidance
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(getCollegeRoute(college))}
+                                  className="inline-flex items-center justify-center rounded-xl bg-[#0f6f79] px-5 py-2.5 text-sm font-semibold text-white"
+                                >
+                                  Check Details
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleComparedCollege(collegeId)}
+                                  className={`inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold ${
+                                    isCompared ? "bg-[#1e7d43] text-white" : "bg-[#132a4a] text-white"
+                                  }`}
+                                >
+                                  {isCompared ? "Compared" : "Compare"}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm text-slate-500">
+                    No colleges linked for this course yet.
+                  </p>
                 )}
+              </section>
+            ) : (
+              <StructuredCourseContent
+                title={
+                  activeTab === "Overview"
+                    ? `About ${formatCourseTitle(courseTitle)}`
+                    : `${formatCourseTitle(courseTitle)} Syllabus`
+                }
+                data={currentContent}
+                emptyMessage={
+                  activeTab === "Overview"
+                    ? "Course details are not available right now."
+                    : "Syllabus details are not available right now."
+                }
+              />
+            )}
+          </main>
 
-                {/* Read More Button */}
-                <button
-                  onClick={() => setShowFullText(!showFullText)}
-                  className="text-blue-700 text-sm font-semibold underline mt-2"
-                >
-                  {showFullText ? "Read Less" : "Read More"}
-                </button>
+          <aside className="space-y-5 w-full">
+            <div className="lg:sticky lg:top-24 space-y-5">
+       
 
+              <div className="overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,#081c33_0%,#133252_100%)] p-6 text-white shadow-[0_20px_45px_rgba(7,29,53,0.16)]">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#0f7a83] text-xs font-bold ">
+                  SC
+                </div>
+
+                <div className="mt-4 text-center">
+                  <h3
+                    className="text-[1.3rem] leading-tight text-white"
+                    style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                  >
+                    Free Counselling
+                  </h3>
+                  <p className="mt-1 text-sm text-white/68">
+                    StudyCups Expert Counsellors
+                  </p>
+                </div>
+
+                <div className="mt-4 text-center">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#f3a11c]">
+                    ⭐⭐⭐⭐⭐
+                  </p>
+                  <p className="mt-1 text-xs text-white/55">
+                    4.6 / 5 from 1,065 Justdial reviews
+                  </p>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                  <a
+                    href="tel:+918081269969"
+                    className="flex min-h-[50px] items-center justify-center rounded-xl bg-[#f3a11c] px-4 text-sm font-bold text-[#071d35] transition hover:brightness-105"
+                  >
+                    📞Call 8081269969
+                  </a>
+                  <a
+                    href="https://wa.me/918081269969"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex min-h-[50px] items-center justify-center rounded-xl border border-[#1f7a61] bg-[#11443f] px-4 text-sm font-semibold text-[#63e6b0] transition hover:bg-[#14514b]"
+                  >
+                    🗨️WhatsApp Us
+                  </a>
+                </div>
               </div>
 
-            ) : (
-
-              <p className="text-slate-500">
-                No data available.
-              </p>
-
-            )}
-
-            {course.details?.highlights && (
-              <section className="bg-white p-6 rounded-2xl border shadow-sm space-y-8">
-
-                {/* ================= COURSE HIGHLIGHTS ================= */}
-                <div>
-                  <h3 className="text-xl font-bold text-blue-900 mb-4">
-                    Course Highlights
+              <div className="overflow-hidden rounded-[22px] border border-[#d8d1c6] bg-white shadow-sm">
+                <div className="bg-[#061d34] px-5 py-4">
+                  <h3 className="text-base font-bold text-white">
+                    {quickFactsTitle} Quick Facts
                   </h3>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {[
-                      ["Duration", course.details.highlights.duration],
-                      ["Course Level", course.details.highlights["course level"]],
-                      ["Mode of Study", course.details.highlights["mode of study"]],
-                      ["Eligibility", course.details.highlights.eligibility],
-                      ["Total Fees", course.details.highlights["total fees"]],
-                    ]
-                      .filter(([, v]) => v)
-                      .map(([label, value], i) => (
-                        <div
-                          key={i}
-                          className="bg-slate-50 border rounded-xl p-4"
-                        >
-                          <p className="text-xs text-slate-500">{label}</p>
-                          <p className="font-semibold text-slate-900 mt-1">
-                            {value}
-                          </p>
-                        </div>
-                      ))}
-                  </div>
                 </div>
 
-                {/* ================= FEE BREAKDOWN ================= */}
-                <div>
-                  <h3 className="text-xl font-bold text-blue-900 mb-4">
-                    Fee Breakdown
-                  </h3>
-
-                  <div className="overflow-hidden border rounded-xl">
-                    <table className="w-full text-sm border-collapse">
-                      <tbody>
-                        {[
-                          ["Tuition Fee", course.details.highlights["tuition fee"]],
-                          ["Caution Fee", course.details.highlights["caution fee*"]],
-                          ["Other Fee", course.details.highlights["other fee"]],
-                          ["Total Academic Fee", course.details.highlights["total academic fee"]],
-                          ["Hostel Fee", course.details.highlights["hostel fee"]],
-                          ["Total Fee", course.details.highlights["total fee"]],
-                        ]
-                          .filter(([, v]) => v)
-                          .map(([label, value], i) => (
-                            <tr
-                              key={i}
-                              className={
-                                label === "Total Fee"
-                                  ? "bg-green-50"
-                                  : "hover:bg-slate-50"
-                              }
-                            >
-                              <td className="border p-3 font-medium text-slate-700">
-                                {label}
-                              </td>
-                              <td className="border p-3 text-right font-bold text-slate-900">
-                                {value}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-xl shadow-sm border flex flex-col block md:hidden">
-                  <h3 className="text-xl font-bold">Apply Now</h3>
-                  <p className="mt-2 text-sm text-slate-600">
-                    Get admission guidance from experts.
-                  </p>
-
-                  <div className="mt-4 flex gap-3">
-                    <a className="cursor-pointer inline-flex items-center justify-center rounded-md bg-[--primary-medium] p-2 text-white font-semibold text-[10px] "
-                      onClick={onOpenApplyNow}
+                <div className="space-y-3 p-5">
+                  {courseQuickFacts.map((fact) => (
+                    <div
+                      key={fact.label}
+                      className="flex items-start justify-between gap-4 rounded-xl bg-[#f6f1e8] px-4 py-3"
                     >
-                      Apply Now
-                    </a>
-                    <a className="inline-flex cursor-pointer items-center justify-center rounded-md border px-4 py-2 font-semibold" 
-                      onClick={onOpenBrochure}
-                    >
-                      Download Brochure
-                    </a>
-                  </div>
-                </div>
-
-                {/* ================= ADMISSION DATES ================= */}
-                <div>
-                  <h3 className="text-xl font-bold text-blue-900 mb-4">
-                    Admission & Counselling Dates
-                  </h3>
-
-                  <div className="space-y-3">
-                    {Object.entries(course.details.highlights)
-                      .filter(([key]) =>
-                        key.toLowerCase().includes("counselling") ||
-                        key.toLowerCase().includes("registration")
-                      )
-                      .map(([key, value], i) => (
-                        <div
-                          key={i}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border rounded-xl p-4 bg-blue-50"
-                        >
-                          <p className="text-sm font-medium text-slate-800">
-                            {key}
-                          </p>
-
-                          <span className="text-sm font-bold text-blue-700">
-                            {value as string}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {course.collegeRaw?.admission?.length > 0 && (
-                  <div className="bg-white border rounded-2xl p-6 mt-10 space-y-6">
-
-                    {course.collegeRaw.admission.map((section: any, idx: number) => (
-                      <div key={idx} className="space-y-5">
-
-                        <h3 className="text-xl font-bold text-blue-900">
-                          {section.title}
-                        </h3>
-
-                        {/* PARAGRAPHS */}
-                        {Array.isArray(section.paragraphs) && (
-                          <div
-                            className={`
-    space-y-3 text-sm text-slate-600 leading-relaxed
-    break-words
-    overflow-hidden
-    ${showFullAdmissionText ? "" : "max-h-[160px] overflow-hidden"}
-    md:max-h-none
-  `}
-                            style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
-                          >
-
-                            {(showFullAdmissionText
-                              ? section.paragraphs
-                              : sliceForMobile(section.paragraphs, 6)
-                            ).map((p: string, i: number) => (
-                              <p key={i}>{replaceBrand(p)}</p>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* READ MORE (MOBILE) */}
-                        {section.paragraphs?.length > 6 && (
-                          <button
-                            onClick={() => setShowFullAdmissionText(!showFullAdmissionText)}
-                            className="md:hidden text-blue-600 text-sm font-semibold"
-                          >
-                            {showFullAdmissionText ? "Read Less" : "Read More"}
-                          </button>
-                        )}
-
-                        {/* BULLETS */}
-                        {Array.isArray(section.bullets) && (
-                          <ul
-                            className="
-    list-disc pl-4
-    text-sm text-slate-700 space-y-2
-    break-words
-    overflow-hidden
-  "
-                            style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
-                          >
-
-                            {(showAllAdmissionBullets
-                              ? section.bullets
-                              : section.bullets.slice(0, 6)
-                            ).map((b: string, i: number) => (
-                              <li key={i}>{replaceBrand(b)}</li>
-                            ))}
-                          </ul>
-                        )}
-
-                        {section.bullets?.length > 6 && (
-                          <button
-                            onClick={() => setShowAllAdmissionBullets(!showAllAdmissionBullets)}
-                            className="text-blue-600 text-sm font-semibold"
-                          >
-                            {showAllAdmissionBullets ? "View Less" : "View More"}
-                          </button>
-                        )}
-
-                        {/* TABLES */}
-                        {Array.isArray(section.tables) && section.tables.map((table: any[], t) => (
-                          <div
-                            key={t}
-                            className="
-    overflow-x-auto
-    border rounded-xl
-    -mx-4 sm:mx-0
-    px-4 sm:px-0
-  "
-                          >
-
-                            <table className="
-  w-full min-w-[650px]
-  border-collapse text-xs sm:text-sm
-">
-
-                              <thead className="bg-slate-100">
-                                <tr>
-                                  {table[0].map((h: string, i: number) => (
-                                    <th key={i} className="border p-3 text-left font-semibold">
-                                      {h}
-                                    </th>
-                                  ))}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {table.slice(1).map((row: string[], r: number) => (
-                                  <tr key={r} className="hover:bg-slate-50">
-                                    {row.map((cell: string, c: number) => (
-                                      <td key={c} className="border p-3">
-                                        {cell}
-                                      </td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ))}
-
-                      </div>
-                    ))}
-
-                  </div>
-                )}
-
-              </section>
-            )}
-
-
-          </section>
-        </main>
-
-        {/* SIDEBAR */}
-        <aside className="space-y-5 w-full block ">
-           <div className="lg:sticky lg:top-[20px]">
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border flex flex-col hidden md:block">
-            <h3 className="text-xl font-bold">Apply Now</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Get admission guidance from experts.
-            </p>
-
-            <div className="mt-4 flex gap-3">
-              <a className="cursor-pointer inline-flex items-center justify-center rounded-md bg-[var(--primary-dark)] p-2 text-white font-semibold text-[10px] "
-                onClick={onOpenApplyNow}
-              >
-                Apply Now
-              </a>
-              <a className="inline-flex items-center justify-center rounded-md border px-4 py-2 font-semibold cursor-pointer" 
-               onClick={onOpenBrochure}>
-                Download Brochure
-              </a>
-            </div>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border">
-            <h3 className="text-xl font-bold mb-4">Colleges Offering this Course</h3>
-
-            {collegesOfferingCourse.length > 0 ? (
-              <ul className="space-y-3 sm:space-y-4">
-
-                {collegesOfferingCourse.map(college => (
-                  <li key={college.id} className="border rounded-lg p-3 hover:bg-slate-50 transition">
-                    <div className="flex items-center gap-3">
-
-                      <img src={college.logoUrl} className="h-10 w-10 rounded-full border" />
-
-                      <div className="flex-1">
-                        <p className="font-semibold text-slate-800">{college.name}</p>
-
-                        <button
-                          onClick={() => {
-    navigate(
-      `/university/${college.id}-${toSeoSlug(college.name)}`
-    );
-  }}
-
-                          className="mt-1 text-xs text-[--primary-medium] font-semibold hover:underline"
-                        >
-                          View Details →
-                        </button>
-                      </div>
-
+                      <span className="text-sm text-slate-500">{fact.label}</span>
+                      <span className="max-w-[58%] text-right text-sm font-semibold text-slate-800">
+                        {fact.value}
+                      </span>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-slate-500">No colleges found offering this course.</p>
-            )}
-          </div> 
-          </div>
-        </aside>
+                  ))}
+                </div>
+              </div>
 
+              <div className="overflow-hidden rounded-[22px] border border-[#d8d1c6] bg-white shadow-sm">
+                <div className="bg-[#061d34] px-5 py-4">
+                  <h3 className="text-base font-bold text-white">
+                    Scholarships Available
+                  </h3>
+                </div>
+
+                <div className="space-y-3 p-5">
+                  {[
+                    {
+                      title: "StudyCups Partner Scholarship",
+                      value: "Up to INR 1,00,000 off",
+                    },
+                    {
+                      title: "Merit-based (High CAT score)",
+                      value: "10-50% tuition waiver",
+                    },
+                    {
+                      title: "SBI / HDFC Education Loan",
+                      value: "Up to INR 40L @ 8.5% p.a.",
+                    },
+                    {
+                      title: "College Diversity Scholarships",
+                      value: "Varies by college",
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.title}
+                      className="rounded-xl border border-[#ded7cc] bg-[#f6f1e8] px-4 py-3"
+                    >
+                      <p className="text-sm font-medium text-slate-800">{item.title}</p>
+                      <p className="mt-1 text-sm font-semibold text-[#0f7a83]">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
-
-   </div>
     </div>
   );
 };

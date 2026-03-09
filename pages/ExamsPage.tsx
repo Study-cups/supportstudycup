@@ -7,6 +7,16 @@ interface ExamsPageProps {
   setView: (view: View) => void;
 }
 
+const toExamSlug = (exam: any) =>
+  exam.name
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^\w\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-") +
+  (exam.year ? `-${exam.year}` : "");
+
+
 const AnimatedCard: React.FC<{ children: React.ReactNode; delay: number }> = ({
   children,
   delay,
@@ -211,7 +221,8 @@ const visibleNews = showAllNews
     filteredExams.map((exam, index) => (
       <AnimatedCard key={exam.id} delay={index * 40}>
         <div
-          onClick={() => navigate(`/exam/${exam.id}`)}
+          onClick={() => navigate(`/exams/${toExamSlug(exam)}`)}
+
           className="bg-white border rounded-xl p-5 hover:shadow-lg transition cursor-pointer"
         >
           {/* TOP */}
