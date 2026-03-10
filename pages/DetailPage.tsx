@@ -3196,7 +3196,7 @@ if (blockType === "heading") {
                   className="
       px-3 py-1.5 md:px-6 md:py-2.5
       rounded-lg
-      bg-blue-600 hover:bg-blue-700
+      bg-[#1E4A7A] hover:bg-[#1A3A6A]
       text-white text-xs md:text-sm font-semibold
       shadow-md
       transition
@@ -3210,7 +3210,7 @@ if (blockType === "heading") {
                   className="
       px-3 py-1.5 md:px-6 md:py-2.5
       rounded-lg
-      bg-green-600 hover:bg-green-700
+      bg-[#f4a71d] hover:bg-[#e69500]
       text-white text-xs md:text-sm font-semibold
       shadow-md
       transition
