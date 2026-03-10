@@ -1668,13 +1668,19 @@ if (blockType === "heading") {
                     )}
                   </div>
 
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-green-600">
+                  <div className="grid grid-cols-[auto_1fr] items-end gap-x-3 gap-y-1 md:block md:text-right">
+                    <button
+                      onClick={onOpenApplyNow}
+                      className="row-span-2 md:hidden shrink-0 px-5 py-2 bg-orange-500 text-white rounded-full text-xs font-semibold hover:bg-orange-600"
+                    >
+                      Apply Now
+                    </button>
+                    <p className="col-start-2 text-right text-xl font-bold text-green-600">
                       {course.total_fees || "N/A"}
                     </p>
 
                     <p
-                      className="text-xs text-blue-600 cursor-pointer hover:underline"
+                      className="col-start-2 text-right text-xs text-blue-600 cursor-pointer hover:underline"
                       onClick={(e) => {
                         e.stopPropagation();
                         const courseSlug = course?.slug_url || toCourseSlug(course?.course_name || "");
@@ -1689,7 +1695,7 @@ if (blockType === "heading") {
                 </div>
 
                 {/* Buttons */}
-                <div className="flex flex-wrap justify-between md:justify-end gap-3 mt-5">
+                <div className="hidden md:flex flex-wrap justify-between md:justify-end gap-3 mt-5">
 
 
                   <button
@@ -3540,3 +3546,4 @@ if (blockType === "heading") {
 };
 
 export default DetailPage;
+
