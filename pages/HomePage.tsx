@@ -2301,7 +2301,7 @@ const HERO_TAGS = [
             {/* FILTER BY LEVEL ONLY */}
             <div className="mb-8">
               <h3 className="text-sm md:text-lg text-[#0A225A] mb-3">Filter by Level</h3>
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
 
                 {exploreLevels.map((level) => (
                   <button
