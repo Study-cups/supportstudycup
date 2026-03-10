@@ -1,7 +1,7 @@
 import React, { useState , useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import type { College } from "../types";
-import { buildCourseDetailPath, toCourseSlug } from "../pages/Seo";
+import { toCourseSlug } from "../pages/Seo";
 
 
 
@@ -812,12 +812,7 @@ const CoursesMegaMenu = () => {
               <p
                 key={course.name}
                 onMouseEnter={() => handleCourseHover(course)} 
-                
-               onClick={() =>
-    navigate(buildCourseDetailPath(course.stream, course.name))
-  }
-
-                className={`text-sm py-1.5 cursor-pointer ${
+                className={`text-sm py-1.5 cursor-default ${
                   activeCourse?.name === course.name
                     ? "text-[#1E4A7A] font-semibold"
                     : "text-slate-700 hover:text-[#1E4A7A]"
