@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 
+const SHOW_CONTENT_IMAGES = false;
+
 type Block =
   | { type: "text"; value: string }
   | { type: "list"; value: string[] }
@@ -197,6 +199,8 @@ const FlexibleBlockRenderer: React.FC<Props> = ({ blocks }) => {
             );
           }
           case "image":
+            // Temporarily hide backend-driven content images on course/college detail pages.
+            if (!SHOW_CONTENT_IMAGES) return null;
             console.log("IMAGE BLOCK:", block);
             console.log("IMAGE SRC:", block?.src);
             if (!block.src) return null;
