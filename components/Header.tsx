@@ -135,7 +135,11 @@ const getExamsForCourse = (courseName: string) => {
       id: exam.id,
       name: exam.name,
       year: exam.year,
-    }));
+    })); 
+
+
+
+    
 };
 
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
