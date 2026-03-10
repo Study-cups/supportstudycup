@@ -2666,7 +2666,8 @@ const HERO_TAGS = [
           <img
     src="https://media.gettyimages.com/id/1920428247/vector/online-examinations-illustrations-concept-trendy-vector-style-confirmation.jpg?s=612x612&w=0&k=20&c=yOGQmJD3DcSh4A1Tb4pqqW6aHc8DS4ONLH2MH7temtY="
     alt="Education Illustration"
-    className="
+    className=" 
+      
       block sm:hidden
       w-full
       max-w-[260px]
@@ -2750,14 +2751,14 @@ const HERO_TAGS = [
 </section>
 
 
-        <section className="py-16 bg-[#f4f6fb]">
+     {/*   <section className="py-16 bg-[#f4f6fb]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <h2 className="text-xl md:text-2xl text-slate-900 mb-8">
             Latest from our Blog
           </h2>
 
-          {/* MOBILE: horizontal scroll */}
+         
           <div
             className="
         flex md:hidden 
@@ -2810,7 +2811,7 @@ const HERO_TAGS = [
             ))}
           </div>
 
-          {/* DESKTOP: 3 column grid */}
+      
           <div className="hidden md:grid grid-cols-3 gap-6">
             {BLOG_POSTS_DATA.slice(0, 3).map((post, index) => (
               <AnimatedContainer key={post.id} delay={index * 80}>
@@ -2857,7 +2858,7 @@ const HERO_TAGS = [
             ))}
           </div>
 
-          {/* VIEW ALL BUTTON */}
+     
           <div className="text-center mt-10">
             <button
               onClick={() => navigate("/blog")}
@@ -2873,7 +2874,7 @@ const HERO_TAGS = [
           </div>
 
         </div>
-      </section>
+      </section> /*}
 
       {/* -------------------------------------------------- */}
       {/* COLLEGE RANKING TABLE (Image 2 middle)            */}

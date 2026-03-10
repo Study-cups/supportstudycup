@@ -40,6 +40,7 @@ const hashIndex = (str: string) => {
 interface CoursesPageProps {
  
   initialStream?: string;
+  onOpenApplyNow?: () => void;
 }
 const normalizeText = (text = "") =>
   text
@@ -141,6 +142,8 @@ type FilterChip = {
   active: boolean;
   count: number;
 };
+
+type FacetCountMap = Record<string, number>;
 
 const getFacetChipPreview = (
   chips: FilterChip[],
@@ -299,6 +302,20 @@ const COURSE_SECTION_CONFIG = [
   },
 ];
 
+const createSectionPageState = (): Record<CourseSectionKey, number> => ({
+  postgraduate: 1,
+  undergraduate: 1,
+  popular: 1,
+});
+
+const createMobileSectionExpansionState = (): Record<CourseSectionKey, boolean> => ({
+  postgraduate: false,
+  undergraduate: false,
+  popular: false,
+});
+
+const MOBILE_SECTION_PREVIEW_COUNT = 3;
+
 const COURSES_PAGE_TESTIMONIALS = [
   {
     quote:
@@ -326,6 +343,7 @@ const COURSES_PAGE_TESTIMONIALS = [
 const CoursesPage: React.FC<CoursesPageProps> = ({
  
   initialStream,
+  onOpenApplyNow,
 }) => { 
     const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
    const navigate = useNavigate();
@@ -338,11 +356,11 @@ const [selectedLevel, setSelectedLevel] = useState("All");
   const [selectedMode, setSelectedMode] = useState("All");
   const [showMobileFilters, setShowMobileFilters] = useState(false); 
   const [expandedDesktopFacet, setExpandedDesktopFacet] = useState<FilterChipType | null>(null);
-  const [sectionPages, setSectionPages] = useState<Record<CourseSectionKey, number>>({
-    postgraduate: 1,
-    undergraduate: 1,
-    popular: 1,
-  });
+  const [sectionPages, setSectionPages] = useState<Record<CourseSectionKey, number>>(
+    createSectionPageState
+  );
+  const [expandedMobileSections, setExpandedMobileSections] =
+    useState<Record<CourseSectionKey, boolean>>(createMobileSectionExpansionState);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const desktopFacetRef = useRef<HTMLDivElement | null>(null);
 
@@ -352,11 +370,8 @@ const [selectedLevel, setSelectedLevel] = useState("All");
 const location = useLocation();
 
 useEffect(() => {
-  setSectionPages({
-    postgraduate: 1,
-    undergraduate: 1,
-    popular: 1,
-  });
+  setSectionPages(createSectionPageState());
+  setExpandedMobileSections(createMobileSectionExpansionState());
 }, [searchTerm, selectedStream, selectedLevel, selectedMode]);
 
 useEffect(() => {
@@ -527,6 +542,12 @@ const getBackendCourseModes = (course: any) =>
 const getPrimaryFacetValue = (values: string[], fallback = "N/A") =>
   values[0] || fallback;
 
+const incrementFacetCounts = (counts: FacetCountMap, values: string[]) => {
+  Array.from(new Set(values.filter(Boolean))).forEach((value) => {
+    counts[value] = (counts[value] || 0) + 1;
+  });
+};
+
 const getCategorySlugFromStream = (courseName: string) => {
   return deriveStream(courseName)
     .toLowerCase()
@@ -560,12 +581,29 @@ const normalizeCourseCard = (course: any) => {
     : derivedLevel
       ? [derivedLevel]
       : [];
+  const searchText = normalizeText(
+    [
+      name,
+      getPrimaryFacetValue(filterLevels),
+      getPrimaryFacetValue(modeValues),
+      getPrimaryFacetValue(filterStreams, derivedStream),
+      ...matchableStreams,
+      ...filterLevels,
+      ...modeValues,
+      "phd",
+      "doctoral",
+      name.includes("Working") ? "working professional part time wp" : "",
+      name.includes("Executive") ? "executive management" : "",
+    ].join(" ")
+  );
 
   return {
     ...course,
     courseKey: slug || name,
+    derivedStream,
     slug,
     name,
+    searchText,
     stream: getPrimaryFacetValue(filterStreams, derivedStream),
     streams: matchableStreams,
     filterStreams,
@@ -586,7 +624,6 @@ useEffect(() => {
   fetch(`${API_BASE}/main-course-card`)
     .then(res => res.json())
     .then(json => {
-      console.log("Raw courses response", json.data);
       const normalizedCourses = Array.isArray(json?.data)
         ? json.data.map((course: any) => normalizeCourseCard(course))
         : [];
@@ -647,27 +684,9 @@ const modes = useMemo(() => {
 
 const searchTokens = useMemo(() => tokenize(searchTerm), [searchTerm]);
 
-const getSearchText = (course) => {
-  return normalizeText(
-    [
-      course.name,
-      course.level,
-      course.mode,
-      course.stream,
-      ...(course.streams || []),
-      ...(course.levels || []),
-      ...(course.modes || []),
-      "phd",
-      "doctoral",
-      course.name?.includes("Working") ? "working professional part time wp" : "",
-      course.name?.includes("Executive") ? "executive management" : "",
-    ].join(" ")
-  );
-};
-
 const searchMatchedCourses = useMemo(() => {
   return courses.filter((course) => {
-    const searchable = getSearchText(course);
+    const searchable = course.searchText || "";
 
     return (
       searchTokens.length === 0 ||
@@ -683,7 +702,7 @@ const matchesFacetFilters = (
   const streamMatch =
     filters.stream === "All" ||
     (course.streams || []).includes(filters.stream) ||
-    deriveStream(course.name) === filters.stream;
+    course.derivedStream === filters.stream;
 
   const levelMatch =
     filters.level === "All" || (course.levels || []).includes(filters.level);
@@ -705,6 +724,69 @@ const matchesFacetFilters = (
   });
 }, [searchMatchedCourses, selectedStream, selectedLevel, selectedMode]);
 
+const streamCounts = useMemo(() => {
+  const counts: FacetCountMap = {};
+
+  searchMatchedCourses.forEach((course) => {
+    if (
+      !matchesFacetFilters(course, {
+        stream: "All",
+        level: selectedLevel,
+        mode: selectedMode,
+      })
+    ) {
+      return;
+    }
+
+    incrementFacetCounts(
+      counts,
+      course.streams?.length ? course.streams : [course.stream || course.derivedStream]
+    );
+  });
+
+  return counts;
+}, [searchMatchedCourses, selectedLevel, selectedMode]);
+
+const modeCounts = useMemo(() => {
+  const counts: FacetCountMap = {};
+
+  searchMatchedCourses.forEach((course) => {
+    if (
+      !matchesFacetFilters(course, {
+        stream: selectedStream,
+        level: selectedLevel,
+        mode: "All",
+      })
+    ) {
+      return;
+    }
+
+    incrementFacetCounts(counts, course.modes || []);
+  });
+
+  return counts;
+}, [searchMatchedCourses, selectedStream, selectedLevel]);
+
+const levelCounts = useMemo(() => {
+  const counts: FacetCountMap = {};
+
+  searchMatchedCourses.forEach((course) => {
+    if (
+      !matchesFacetFilters(course, {
+        stream: selectedStream,
+        level: "All",
+        mode: selectedMode,
+      })
+    ) {
+      return;
+    }
+
+    incrementFacetCounts(counts, course.levels || []);
+  });
+
+  return counts;
+}, [searchMatchedCourses, selectedStream, selectedMode]);
+
 
   const clearFilters = () => {
     setSelectedStream("All");
@@ -722,6 +804,9 @@ const buildFilterChips = (
   values: string[],
   type: FilterChipType
 ): FilterChip[] => {
+  const countMap =
+    type === "stream" ? streamCounts : type === "level" ? levelCounts : modeCounts;
+
   return values
     .filter(value => value !== "All")
     .map((value) => ({
@@ -734,30 +819,24 @@ const buildFilterChips = (
           : type === "level"
             ? selectedLevel === value
             : selectedMode === value,
-      count: searchMatchedCourses.filter((course) =>
-        matchesFacetFilters(course, {
-          stream: type === "stream" ? value : selectedStream,
-          level: type === "level" ? value : selectedLevel,
-          mode: type === "mode" ? value : selectedMode,
-        })
-      ).length,
+      count: countMap[value] || 0,
     }))
     .filter(chip => chip.count > 0);
 };
 
 const streamFilterChips = useMemo(
   () => buildFilterChips(streams, "stream"),
-  [streams, searchMatchedCourses, selectedStream, selectedLevel, selectedMode]
+  [streams, selectedStream, selectedLevel, selectedMode, streamCounts]
 );
 
 const levelFilterChips = useMemo(
   () => buildFilterChips(levels, "level"),
-  [levels, searchMatchedCourses, selectedStream, selectedLevel, selectedMode]
+  [levels, selectedStream, selectedLevel, selectedMode, levelCounts]
 );
 
 const modeFilterChips = useMemo(
   () => buildFilterChips(modes, "mode"),
-  [modes, searchMatchedCourses, selectedStream, selectedLevel, selectedMode]
+  [modes, selectedStream, selectedLevel, selectedMode, modeCounts]
 );
 
 const streamChipPreview = useMemo(
@@ -774,6 +853,21 @@ const levelChipPreview = useMemo(
   () => getFacetChipPreview(levelFilterChips, 2, selectedLevel),
   [levelFilterChips, selectedLevel]
 );
+
+const professionalModeOption = useMemo(
+  () =>
+    modes.find((mode) =>
+      /(professional|executive|working|part[\s-]?time|weekend)/i.test(mode)
+    ) || null,
+  [modes]
+);
+
+const isHeroAllCoursesActive =
+  selectedStream === "All" && selectedLevel === "All" && selectedMode === "All";
+
+const isHeroProfessionalActive = professionalModeOption
+  ? selectedMode === professionalModeOption
+  : false;
 
 const expandedDesktopFacetConfig =
   expandedDesktopFacet === "stream"
@@ -923,39 +1017,39 @@ const renderCompactCourseCard = (course: any) => {
     <div
       key={course.courseKey}
       onClick={() => navigate(courseLink)}
-      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-[22px] border border-[#d6cec2] bg-[#ffffff] shadow-[0_10px_22px_rgba(15,35,63,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_34px_rgba(15,35,63,0.12)]"
+      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-[24px] border border-[#d6cec2] bg-[#ffffff] shadow-[0_10px_22px_rgba(15,35,63,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_34px_rgba(15,35,63,0.12)]"
     >
-      <div className="p-3 md:p-5">
-        <div className="flex items-start justify-between gap-2 md:gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#efe8da] text-[#0a5474] md:h-12 md:w-12">
+      <div className="p-4 md:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#efe8da] text-[#0a5474]">
             <GraduationCap className="h-5 w-5 md:h-6 md:w-6" strokeWidth={2} />
           </div>
 
-          <span className="rounded-full border border-[#f3a11c]/20 bg-[#f7ebd2] px-2.5 py-1 text-[9px] font-semibold text-[#cb7b12] md:px-3 md:text-[11px]">
+          <span className="rounded-full border border-[#f3a11c]/20 bg-[#f7ebd2] px-3 py-1 text-[10px] font-semibold text-[#cb7b12] md:text-[11px]">
             {getCourseBadgeLabel(course)}
           </span>
         </div>
 
-        <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#0b6b86] md:text-[11px]">
+        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0b6b86]">
           {course.stream || "General Program"}
         </p>
 
         <h3
-          className="mt-2 truncate text-[0.6rem] leading-[1.1] text-[#0f203e] md:text-[1.05rem] lg:text-[1rem]"
+          className="mt-2 line-clamp-2 text-[1.42rem] leading-[1.05] text-[#0f203e] md:text-[1.05rem] lg:text-[1rem]"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
           {course.name}
         </h3>
 
-        <p className="mt-3 line-clamp-2 min-h-[3rem] text-[11px] leading-5 text-slate-500 md:min-h-[5.4rem] md:text-[12px] md:leading-6">
+        <p className="mt-3 line-clamp-3 min-h-[4.5rem] text-[13px] leading-6 text-slate-500 md:min-h-[5.4rem] md:text-[12px] md:leading-6">
           {getCourseCardDescription(course)}
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-1.5 md:mt-4 md:gap-2">
+        <div className="mt-4 flex flex-wrap gap-2">
           {courseTags.map((tag) => (
             <span
               key={`${course.courseKey}-${tag}`}
-              className="rounded-full border border-[#d8cdbd] bg-[#f7f1e6] px-2 py-1 text-[9px] font-medium text-[#0f2d52] md:px-2.5 md:text-[11px]"
+              className="rounded-full border border-[#d8cdbd] bg-[#f7f1e6] px-2.5 py-1 text-[10px] font-medium text-[#0f2d52] md:text-[11px]"
             >
               {tag}
             </span>
@@ -964,50 +1058,50 @@ const renderCompactCourseCard = (course: any) => {
       </div>
 
       <div className="mt-auto grid grid-cols-3 border-y border-[#d8cdbd] bg-[#f7f2e9]">
-        <div className="px-2 py-2 text-center md:px-3 md:py-3">
+        <div className="px-3 py-3 text-center">
           <p
-            className="text-[0.88rem] font-semibold leading-tight text-[#0f203e] md:text-[0.9rem]"
+            className="text-[1rem] font-semibold leading-tight text-[#0f203e] md:text-[0.9rem]"
             style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
           >
             {course.totalColleges || 0}+
           </p>
-          <p className="mt-1 text-[9px] uppercase tracking-[0.08em] text-slate-500 md:text-[10px]">
+          <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-slate-500">
             Colleges
           </p>
         </div>
 
-        <div className="border-x border-[#d8cdbd] px-2 py-3 text-center md:px-3">
+        <div className="border-x border-[#d8cdbd] px-3 py-3 text-center">
           <p
-            className="truncate text-[0.78rem] font-semibold leading-tight text-[#0f203e] md:text-[0.7rem]"
+            className="truncate text-[0.94rem] font-semibold leading-tight text-[#0f203e] md:text-[0.7rem]"
             style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
           >
             {course.duration && course.duration !== "N/A" ? course.duration : "NA"}
           </p>
-          <p className="mt-1 text-[9px] uppercase tracking-[0.08em] text-slate-500 md:text-[10px]">
+          <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-slate-500">
             Duration
           </p>
         </div>
 
-        <div className="px-2 py-3 text-center md:px-3">
+        <div className="px-3 py-3 text-center">
           <p
-            className="truncate text-[0.78rem] font-semibold leading-tight text-[#0f203e] md:text-[0.9rem]"
+            className="truncate text-[0.94rem] font-semibold leading-tight text-[#0f203e] md:text-[0.9rem]"
             style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
           >
             {course.level || "N/A"}
           </p>
-          <p className="mt-1 text-[9px] uppercase tracking-[0.08em] text-slate-500 md:text-[10px]">
+          <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-slate-500">
             Level
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_auto] gap-2 p-3 md:p-4">
+      <div className="grid grid-cols-[1fr_auto] gap-3 p-4">
         <button
           onClick={(event) => {
             event.stopPropagation();
             navigate(courseLink);
           }}
-          className="rounded-xl bg-[#eb980f] px-3 py-2.5 text-[11px] font-bold text-[#0f203e] transition hover:brightness-105 md:px-4 md:text-sm"
+          className="rounded-xl bg-[#eb980f] px-4 py-3 text-[13px] font-bold text-[#0f203e] transition hover:brightness-105 md:px-4 md:text-sm"
         >
           Enquire Free
         </button>
@@ -1018,7 +1112,7 @@ const renderCompactCourseCard = (course: any) => {
             navigate(courseLink);
           }}
           aria-label={`Open ${course.name}`}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#d6cec2] bg-white text-[#0f2d52] transition hover:bg-[#f5efe5]"
+          className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#d6cec2] bg-white text-[#0f2d52] transition hover:bg-[#f5efe5]"
         >
           <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
         </button>
@@ -1113,7 +1207,7 @@ const renderSectionPagination = (
   currentPage: number,
   totalPages: number
 ) => {
-  if (totalPages <= 1) {
+  if (isMobileViewport || totalPages <= 1) {
     return null;
   }
 
@@ -1163,11 +1257,18 @@ const renderSectionPagination = (
     </div>
   );
 };
+
+const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
+  setExpandedMobileSections((previous) => ({
+    ...previous,
+    [sectionKey]: !previous[sectionKey],
+  }));
+};
   return (
-    <div className="bg-[#f5f7fb] min-h-screen">
+    <div className="min-h-screen overflow-x-hidden bg-[#f5f7fb] md:overflow-visible">
        <Helmet>
               <title>
-                StudyCups Ã¢â‚¬â€œ Compare Colleges, Courses & Exams in India
+                StudyCups  Compare Colleges, Courses & Exams in India
               </title>
               <meta
                 name="description"
@@ -1177,29 +1278,30 @@ const renderSectionPagination = (
             </Helmet>
 
 {/* HERO */}
-<section className="relative mt-6 md:mt-20 overflow-hidden bg-[#071d35]">
+<section className="relative mt-0 md:mt-20 overflow-hidden bg-[#071d35]">
   <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.08),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(37,99,235,0.22),_transparent_32%)]" />
   <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,17,33,0.96)_0%,rgba(6,29,55,0.94)_55%,rgba(0,62,109,0.88)_100%)]" />
   <div className="absolute -left-16 top-24 h-36 w-36 rounded-full bg-[#f59e0b]/10 blur-3xl md:h-56 md:w-56" />
   <div className="absolute right-0 top-20 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl md:h-72 md:w-72" />
 
-  <div className="relative container mx-auto px-5 py-3 md:px-6 md:py-4">
+  <div className="relative container mx-auto px-4 py-5 md:px-6 md:py-4">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="max-w-[690px]">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-white/60">
-          <span onclick="window.location.href='/'" className="cursor-pointer">
+        <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-white/70 md:pt-3 md:text-sm md:text-white/60">
+          <span onClick={() => navigate("/")} className="cursor-pointer">
             Home
           </span>
           <span className="text-white/30">&gt;</span>
           <span className="font-semibold text-[#f3a11c]">Courses &amp; Programs</span>
         </div>
 
-        <div className="mt-2 inline-flex rounded-full border border-[#f3a11c]/35 bg-white/5 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#f3a11c]">
+        <div className="mt-8 inline-flex rounded-full border border-[#f3a11c]/45 bg-[#f3a11c]/10 px-4 py-2 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[#f3a11c] md:hidden">
           All Programs - 2026 Admissions Open
         </div>
+      
 
         <h1
-          className="mt-3 max-w-[640px] text-[2rem] leading-[0.96] text-white md:text-[3rem]"
+          className="mt-4 max-w-[640px] pt-1 text-[2.70rem] leading-[0.92] text-white md:mt-3 md:pt-3 md:text-[3rem] md:leading-[0.96]"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
           Find the{" "}
@@ -1208,13 +1310,13 @@ const renderSectionPagination = (
           for Your Career
         </h1>
 
-        <p className="mt-2.5 max-w-[590px] text-sm leading-6 text-white/78 md:text-[0.94rem] md:leading-6">
+        <p className="max-w-[590px] pt-5 text-[1.01rem] leading-[1.72] text-white/82 md:pt-8 md:text-[0.94rem] md:leading-6">
           From MBA to MBBS, B.Tech to Fashion Design, our expert counsellors help
-          you shortlist the right course by goals, budget, and career path without
-          losing the important details.
+          you get admitted to the best college for your goals, budget, and score.
+          Free guidance for every course.
         </p>
 
-        <div className="mt-3 max-w-[500px]">
+        <div className="mt-8 hidden max-w-[500px] md:block">
           <label className="relative block">
             <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base text-white/45">
               Search
@@ -1227,6 +1329,70 @@ const renderSectionPagination = (
               className="h-10 w-full rounded-full border border-white/14 bg-white/8 pl-20 pr-5 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-[#f3a11c]/60 focus:bg-white/12"
             />
           </label>
+        </div>
+
+        <div className="mt-7 flex flex-wrap gap-2 md:hidden">
+          <button
+            type="button"
+            onClick={() => {
+              clearFilters();
+            }}
+            className={`rounded-full border px-3 py-2 text-[0.875rem] font-semibold leading-none transition ${
+              isHeroAllCoursesActive
+                ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
+                : "border-white/18 bg-white/8 text-white/85"
+            }`}
+          >
+            All Courses
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedLevel(selectedLevel === "Postgraduate" ? "All" : "Postgraduate");
+              setSelectedMode("All");
+            }}
+            className={`rounded-full border px-3 py-2 text-[0.875rem] font-semibold leading-none transition ${
+              selectedLevel === "Postgraduate"
+                ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
+                : "border-white/18 bg-white/8 text-white/85"
+            }`}
+          >
+            Postgraduate
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedLevel(selectedLevel === "Undergraduate" ? "All" : "Undergraduate");
+              setSelectedMode("All");
+            }}
+            className={`rounded-full border px-3 py-2 text-[0.875rem] font-semibold leading-none transition ${
+              selectedLevel === "Undergraduate"
+                ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
+                : "border-white/18 bg-white/8 text-white/85"
+            }`}
+          >
+            Undergraduate
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!professionalModeOption) return;
+              setSelectedMode(
+                selectedMode === professionalModeOption ? "All" : professionalModeOption
+              );
+              setSelectedLevel("All");
+            }}
+            className={`rounded-full border px-3 py-2 text-[0.875rem] font-semibold leading-none transition ${
+              isHeroProfessionalActive
+                ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
+                : "border-white/18 bg-white/8 text-white/85"
+            }`}
+          >
+            Professional
+          </button>
         </div>
 
       </div>
@@ -1269,7 +1435,7 @@ const renderSectionPagination = (
   </div>
 </section>
 
-<div className="hidden md:block sticky top-[74px] z-40 bg-[#f5f7fb] border-b border-[#d9d4ca] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+<div className="hidden lg:block sticky top-[74px] z-40  bg-[#f5f7fb] border-b border-[#d9d4ca] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
   <div className="w-full px-0 py-0">
     <div className="border-0 bg-[#f6f1e8] px-6 py-3">
       <div ref={desktopFacetRef} className="flex flex-col gap-3">
@@ -1452,31 +1618,39 @@ const renderSectionPagination = (
   </div>
 </div>
 
-{/* MOBILE FILTER BUTTON */}
-<div className="md:hidden px-6 mt-4">
-  <button
-    onClick={() => setShowMobileFilters(true)}
-    className=" 
-      
-      w-full
-      py-3
-      rounded-xl
-      bg-transparent
-      text-[#0A225A]
-      font-semibold
-      shadow-md
-    "
-  >
-    Filters
-  </button>
+{/* ONLY MOBILE SEARCH + FILTER */}
+<div className="md:hidden max-w-7xl mx-auto px-4 mt-3 mb-4">
+  <div className="bg-white rounded-xl border-none shadow-none flex items-center gap-3 px-4 py-3">
+    <input
+      placeholder="Search course, stream, mode..."
+      className="
+        flex-1 text-sm
+        bg-transparent
+        border-0
+        outline-none
+        ring-0
+        focus:ring-0
+        focus:outline-none
+        shadow-none
+      "
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+    />
+    <button
+      onClick={() => setShowMobileFilters(true)}
+      className="text-sm font-semibold text-[var(--primary-medium)]"
+    >
+      Filters
+    </button>
+  </div>
 </div>
 
 
 
 
 
-      <div className="  container mx-auto px-6 py-12"> 
-       <div className="flex gap-8 items-start">
+      <div className="container mx-auto px-6 py-12"> 
+       <div className="flex items-start gap-8">
         {/* FILTERS */}
        {/* LEFT FILTER SIDEBAR (Desktop) */}
 <aside className="hidden">
@@ -1616,7 +1790,7 @@ const renderSectionPagination = (
 
 
         {/* COURSES SECTIONS */}
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           {sectionViews.some((section) => section.courses.length > 0) ? (
             <div className="space-y-14">
               {sectionViews.map((section) => {
@@ -1624,13 +1798,18 @@ const renderSectionPagination = (
                   return null;
                 }
 
+                const mobilePreviewCourses = section.courses.slice(0, MOBILE_SECTION_PREVIEW_COUNT);
+                const isMobileSectionExpanded = expandedMobileSections[section.key];
+                const hasExpandableMobileView =
+                  section.courses.length > MOBILE_SECTION_PREVIEW_COUNT;
+
                 return (
                   <section
                     key={section.key}
                     id={section.sectionId}
                     className="border-t border-[#d8d0c3] pt-10 first:border-t-0 first:pt-0"
                   >
-                    <div className="mb-6 flex items-center justify-between gap-4">
+                    <div className="mb-6 flex flex-col items-start gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
                       <h2
                         className="text-[1.9rem] leading-tight text-[#0f203e] md:text-[2.2rem]"
                         style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
@@ -1638,13 +1817,51 @@ const renderSectionPagination = (
                         {section.title}
                       </h2>
 
+                      {hasExpandableMobileView ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleMobileSectionExpansion(section.key)}
+                          aria-expanded={isMobileSectionExpanded}
+                          className="text-sm font-semibold text-[#0b6b86] md:hidden"
+                        >
+                          {isMobileSectionExpanded ? "Show fewer ->" : section.linkLabel}
+                        </button>
+                      ) : (
+                        <span className="text-sm font-medium text-[#0b6b86] md:hidden">
+                          {section.courses.length} course{section.courses.length === 1 ? "" : "s"}
+                        </span>
+                      )}
+
                       <span className="hidden text-sm font-medium text-[#0b6b86] md:inline">
                         {section.linkLabel}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 md:hidden">
-                      {section.pagedCourses.map((course) => renderCompactCourseCard(course))}
+                    <div className="md:hidden">
+                      {isMobileSectionExpanded ? (
+                        <div className="space-y-4">
+                          {section.courses.map((course) => (
+                            <div key={course.courseKey}>{renderCompactCourseCard(course)}</div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory px-2 pb-3">
+                          {mobilePreviewCourses.map((course) => (
+                            <div
+                              key={course.courseKey}
+                              className="min-w-[240px] max-w-[260px] shrink-0 snap-start"
+                            >
+                              {renderCompactCourseCard(course)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {hasExpandableMobileView && !isMobileSectionExpanded ? (
+                        <p className="mt-3 px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                          Showing 3 of {section.courses.length} courses
+                        </p>
+                      ) : null}
                     </div>
 
                     {section.desktopLayout === "grid" ? (
@@ -1737,17 +1954,7 @@ const renderSectionPagination = (
                       className="h-4 w-4 rounded border-slate-400"
                     />
                     <span className="flex-1">{stream}</span>
-                    <span className="text-slate-700">
-                      {
-                        searchMatchedCourses.filter((course) =>
-                          matchesFacetFilters(course, {
-                            stream,
-                            level: selectedLevel,
-                            mode: selectedMode,
-                          })
-                        ).length
-                      }
-                    </span>
+                    <span className="text-slate-700">{streamCounts[stream] || 0}</span>
                   </label>
                 ))}
             </div>
@@ -1779,17 +1986,7 @@ const renderSectionPagination = (
                       className="h-4 w-4 rounded border-slate-400"
                     />
                     <span className="flex-1">{mode}</span>
-                    <span className="text-slate-700">
-                      {
-                        searchMatchedCourses.filter((course) =>
-                          matchesFacetFilters(course, {
-                            stream: selectedStream,
-                            level: selectedLevel,
-                            mode,
-                          })
-                        ).length
-                      }
-                    </span>
+                    <span className="text-slate-700">{modeCounts[mode] || 0}</span>
                   </label>
                 ))}
             </div>
@@ -1821,17 +2018,7 @@ const renderSectionPagination = (
                       className="h-4 w-4 rounded border-slate-400"
                     />
                     <span className="flex-1">{level}</span>
-                    <span className="text-slate-700">
-                      {
-                        searchMatchedCourses.filter((course) =>
-                          matchesFacetFilters(course, {
-                            stream: selectedStream,
-                            level,
-                            mode: selectedMode,
-                          })
-                        ).length
-                      }
-                    </span>
+                    <span className="text-slate-700">{levelCounts[level] || 0}</span>
                   </label>
                 ))}
             </div>
@@ -1884,10 +2071,7 @@ const renderSectionPagination = (
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setSearchTerm("MBA");
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
+                     onClick={onOpenApplyNow}
                   className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-[#0b5c73] transition hover:bg-[#f6f2ea] md:px-8"
                 >
                   Apply for Scholarship <span className="ml-1">-&gt;</span>
@@ -1983,14 +2167,12 @@ const renderSectionPagination = (
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             onClick={() => {
-              setSearchTerm("MBA");
-              setSelectedStream("Management");
-              setSelectedLevel("All");
-              setSelectedMode("All");
+              onOpenApplyNow?.();
+             
             }}
             className="rounded-full bg-[#f3a11c] px-6 py-3 text-sm font-bold text-[#071d35] shadow-[0_10px_28px_rgba(243,161,28,0.28)] transition hover:brightness-105"
           >
-            Get Free MBA Guidance
+            Get Free  Guidance
           </button>
 
           <button

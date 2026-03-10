@@ -70,7 +70,7 @@ const prevSlide = () => {
       <div className="absolute top-1/2 -left-4 sm:-left-6 lg:-left-12 -translate-y-1/2 z-30 opacity-0 group-hover:opacity-100 transition-opacity">
         <button 
           onClick={prevSlide}
-          className="p-3 sm:p-4 rounded-full bg-white shadow-xl text-slate-800 hover:bg-orange-600 hover:text-white transition-all transform hover:scale-110 active:scale-95 border border-slate-100"
+          className="p-3 sm:p-4 rounded-full bg-white shadow-xl text-slate-800 hover:bg-[#f4a71d] hover:text-white transition-all transform hover:scale-110 active:scale-95 border border-slate-100"
           aria-label="Previous slide"
         >
           <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,9 +114,9 @@ const prevSlide = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/10 to-transparent opacity-80 group-hover/card:opacity-90 transition-opacity"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 translate-y-2 group-hover/card:translate-y-0 transition-transform">
-                  <div className="w-8 h-1 bg-orange-500 mb-3 rounded-full"></div>
+                  <div className="w-8 h-1 bg-[#f4a71d] mb-3 rounded-full"></div>
                   <p className="text-white font-black text-lg sm:text-xl tracking-tight">{t.name}</p>
-                  <p className="text-orange-400 font-bold text-xs sm:text-sm uppercase tracking-widest mt-1">Placed at {t.company}</p>
+                  <p className="text-[#f4a71d] font-bold text-xs sm:text-sm uppercase tracking-widest mt-1">Placed at {t.company}</p>
                 </div>
               </div>
             </div>
@@ -131,7 +131,7 @@ const prevSlide = () => {
             key={idx}
             onClick={() => goToSlide(idx)}
             className={`h-1.5 transition-all duration-300 rounded-full ${
-              currentIndex === idx ? 'w-8 bg-orange-600' : 'w-2 bg-slate-200 hover:bg-slate-300'
+              currentIndex === idx ? 'w-8 bg-[#f4a71d]' : 'w-2 bg-[#f4a71d] hover:bg-[#f4a71d]/80'
             }`}
             aria-label={`Go to slide ${idx + 1}`}
           />

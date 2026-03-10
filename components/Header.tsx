@@ -139,7 +139,7 @@ const getExamsForCourse = (courseName: string) => {
 
 
 
-    
+
 };
 
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
@@ -1159,7 +1159,7 @@ const CollegesMegaMenu = () => {
 
             <button
               onClick={onOpenApplyNow}
-              className="bg-[#1E4A7A] text-white px-4 py-2 rounded-full font-semibold hover:bg-[#f4a71d]"
+              className="bg-[#f4a71d] text-white px-4 py-2 rounded-full font-semibold hover:bg-[#1E4A7A]"
             >
               Apply Now
             </button>

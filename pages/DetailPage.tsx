@@ -3256,12 +3256,12 @@ if (blockType === "heading") {
       </div>
 
       {/* LAYOUT */}
-    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div className="container max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
 
         <div className="lg:col-span-2">{renderTabContent()}</div>
 
-       <aside className="space-y-5 w-full hidden lg:block lg:sticky lg:top-[110px] self-start">
+       <aside className="space-y-5 w-full hidden lg:block lg:sticky lg:top-[140px] self-start">
 
 
           <div className="bg-[#1E4A7A] to-indigo-600 text-white rounded-2xl p-5">

@@ -8,6 +8,49 @@ interface ApplyNowModalProps {
 
 /* const API_BASE = "https://studycupsbackend-wb8p.onrender.com"; */
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com"; // LOCAL DEV
+const APPLY_MODAL_IMAGE_SRC = "/images/Registeredimg-optimized.png";
+
+let applyModalImagePromise: Promise<void> | null = null;
+
+const preloadImage = (src: string) =>
+  new Promise<void>((resolve) => {
+    const image = new Image();
+    let settled = false;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+
+    const decodeIfPossible = () => {
+      if (typeof image.decode === "function") {
+        image.decode().catch(() => undefined).finally(finish);
+        return;
+      }
+      finish();
+    };
+
+    image.onload = decodeIfPossible;
+    image.onerror = finish;
+    image.src = src;
+
+    if (image.complete) {
+      decodeIfPossible();
+    }
+  });
+
+const preloadApplyNowModalImage = () => {
+  if (typeof window === "undefined") {
+    return Promise.resolve();
+  }
+
+  if (!applyModalImagePromise) {
+    applyModalImagePromise = preloadImage(APPLY_MODAL_IMAGE_SRC);
+  }
+
+  return applyModalImagePromise;
+};
 
 const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
   isOpen,
@@ -24,6 +67,10 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    void preloadApplyNowModalImage();
+  }, []);
 
   /* 🔒 Prevent background scroll */
   useEffect(() => {
@@ -100,8 +147,8 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
         <button
           onClick={handleClose}
           className="absolute top-3 right-3 h-9 w-9 rounded-full
-                     border border-gray-300 text-gray-600
-                     flex items-center justify-center
+                     text-gray-600
+                     flex items-center justify-end
                      hover:bg-gray-100 transition"
         >
           ✕
@@ -120,8 +167,13 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
   {/* Content */}
   <div className="relative z-10 text-center text-white max-w-sm">
     <img
-      src="/images/Registeredimg.png"
+      src={APPLY_MODAL_IMAGE_SRC}
       alt="Student Illustration"
+      loading="eager"
+      decoding="async"
+      fetchPriority="high"
+      width={512}
+      height={512}
       className="mx-auto w-72"
     />
 

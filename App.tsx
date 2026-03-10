@@ -118,14 +118,11 @@ const App: React.FC = () => {
   const handleBrochure = (college) => {
     setApplyMode("brochure");
     setApplyModalOpen(true);
-    console.log("BROCHURE CLICKED");
-
   };
 
   const handleBrochureSimple = () => {
     setApplyMode("brochure");
     setApplyModalOpen(true);
-    console.log("BROCHURE SIMPLE");
   };
 
 
@@ -138,10 +135,6 @@ const App: React.FC = () => {
       fetch(`${API_BASE}/blogs`).then(r => r.json()),
     ])
       .then(([c, e, b]) => {
-        console.log("APP.TSX → colleges API:", c);
-        console.log("APP.TSX → exams API:", e);
-
-        // 🔥 DIRECT SET — NO GUARDS
         setColleges(c.data);
         setExams(e.data);
         setBlogs(b.data);
@@ -160,7 +153,6 @@ useEffect(() => {
   }
 
   if (!canShowPopup(pathname)) {
-    console.log("❌ Popup blocked for page:", pathname);
     return;
   }
 
@@ -174,11 +166,7 @@ useEffect(() => {
     const scrollPercent =
       ((scrollTop + windowHeight) / fullHeight) * 100;
 
-    console.log("📜 Scroll %:", scrollPercent.toFixed(2));
-
     if (scrollPercent >= 20) {
-      console.log("✅ Popup opened on:", pathname);
-
       setApplyMode("apply");
       setApplyModalOpen(true);
 
@@ -267,6 +255,16 @@ useEffect(() => {
           }
         />
 
+        <Route
+          path="/courses/:categorySlug/:courseSlug/:tabSlug"
+          element={
+            <CourseDetailPage
+            
+              onOpenApplyNow={handleApplyNow}
+              onOpenBrochure={handleBrochureSimple}
+            />
+          }
+        />
         <Route
           path="/courses/:categorySlug/:courseSlug"
           element={
@@ -374,7 +372,8 @@ useEffect(() => {
 
         <Route
           path="/courses"
-          element={<CoursesPage />}
+          element={<CoursesPage 
+             onOpenApplyNow={handleApplyNow} />}
         />
 
       <Route

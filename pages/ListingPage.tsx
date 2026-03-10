@@ -54,7 +54,12 @@ interface FilterSidebarProps {
   forceShow?: boolean;
   colleges: College[];
   compareList: string[];
+  desktopStickyTop?: number;
+  sidebarRef?: React.RefObject<HTMLAsideElement | null>;
 }
+
+const DESKTOP_FILTER_STICKY_TOP = 148;
+const DESKTOP_FILTER_BOTTOM_GAP = 24;
 
 /* ================= UTILS ================= */
 
@@ -316,6 +321,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   forceShow = false,
   colleges,
   compareList,
+  desktopStickyTop = DESKTOP_FILTER_STICKY_TOP,
+  sidebarRef,
 }) => {
   const {
     streams,
@@ -461,7 +468,9 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
   return (
     <aside
-      className={`${forceShow ? "block" : "hidden lg:block"} lg:w-1/4 xl:w-1/5 lg:sticky lg:top-[148px] mt-3 self-start`}
+      ref={sidebarRef}
+      className={`${forceShow ? "block" : "hidden lg:block"} lg:w-1/4 xl:w-1/5 lg:sticky mt-3 self-start`}
+      style={forceShow ? undefined : { top: desktopStickyTop }}
     >
       <div className="rounded-2xl border border-[#d8d1c5] bg-[#f6f3ec] shadow-sm overflow-hidden">
         <div className="flex items-center justify-between bg-[#081f39] px-4 py-3">
@@ -479,7 +488,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             <p className="text-[12px] font-bold tracking-wide text-[#6d7f95] uppercase">
               Course Type
             </p>
-            <div className="max-h-44 overflow-y-auto space-y-2 pr-1">
+            <div className="max-h-44 overflow-y-auto space-y-2 pr-1 lg:max-h-none lg:overflow-visible">
               <label className="flex items-center gap-2 text-[15px] text-slate-800">
                 <input
                   type="checkbox"
@@ -524,7 +533,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             <p className="text-[12px] font-bold tracking-wide text-[#6d7f95] uppercase">
               State
             </p>
-            <div className="max-h-36 overflow-y-auto space-y-2 pr-1">
+            <div className="max-h-36 overflow-y-auto space-y-2 pr-1 lg:max-h-none lg:overflow-visible">
               {states.map((s) => (
                 <label key={s} className="flex items-center gap-2 text-[15px] text-slate-800">
                   <input
@@ -550,7 +559,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
             <p className="text-[12px] font-bold tracking-wide text-[#6d7f95] uppercase">
               City
             </p>
-            <div className="max-h-36 overflow-y-auto space-y-2 pr-1">
+            <div className="max-h-36 overflow-y-auto space-y-2 pr-1 lg:max-h-none lg:overflow-visible">
               {cities.map((c) => (
                 <label key={c} className="flex items-center gap-2 text-[15px] text-slate-800">
                   <input
@@ -865,12 +874,14 @@ const ListingPage: React.FC<ListingPageProps> = ({
   const [sortBy, setSortBy] = useState("most-popular");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [visibleCount, setVisibleCount] = useState(18);
+  const [desktopSidebarTop, setDesktopSidebarTop] = useState(DESKTOP_FILTER_STICKY_TOP);
   const [heroStats, setHeroStats] = useState({
     colleges: 0,
     states: 0,
     disciplines: 0,
   });
   const hasRunHeroStatsRef = useRef(false);
+  const desktopSidebarRef = useRef<HTMLAsideElement | null>(null);
 
   useEffect(() => {
     if (hasRunHeroStatsRef.current) return;
@@ -910,6 +921,43 @@ const ListingPage: React.FC<ListingPageProps> = ({
       }));
     }
   }, [initialFilters, location.state]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const node = desktopSidebarRef.current;
+    if (!node) return;
+
+    const updateStickyTop = () => {
+      if (window.innerWidth < 1024) {
+        setDesktopSidebarTop(DESKTOP_FILTER_STICKY_TOP);
+        return;
+      }
+
+      const sidebarHeight = node.getBoundingClientRect().height;
+      const bottomLockedTop =
+        window.innerHeight - sidebarHeight - DESKTOP_FILTER_BOTTOM_GAP;
+
+      setDesktopSidebarTop(
+        Math.min(DESKTOP_FILTER_STICKY_TOP, Math.round(bottomLockedTop))
+      );
+    };
+
+    updateStickyTop();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updateStickyTop())
+        : null;
+
+    resizeObserver?.observe(node);
+    window.addEventListener("resize", updateStickyTop);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateStickyTop);
+    };
+  }, [colleges.length, compareList.length]);
 
   const HERO_TITLE_MAP: Record<string, string> = {
     mba: "Top MBA Colleges",
@@ -1183,6 +1231,18 @@ const ListingPage: React.FC<ListingPageProps> = ({
     return "Compare top colleges in India by fees, rankings, placements, cutoffs and admission process.";
   })();
 
+  const heroHeadingContext =
+    !filters.stream || filters.stream === "All"
+      ? filters.city || filters.region
+        ? `Top Colleges in ${filters.city || filters.region}`
+        : "Across India"
+      : `Top ${filters.stream} Colleges${filters.city ? ` in ${filters.city}` : !filters.city && filters.region ? ` in ${filters.region}` : ""}`;
+
+  const mobileHeroDescription =
+    filters.stream && filters.stream !== "All"
+      ? `Browse our curated network of ${filters.stream} colleges. Compare fees, cutoffs, placements and get free admission help from our counsellors.`
+      : "Browse our curated network of 500+ MBA, MBBS, B.Tech, BBA, Law and Fashion Design colleges. Compare fees, cutoffs and placements, then get free admission help from our counsellors.";
+
 
   return (
 
@@ -1198,7 +1258,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
         />
       </Helmet>
       {/* HERO */}
-      <section className="md:mt-20 mt-6 mb-0">
+      <section className="mt-0 mb-0 md:mt-20">
 
         {/* MOBILE: full width | DESKTOP: centered */}
         <div className="w-full">
@@ -1215,8 +1275,74 @@ const ListingPage: React.FC<ListingPageProps> = ({
             <div className="absolute -top-20 -left-16 w-52 h-52 bg-[#2f6cb9]/20 blur-[60px] rounded-full pointer-events-none" />
             <div className="absolute -bottom-12 right-0 w-44 h-44 bg-[#1b8a8a]/20 blur-[60px] rounded-full pointer-events-none" />
 
-            <div className="relative z-10 px-4 md:px-6 py-4 md:py-5">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5 items-start">
+            <div className="relative z-10 px-4 py-5 md:px-6 md:py-5">
+              <div className="md:hidden">
+                <div className="text-[13px] text-white/65">
+                  Home <span className="mx-1">&rsaquo;</span>{" "}
+                  <span className="font-semibold text-[#f4a71d]">College Directory</span>
+                </div>
+
+           
+                <h1
+                  className="mt-8 pt-4 max-w-[320px] text-[2.1rem] leading-[0.92] tracking-[-0.04em] text-white"
+                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                >
+                  Find Your{" "}
+                  <span className="font-semibold italic text-[#f4a71d]">Perfect</span>
+                  <br />
+                  <span className="font-semibold italic text-[#f4a71d]">College</span>
+                  <br />
+                  <span className="text-slate-50">{heroHeadingContext}</span>
+                </h1>
+
+                <p className="mt-5 pt-2 max-w-[320px] text-[1rem] leading-7 text-slate-200/88">
+                  {mobileHeroDescription}
+                </p>
+
+                <div className="mt-9 grid grid-cols-2 gap-x-8 gap-y-4">
+                  <div>
+                    <p
+                      className="text-[1.5rem] leading-none font-semibold text-[#f4a71d]"
+                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                    >
+                      {heroStats.colleges}+
+                    </p>
+                    <p className="mt-1 text-[0.9rem] leading-5 text-white/70">Partner Colleges</p>
+                  </div>
+
+                  <div>
+                    <p
+                      className="text-[1.5rem] leading-none font-semibold text-[#f4a71d]"
+                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                    >
+                      {heroStats.states}
+                    </p>
+                    <p className="mt-1 text-[0.9rem] leading-5 text-white/70">States Covered</p>
+                  </div>
+
+                  <div>
+                    <p
+                      className="text-[1.5rem] leading-none font-semibold text-[#f4a71d]"
+                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                    >
+                      {heroStats.disciplines}
+                    </p>
+                    <p className="mt-1 text-[0.9rem] leading-5 text-white/70">Disciplines</p>
+                  </div>
+
+                  <div>
+                    <p
+                      className="text-[1.5rem] leading-none font-semibold text-[#f4a71d]"
+                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                    >
+                      Free
+                    </p>
+                    <p className="mt-1 text-[0.9rem] leading-5 text-white/70">Counselling</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden grid-cols-1 items-start gap-4 md:grid md:grid-cols-12 md:gap-5">
                 <div className="md:col-span-9 pl-2 md:pl-5">
                   <div className="text-[11px] md:text-xs text-white/60 mb-2">
                     Home <span className="mx-1">&rsaquo;</span>{" "}
@@ -1233,21 +1359,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
                       Perfect College
                     </span>
                     <br className="hidden md:block" />
-                    <span className="text-slate-100">
-                      {!filters.stream || filters.stream === "All" ? (
-                        filters.city || filters.region ? (
-                          <>Top Colleges in {filters.city || filters.region}</>
-                        ) : (
-                          <> {" "}Across India</>
-                        )
-                      ) : (
-                        <>
-                          Top {filters.stream} Colleges
-                          {filters.city && ` in ${filters.city}`}
-                          {!filters.city && filters.region && ` in ${filters.region}`}
-                        </>
-                      )}
-                    </span>
+                    <span className="text-slate-100">{heroHeadingContext}</span>
                   </h1>
 
                   <p className="mt-2 text-xs md:text-sm text-slate-200/90 max-w-xl">
@@ -1402,7 +1514,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
 
 
       {/* ONLY MOBILE SEARCH + FILTER (UPPER ONE) */}
-      <div className="lg:hidden max-w-7xl mx-auto px-4 -mt-3 mb-4">
+      <div className="lg:hidden max-w-7xl mx-auto px-4 mt-3 mb-4">
         <div className="bg-white rounded-xl border-none shadow-none flex items-center gap-3 px-4 py-3">
           <input
             placeholder="Search college, city, course..."
@@ -1432,7 +1544,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
       </div>
 
       {/* CONTENT */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 pb-20 overflow-visible">
+      <div className="max-w-full mx-auto px-4 md:px-6 pb-20 overflow-visible">
         <div className="flex flex-col lg:flex-row gap-10 items-stretch">
 
           {/* DESKTOP FILTER */}
@@ -1442,6 +1554,8 @@ const ListingPage: React.FC<ListingPageProps> = ({
             onClearFilters={clearFilters}
             colleges={colleges}
             compareList={compareList}
+            desktopStickyTop={desktopSidebarTop}
+            sidebarRef={desktopSidebarRef}
           />
 
 

@@ -11,6 +11,20 @@ interface CourseDetailPageProps {
 
 type CourseTab = "Overview" | "Syllabus" | "Top Colleges";
 
+const TAB_KEY_TO_SLUG: Record<CourseTab, string> = {
+  Overview: "overview",
+  Syllabus: "syllabus",
+  "Top Colleges": "collegeoffering",
+};
+
+const TAB_SLUG_TO_KEY: Record<string, CourseTab> = {
+  overview: "Overview",
+  syllabus: "Syllabus",
+  collegeoffering: "Top Colleges",
+  collegesoffering: "Top Colleges",
+  topcolleges: "Top Colleges",
+};
+
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
 
 const CTA_TEXTS = new Set([
@@ -97,6 +111,11 @@ const startCaseFromSlug = (value = "") =>
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+
+const normalizeTabSlug = (value = "") =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
 
 const getCourseFamily = (...parts: string[]) => {
   const combined = parts.join(" ").toLowerCase();
@@ -493,9 +512,10 @@ const StructuredCourseContent: React.FC<{
 };
 
 const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) => {
-  const { categorySlug, courseSlug } = useParams<{
+  const { categorySlug, courseSlug, tabSlug } = useParams<{
     categorySlug: string;
     courseSlug: string;
+    tabSlug?: string;
   }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -509,9 +529,12 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
     () => new URLSearchParams(location.search).get("name") || "",
     [location.search]
   );
+  const tabFromRoute = useMemo<CourseTab>(
+    () => TAB_SLUG_TO_KEY[normalizeTabSlug(tabSlug)] || "Overview",
+    [tabSlug]
+  );
 
   useEffect(() => {
-    setActiveTab("Overview");
     setComparedCollegeIds([]);
   }, [courseSlug]);
 
@@ -560,7 +583,7 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
     const source = Array.isArray(course?.collegesOffering) ? course.collegesOffering : [];
     return [...new Map(source.map((item: any) => [String(item?.id), item])).values()];
   }, [course?.collegesOffering]);
-  const canonicalPath = useMemo(() => {
+  const baseCoursePath = useMemo(() => {
     if (!course) return "";
 
     const resolvedTitle = course?.course_name || course?.name || "";
@@ -573,6 +596,11 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
 
     return buildCourseDetailPath(resolvedCategory || categorySlug || "general", resolvedTitle);
   }, [categorySlug, course]);
+  const buildTabPath = (tab: CourseTab) =>
+    baseCoursePath ? `${baseCoursePath}/${TAB_KEY_TO_SLUG[tab]}` : "";
+  const canonicalPath = useMemo(() => {
+    return buildTabPath(activeTab);
+  }, [activeTab, baseCoursePath]);
   const canonicalUrl = useMemo(() => {
     if (!canonicalPath) return "";
     if (typeof window === "undefined") return canonicalPath;
@@ -590,25 +618,55 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
   }, [hasSyllabusContent]);
 
   useEffect(() => {
-    if (activeTab === "Syllabus" && !hasSyllabusContent) {
-      setActiveTab("Overview");
+    const nextTab =
+      tabFromRoute === "Syllabus" && !hasSyllabusContent
+        ? "Overview"
+        : tabFromRoute;
+
+    if (activeTab !== nextTab) {
+      setActiveTab(nextTab);
     }
-  }, [activeTab, hasSyllabusContent]);
+  }, [activeTab, hasSyllabusContent, tabFromRoute]);
 
   useEffect(() => {
-    if (!course || !canonicalPath) return;
+    if (!course || !baseCoursePath) return;
 
     const searchParams = new URLSearchParams(location.search);
     searchParams.delete("name");
 
     const nextSearch = searchParams.toString();
-    const nextUrl = nextSearch ? `${canonicalPath}?${nextSearch}` : canonicalPath;
+    const nextTab =
+      tabFromRoute === "Syllabus" && !hasSyllabusContent
+        ? "Overview"
+        : tabFromRoute;
+    const nextPath = buildTabPath(nextTab);
+    const nextUrl = nextSearch ? `${nextPath}?${nextSearch}` : nextPath;
     const currentUrl = `${location.pathname}${location.search}`;
 
     if (currentUrl !== nextUrl) {
       navigate(nextUrl, { replace: true });
     }
-  }, [canonicalPath, course, location.pathname, location.search, navigate]);
+  }, [
+    baseCoursePath,
+    course,
+    hasSyllabusContent,
+    location.pathname,
+    location.search,
+    navigate,
+    tabFromRoute,
+  ]);
+
+  const handleTabChange = (tab: CourseTab) => {
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: "auto" });
+
+    const nextPath = buildTabPath(tab);
+    const currentUrl = `${location.pathname}${location.search}`;
+
+    if (nextPath && currentUrl !== nextPath) {
+      navigate(nextPath);
+    }
+  };
 
   const toggleComparedCollege = (collegeId: string) => {
     setComparedCollegeIds((prev) =>
@@ -885,14 +943,14 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
       </div>
       )}
 
-      <div className="sticky top-[74px] z-40 border-b border-[#d9d4ca] bg-[#f2efe8] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      <div className="sticky top-[54px] md:top-[70px] z-40 border-b border-[#d9d4ca] bg-[#f2efe8] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-6 overflow-x-auto no-scrollbar">
             {availableTabs.map((tab) => (
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => handleTabChange(tab)}
                 className={`whitespace-nowrap border-b-2 px-2 py-4 text-sm font-semibold transition ${
                   activeTab === tab
                     ? "border-[#0f7a83] text-[#0f7a83]"
@@ -1059,7 +1117,7 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
           </main>
 
           <aside className="space-y-5 w-full">
-            <div className="lg:sticky lg:top-24 space-y-5">
+            <div className="lg:sticky lg:top-35 space-y-5">
        
 
               <div className="overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,#081c33_0%,#133252_100%)] p-6 text-white shadow-[0_20px_45px_rgba(7,29,53,0.16)]">
