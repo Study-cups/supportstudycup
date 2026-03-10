@@ -2698,53 +2698,35 @@ const HERO_TAGS = [
 
         {/* Trusted by Students Section */}
  <section className="py-16 bg-white">
-  <div className="max-w-7xl mx-auto px-6 text-center">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
 
     <h2 className="text-lg md:text-xl font-semibold text-[#0A225A] mb-10">
       Top Universities We Work With
     </h2>
 
-    <div className="overflow-hidden relative">
-      <div className="flex items-center gap-6 animate-logoScroll whitespace-nowrap">
-
-        {/* BOX */}
-        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
-          <img src="/logos/doon.png" className="h-8 md:h-10 object-contain" />
-        </div>
-
-        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
-          <img src="/logos/download.jpg" className="h-8 md:h-10 object-contain" />
-        </div>
-
-        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
-          <img src="/logos/ITM.png" className="h-8 md:h-10 object-contain" />
-        </div>
-
-        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
-          <img src="/logos/NBS.jpg" className="h-8 md:h-10 object-contain" />
-        </div>
-
-        {/* Duplicate for infinite scroll */}
-
-        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
-          <img src="/logos/doon.png" className="h-8 md:h-10 object-contain" />
-        </div> 
-
-        
-
-        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
-          <img src="/logos/download.jpg" className="h-8 md:h-10 object-contain" />
-        </div>
-
-        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
-          <img src="/logos/ITM.png" className="h-8 md:h-10 object-contain" />
-        </div>
-
-        <div className="bg-white border rounded-lg shadow-sm px-6 py-3 flex items-center justify-center">
-          <img src="/logos/NBS.jpg" className="h-8 md:h-10 object-contain" />
-        </div>
- 
- 
+    <div className="relative overflow-hidden">
+      <div className="flex min-w-max items-center gap-3 whitespace-nowrap animate-logoScroll sm:gap-6">
+        {[
+          { src: "/logos/doon.png", alt: "Doon Business School" },
+          { src: "/logos/download.jpg", alt: "Asian Business School" },
+          { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
+          { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
+          { src: "/logos/doon.png", alt: "Doon Business School" },
+          { src: "/logos/download.jpg", alt: "Asian Business School" },
+          { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
+          { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
+        ].map((logo, index) => (
+          <div
+            key={`${logo.src}-${index}`}
+            className="flex h-16 w-[118px] shrink-0 items-center justify-center rounded-lg border bg-white px-3 py-3 shadow-sm sm:h-[72px] sm:w-[156px] sm:px-6"
+          >
+            <img
+              src={logo.src}
+              alt={logo.alt}
+              className="h-full w-full object-contain"
+            />
+          </div>
+        ))}
       </div>
     </div>
   </div>

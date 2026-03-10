@@ -55,7 +55,7 @@ interface FilterSidebarProps {
   colleges: College[];
   compareList: string[];
   desktopStickyTop?: number;
-  sidebarRef?: React.RefObject<HTMLAsideElement | null>;
+  sidebarRef?: React.RefObject<HTMLElement | null>;
 }
 
 const DESKTOP_FILTER_STICKY_TOP = 148;
@@ -881,7 +881,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
     disciplines: 0,
   });
   const hasRunHeroStatsRef = useRef(false);
-  const desktopSidebarRef = useRef<HTMLAsideElement | null>(null);
+  const desktopSidebarRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (hasRunHeroStatsRef.current) return;

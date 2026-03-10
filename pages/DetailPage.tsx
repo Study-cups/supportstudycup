@@ -1487,13 +1487,20 @@ if (blockType === "heading") {
               <div className="bg-white border rounded-2xl p-6 shadow-sm">
                 {selectedCourse ? (
                   <div className="space-y-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h2 className="text-2xl font-bold text-blue-900">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                      <button
+                        onClick={() => navigate(buildUniversityPath("Courses & Fees"))}
+                        className="order-1 self-end text-sm text-blue-600 hover:underline whitespace-nowrap sm:order-2 sm:self-auto"
+                      >
+                        View All Courses
+                      </button>
+
+                      <div className="order-2 sm:order-1">
+                        <h2 className="text-1xl md:text-2xl font-bold text-blue-900">
                           {selectedCourse.course_name}
                         </h2>
 
-                        <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-600">
+                        <div className="mt-2 flex flex-wrap gap-4 text-sm text-black">
                           {selectedCourse.rating && (
                             <span className="font-semibold text-yellow-600">⭐ {selectedCourse.rating}</span>
                           )}
@@ -1502,16 +1509,9 @@ if (blockType === "heading") {
                           {selectedCourse.mode && <span>{selectedCourse.mode}</span>}
                         </div>
                       </div>
-
-                      <button
-                        onClick={() => navigate(buildUniversityPath("Courses & Fees"))}
-                        className="text-sm text-blue-600 hover:underline whitespace-nowrap"
-                      >
-                        View All Courses
-                      </button>
                     </div>
 
-                    <div className="text-sm text-slate-700 space-y-1">
+                    <div className="text-sm text-black space-y-1">
                       {selectedCourse.eligibility && (
                         <p>
                           <span className="font-semibold text-slate-900">Eligibility:</span>{" "}
@@ -1562,7 +1562,7 @@ if (blockType === "heading") {
                                         </p>
                                       )}
                                       {author.meta && (
-                                        <p className="text-xs text-slate-600">{author.meta}</p>
+                                        <p className="text-xs text-black">{author.meta}</p>
                                       )}
                                     </div>
                                   </div>
@@ -3120,7 +3120,7 @@ if (blockType === "heading") {
                     className="h-14 w-14 rounded-full bg-white p-2 shadow"
                   />
 
-                  <h2 className="text-2xl font-bold mt-6 mb-4">
+                  <h2 className="text-1xl md:text-2xl font-bold mt-6 mb-4">
   {getTabHeading()}
 </h2>
                 </div>

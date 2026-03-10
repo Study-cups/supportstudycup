@@ -143,16 +143,17 @@ export default function CollegeCourseDetail() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-blue-900">{course.course_name}</h1>
-
-        <div className="mt-4 text-sm text-slate-600 flex flex-wrap gap-4">
+       
+ <h1 className="text-2xl font-bold text-blue-900">{course.course_name}</h1>
+        <div className="mt-4 text-sm text-black flex flex-wrap gap-4">
+          
           {course.rating && <span>Rating: {course.rating}</span>}
           {course.reviews && <span>{course.reviews} Reviews</span>}
           {course.duration && <span>{course.duration}</span>}
           {course.mode && <span>{course.mode}</span>}
         </div>
 
-        <div className="mt-4 text-sm text-slate-700 space-y-1">
+        <div className="mt-4 text-sm text-black space-y-1">
           {course.eligibility && (
             <p>
               <strong>Eligibility:</strong> {course.eligibility}
