@@ -890,7 +890,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
     const frames = [
       { colleges: 220, states: 7, disciplines: 1 },
       { colleges: 340, states: 13, disciplines: 4 },
-      { colleges: 5450, states: 41, disciplines: 9 },
+      { colleges: 450, states: 21, disciplines: 9 },
       { colleges: 500, states: 28, disciplines: 6 },
     ];
 
@@ -1284,7 +1284,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
 
            
                 <h1
-                  className="mt-8 pt-4 max-w-[320px] text-[2.1rem] leading-[0.92] tracking-[-0.04em] text-white"
+                  className="mt-8 pt-4 max-w-[320px] text-[25px] leading-7 tracking-[-0.04em] text-white"
                   style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
                 >
                   Find Your{" "}
@@ -1295,7 +1295,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
                   <span className="text-slate-50">{heroHeadingContext}</span>
                 </h1>
 
-                <p className="mt-5 pt-2 max-w-[320px] text-[1rem] leading-7 text-slate-200/88">
+                <p className="mt-2 pt-1 max-w-[320px] text-[12px] leading-5 text-slate-200/88">
                   {mobileHeroDescription}
                 </p>
 

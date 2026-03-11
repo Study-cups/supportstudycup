@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { View, College } from "../types";
 import { getCollegeImages } from "../collegeImages";
 import { useParams } from "react-router-dom";
@@ -7,6 +7,9 @@ import { useLocation } from "react-router-dom";
 import FlexibleBlockRenderer from './FlexibleBlockRenderer'
 import { toCourseSlug, toSeoSlug } from "./Seo"
 import { Helmet } from "react-helmet-async"
+
+const DESKTOP_SIDEBAR_STICKY_TOP = 140;
+const DESKTOP_SIDEBAR_BOTTOM_GAP = 24;
 
 import {
   Monitor,
@@ -429,8 +432,10 @@ const DetailPage: React.FC<DetailPageProps> = ({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeSubTab, setActiveSubTab] = useState(0);
+  const [desktopSidebarTop, setDesktopSidebarTop] = useState(DESKTOP_SIDEBAR_STICKY_TOP);
   const [courses, setCourses] = useState<any[]>([]);
-const [loadingCourses, setLoadingCourses] = useState(false);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const desktopSidebarRef = useRef<HTMLElement | null>(null);
 
 
 
@@ -985,6 +990,43 @@ const getTabHeading = () => {
 
     loadCollege();
   }, [collegeId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || loadingCollege) return;
+
+    const node = desktopSidebarRef.current;
+    if (!node) return;
+
+    const updateStickyTop = () => {
+      if (window.innerWidth < 1024) {
+        setDesktopSidebarTop(DESKTOP_SIDEBAR_STICKY_TOP);
+        return;
+      }
+
+      const sidebarHeight = node.getBoundingClientRect().height;
+      const bottomLockedTop =
+        window.innerHeight - sidebarHeight - DESKTOP_SIDEBAR_BOTTOM_GAP;
+
+      setDesktopSidebarTop(
+        Math.min(DESKTOP_SIDEBAR_STICKY_TOP, Math.round(bottomLockedTop))
+      );
+    };
+
+    updateStickyTop();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updateStickyTop())
+        : null;
+
+    resizeObserver?.observe(node);
+    window.addEventListener("resize", updateStickyTop);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateStickyTop);
+    };
+  }, [loadingCollege, college?.id]);
 
 
 
@@ -3267,7 +3309,11 @@ if (blockType === "heading") {
 
         <div className="lg:col-span-2">{renderTabContent()}</div>
 
-       <aside className="space-y-5 w-full hidden lg:block lg:sticky lg:top-[140px] self-start">
+       <aside
+        ref={desktopSidebarRef}
+        className="space-y-5 w-full hidden lg:block lg:sticky self-start"
+        style={{ top: desktopSidebarTop }}
+      >
 
 
           <div className="bg-[#1E4A7A] to-indigo-600 text-white rounded-2xl p-5">

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import FlexibleBlockRenderer from "./FlexibleBlockRenderer";
@@ -26,6 +26,8 @@ const TAB_SLUG_TO_KEY: Record<string, CourseTab> = {
 };
 
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
+const DESKTOP_SIDEBAR_STICKY_TOP = 140;
+const DESKTOP_SIDEBAR_BOTTOM_GAP = 24;
 
 const CTA_TEXTS = new Set([
   "apply now",
@@ -524,6 +526,8 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
   const [course, setCourse] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [comparedCollegeIds, setComparedCollegeIds] = useState<string[]>([]);
+  const [desktopSidebarTop, setDesktopSidebarTop] = useState(DESKTOP_SIDEBAR_STICKY_TOP);
+  const desktopSidebarRef = useRef<HTMLDivElement | null>(null);
 
   const exactName = useMemo(
     () => new URLSearchParams(location.search).get("name") || "",
@@ -714,6 +718,43 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
     activeTab === "Syllabus" && hasSyllabusContent
       ? course?.syllabus_detail
       : course?.course_detail;
+
+  useEffect(() => {
+    if (typeof window === "undefined" || loading) return;
+
+    const node = desktopSidebarRef.current;
+    if (!node) return;
+
+    const updateStickyTop = () => {
+      if (window.innerWidth < 1024) {
+        setDesktopSidebarTop(DESKTOP_SIDEBAR_STICKY_TOP);
+        return;
+      }
+
+      const sidebarHeight = node.getBoundingClientRect().height;
+      const bottomLockedTop =
+        window.innerHeight - sidebarHeight - DESKTOP_SIDEBAR_BOTTOM_GAP;
+
+      setDesktopSidebarTop(
+        Math.min(DESKTOP_SIDEBAR_STICKY_TOP, Math.round(bottomLockedTop))
+      );
+    };
+
+    updateStickyTop();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => updateStickyTop())
+        : null;
+
+    resizeObserver?.observe(node);
+    window.addEventListener("resize", updateStickyTop);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateStickyTop);
+    };
+  }, [loading, activeTab, courseTitle, courseQuickFacts.length]);
 
   if (loading) {
     return (
@@ -1117,7 +1158,11 @@ const CourseDetailPage: React.FC<CourseDetailPageProps> = ({ onOpenApplyNow }) =
           </main>
 
           <aside className="space-y-5 w-full">
-            <div className="lg:sticky lg:top-35 space-y-5">
+            <div
+              ref={desktopSidebarRef}
+              className="lg:sticky space-y-5"
+              style={{ top: desktopSidebarTop }}
+            >
        
 
               <div className="overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,#081c33_0%,#133252_100%)] p-6 text-white shadow-[0_20px_45px_rgba(7,29,53,0.16)]">

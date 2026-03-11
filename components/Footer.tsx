@@ -100,7 +100,7 @@ const Newsletter: React.FC<{ hideOnMobile?: boolean }> = ({ hideOnMobile = false
               </span>
               <span className="inline-flex items-center gap-2">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-white/70" />
-               7505888936
+               7753831118
               </span>
               <span className="inline-flex items-center gap-2">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-white/70" />
@@ -258,7 +258,7 @@ const Footer: React.FC<FooterProps> = ({
               <p>Â© 2026 StudyCups</p>
               <p>
                 Regular Helpdesk: <strong>+91 8081269969</strong> | Online Helpdesk:{" "}
-                <strong>7505888936</strong>
+                <strong> 7753831118</strong>
               </p>
             </div>
           </div>

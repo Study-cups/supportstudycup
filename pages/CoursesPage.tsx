@@ -1301,7 +1301,7 @@ const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
       
 
         <h1
-          className="mt-4 max-w-[640px] pt-1 text-[2.70rem] leading-[0.92] text-white md:mt-3 md:pt-3 md:text-[3rem] md:leading-[0.96]"
+          className="mt-4 max-w-[640px] pt-1 text-[30px] leading-[1.2] text-white md:mt-3 md:pt-3 md:text-[3rem] md:leading-[0.96]"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
         >
           Find the{" "}
@@ -1310,7 +1310,7 @@ const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
           for Your Career
         </h1>
 
-        <p className="max-w-[590px] pt-5 text-[1.01rem] leading-[1.72] text-white/82 md:pt-8 md:text-[0.94rem] md:leading-6">
+        <p className="max-w-[590px] pt-5 text-[15px] leading-[1.72] text-white/82 md:pt-8 md:text-[0.94rem] md:leading-6">
           From MBA to MBBS, B.Tech to Fashion Design, our expert counsellors help
           you get admitted to the best college for your goals, budget, and score.
           Free guidance for every course.
@@ -1337,7 +1337,7 @@ const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
             onClick={() => {
               clearFilters();
             }}
-            className={`rounded-full border px-3 py-2 text-[0.875rem] font-semibold leading-none transition ${
+            className={`rounded-full border px-3 py-2 text-[10px] font-semibold leading-none transition ${
               isHeroAllCoursesActive
                 ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
                 : "border-white/18 bg-white/8 text-white/85"
@@ -1352,7 +1352,7 @@ const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
               setSelectedLevel(selectedLevel === "Postgraduate" ? "All" : "Postgraduate");
               setSelectedMode("All");
             }}
-            className={`rounded-full border px-3 py-2 text-[0.875rem] font-semibold leading-none transition ${
+            className={`rounded-full border px-3 py-2 text-[10px] font-semibold leading-none transition ${
               selectedLevel === "Postgraduate"
                 ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
                 : "border-white/18 bg-white/8 text-white/85"
@@ -1367,7 +1367,7 @@ const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
               setSelectedLevel(selectedLevel === "Undergraduate" ? "All" : "Undergraduate");
               setSelectedMode("All");
             }}
-            className={`rounded-full border px-3 py-2 text-[0.875rem] font-semibold leading-none transition ${
+            className={`rounded-full border px-3 py-2 text-[10px] font-semibold leading-none transition ${
               selectedLevel === "Undergraduate"
                 ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
                 : "border-white/18 bg-white/8 text-white/85"
@@ -1385,7 +1385,7 @@ const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
               );
               setSelectedLevel("All");
             }}
-            className={`rounded-full border px-3 py-2 text-[0.875rem] font-semibold leading-none transition ${
+            className={`rounded-full border px-3 py-2 text-[10px] font-semibold leading-none transition ${
               isHeroProfessionalActive
                 ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
                 : "border-white/18 bg-white/8 text-white/85"
