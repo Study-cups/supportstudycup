@@ -1149,7 +1149,14 @@ const filteredColleges = useMemo(() => {
       : rankingColleges.filter((c) => c.stream === selectedtopcollge);
 
 
-
+const toExamSlug = (exam: any) =>
+  exam.name
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^\w\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-") +
+  (exam.year ? `-${exam.year}` : "");
 
   const bgImages = [
     "https://res.cloudinary.com/alishakhan987/image/upload/v1765219557/Gemini_Generated_Image_3xjtay3xjtay3xjt-Photoroom_nx9j6s.png",
@@ -2521,7 +2528,7 @@ const HERO_TAGS = [
                 .map((exam) => (
                   <div
                     key={exam.id}
-                    onClick={() => navigate(`/exam/${exam.id}`)}
+                     onClick={() => navigate(`/exams/${toExamSlug(exam)}`)}
 
                     className="
                 min-w-[290px] max-w-[290px]
