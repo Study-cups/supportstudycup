@@ -54,7 +54,7 @@ type BlogNewsArticle = {
 
 const BLOG_NEWS_API_URL =
   typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:5000/api/news"
+    ? "https://studycupsbackend-wb8p.onrender.com/api/news"
     : "https://studycupsbackend-wb8p.onrender.com/api/news";
 
 const normalizeBlogNewsText = (value = "") =>
