@@ -221,6 +221,7 @@ useEffect(() => {
               onOpenBrochure={handleBrochure} // ✅ GLOBAL HANDLER 
               compareList={compareList}
               onCompareToggle={handleCompareToggle}
+              onOpenApplyNow={handleApplyNow}
 
             />
           }

@@ -147,7 +147,8 @@ interface HomePageProps {
   exams: any[];
    onOpenBrochure: () => void;
    onCompareToggle: (id: string) => void;
-  compareList: string[]; // 🔥 ADD THIS
+  compareList: string[]; // 🔥 ADD THIS 
+   onOpenApplyNow: () => void;
 
 }
 
@@ -455,7 +456,8 @@ const HomePage: React.FC<HomePageProps> = ({
   exams,
   onOpenBrochure,
   onCompareToggle,
-  compareList
+  compareList , 
+  onOpenApplyNow
 
 }) => {
   useEffect(() => {
@@ -2212,10 +2214,11 @@ const HERO_TAGS = [
 
       <div className="md:p-10 p-0">
         <img
+         onClick={onOpenApplyNow}
           src="./icons/Poster_1.webp"
           alt="Poster"
           loading="lazy"
-          className="w-full h-auto rounded-2xl object-contain"
+          className="w-full h-auto rounded-2xl object-contain cursor-pointer shadow-md hover:shadow-lg transition"
         />
       </div>
     </div>
@@ -2328,8 +2331,8 @@ const HERO_TAGS = [
   }
   className="
     group
-    min-w-[130px] md:min-w-[150px]
-    h-[135px] md:h-[150px]
+    min-w-[100px] md:min-w-[150px]
+    h-[100px] md:h-[150px]
     rounded-2xl
     border border-slate-200
     bg-white
@@ -2342,7 +2345,7 @@ const HERO_TAGS = [
   "
 >
 
-    <div className="h-12 w-12 md:h-14 md:w-14">
+    <div className="h-8 w-8 md:h-14 md:w-14">
    <img
   src={CITY_ICON_MAP[region] || "/icons/university.png"}
   alt={region}
@@ -2407,11 +2410,20 @@ const HERO_TAGS = [
 
             {/* Heading */}
             <div className="flex items-center gap-3 mb-2 md:mb-6">
-              <svg width="35" height="35" viewBox="0 0 24 24" stroke="#0A225A" fill="none">
-                <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                  d="M4 4h16v12H4z M4 16l8 4 8-4" />
-              </svg>
-              <h2 className="text-2xl md:text-[3xl] text-[#0A225A]">
+             <svg
+  viewBox="0 0 24 24"
+  stroke="#0A225A"
+  fill="none"
+  className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8"
+>
+  <path
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    d="M4 4h16v12H4z M4 16l8 4 8-4"
+  />
+</svg>
+              <h2 className="text-1xl md:text-[3xl] text-[#0A225A]">
                 Explore Courses
               </h2>
             </div>
@@ -2426,7 +2438,7 @@ const HERO_TAGS = [
                     key={level}
                     onClick={() => setExploreLevel(level)}
                     className={`
-              px-4 py-2 rounded-full border font-medium text-sm transition
+              px-2 py-1 md:px-4 md:py-2 rounded-full border font-medium text-[10px] md:text-sm transition
               ${exploreLevel === level
                         ? "bg-[#0A225A] text-white border-[#0A225A]"
                         : "bg-white text-[#0A225A] border-gray-300 hover:bg-gray-100"
@@ -3025,7 +3037,7 @@ const HERO_TAGS = [
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-md mt-8 max-w-7xl mx-auto">
 
         {/* TABLE HEAD SECTION */}
-        <div className="px-5 pt-6 pb-3">
+        <div className="px-5 pt-6 pb-3 ">
           <h2 className="text-2xl text-slate-900">Top 10 Colleges</h2>
         </div>
 
@@ -3193,11 +3205,14 @@ const HERO_TAGS = [
    
 
       <div className="md:p-10 p-0">
-        <img
+        <img 
+      onClick={onOpenApplyNow}
           src="./icons/Poster_3.webp"
           alt="Poster"
           loading="lazy"
-          className="w-full h-auto rounded-2xl object-contain"
+         className="w-full h-[200px] sm:h-[300px] md:h-[400px] 
+             object-contain sm:object-cover 
+             rounded-2xl cursor-pointer"
         />
       </div>
     </div>
