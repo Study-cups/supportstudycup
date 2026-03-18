@@ -31,7 +31,7 @@ const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
 
 const HOME_NEWS_API_URL =
   typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "http://localhost:5000/api/news"
+    ? "https://studycupsbackend-wb8p.onrender.com/api/news"
     : `${API_BASE}/news`;
 
 const normalizeHomeNewsText = (value = "") =>
@@ -2205,9 +2205,9 @@ const HERO_TAGS = [
           </div>
         </section> 
 
-    <section className="bg-slate-50 md:mt-4 mt-2 ">
+    <section className=" md:mt-4 mt-2 ">
   <div className="max-w-7xl mx-auto">
-    <div className="rounded-3xl bg-white border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+    <div className="rounded-3xl  overflow-hidden">
    
 
       <div className="md:p-10 p-0">
@@ -2752,7 +2752,7 @@ const HERO_TAGS = [
                     className="flex gap-2 sm:gap-4 items-center p-1.5 sm:p-2 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 cursor-pointer"
                   >
                     <img
-                      src={news.image || "./icons/latestnews.png"}
+                      src={news.image || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbmKDMrnfbPcR2TwpnuRFu7CDi_A_mu-mnkw&s"}
                       alt={news.title}
                       className="w-10 h-10 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0 shadow-sm"
                     />
@@ -2826,9 +2826,9 @@ const HERO_TAGS = [
   `}</style>
 </section> 
 
-<section className="bg-slate-50 pb-8 sm:pb-16">
+<section className=" pb-8 sm:pb-16">
   <div className="max-w-7xl mx-auto px-4 sm:px-6">
-    <div className="rounded-3xl bg-white border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+    <div className="rounded-3xl  overflow-hidden">
    
 
       <div className="md:p-10 p-0">
