@@ -19,56 +19,55 @@ import ContactForm from "../components/ContactForm";
 import { useLocation } from "react-router-dom";
 import { TESTIMONIALS } from "@/LandingPage/constants";
 
-
-
-
-const DUMMY_NEWS = [
-  {
-    id: 1,
-    title: "RSB Chennai PGDM Admission 2026 Begins",
-    excerpt:
-      "RSB Chennai has opened applications for its flagship PGDM programme for the 2026 intake.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1588072432836-e10032774350",
-    date: "Dec 15, 2025",
-    author: "StudyCups Editorial Team",
-    category: "Admission News",
-  },
-  {
-    id: 3,
-    title: "IIM Visakhapatnam Admission 2026 Open",
-    imageUrl: "https://images.unsplash.com/photo-1562774053-701939374585",
-    date: "Dec 13, 2025",
-  },
-  {
-    id: 4,
-    title: "Top MBA Colleges Accepting CAT 2025 Scores",
-    excerpt:
-      "List of top MBA colleges in India accepting CAT 2025 scores.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1523050854058-8df90110c9f1",
-    date: "Dec 12, 2025",
-    author: "StudyCups Experts",
-    category: "Articles",
-  },
-  {
-    id: 5,
-    title: "How to Prepare for Board Exams Effectively",
-    excerpt:
-      "Proven strategies and study plans to score high in board exams.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b",
-    date: "Dec 11, 2025",
-    author: "StudyCups Editorial Team",
-    category: "Articles",
-  },
- 
-
-]; 
+type HomeNewsArticle = {
+  title: string;
+  description: string;
+  link: string;
+  pubDate: string;
+  image: string;
+};
 
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
 
-const loopingNews = [...DUMMY_NEWS, ...DUMMY_NEWS];
+const HOME_NEWS_API_URL =
+  typeof window !== "undefined" && window.location.hostname === "localhost"
+    ? "http://localhost:5000/api/news"
+    : `${API_BASE}/news`;
+
+const normalizeHomeNewsText = (value = "") =>
+  value.replace(/\s+/g, " ").trim();
+
+const normalizeHomeNewsArticle = (article: any): HomeNewsArticle | null => {
+  const title = normalizeHomeNewsText(article?.title || "");
+  const link = normalizeHomeNewsText(article?.link || "");
+
+  if (!title || !link) {
+    return null;
+  }
+
+  return {
+    title,
+    description: normalizeHomeNewsText(article?.description || ""),
+    link,
+    pubDate: normalizeHomeNewsText(article?.pubDate || ""),
+    image: normalizeHomeNewsText(article?.image || article?.imageUrl || ""),
+  };
+};
+
+const formatHomeNewsDate = (value = "") => {
+  if (!value) return "";
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return parsedDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
 
 const PRIORITY_CITIES = [
  "Delhi NCR",
@@ -92,6 +91,12 @@ const ADMISSION_TICKER_ITEMS = [
   { icon: "📍", label: "Offices in Kanpur, Lucknow, Delhi NCR" }
 ];
 
+
+const HERO_TYPED_WORDS = ["Colleges", "Courses", "Placements"];
+const HERO_TYPING_SPEED = 110;
+const HERO_DELETING_SPEED = 70;
+const HERO_WORD_PAUSE_MS = 1300;
+const HERO_WORD_SWITCH_DELAY_MS = 250;
 
 const useScroll = () => {
   const [scrollY, setScrollY] = useState(0);
@@ -461,6 +466,9 @@ const HomePage: React.FC<HomePageProps> = ({
   const [selectedStream, setSelectedStream] = useState<string | null>(null);
   const [heroCollege, setHeroCollege] = useState("");
 const [heroCity, setHeroCity] = useState("");
+  const [heroTypedWord, setHeroTypedWord] = useState("");
+  const [heroTypedWordIndex, setHeroTypedWordIndex] = useState(0);
+  const [heroIsDeleting, setHeroIsDeleting] = useState(false);
 
 
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -473,6 +481,34 @@ const [heroCity, setHeroCity] = useState("");
   useEffect(() => {
   console.log("TESTIMONIALS =>", TESTIMONIALS);
 }, []);
+
+  useEffect(() => {
+    const currentWord = HERO_TYPED_WORDS[heroTypedWordIndex];
+    let timeoutId: number;
+
+    if (!heroIsDeleting && heroTypedWord === currentWord) {
+      timeoutId = window.setTimeout(() => {
+        setHeroIsDeleting(true);
+      }, HERO_WORD_PAUSE_MS);
+    } else if (heroIsDeleting && heroTypedWord.length === 0) {
+      timeoutId = window.setTimeout(() => {
+        setHeroIsDeleting(false);
+        setHeroTypedWordIndex((prev) => (prev + 1) % HERO_TYPED_WORDS.length);
+      }, HERO_WORD_SWITCH_DELAY_MS);
+    } else {
+      timeoutId = window.setTimeout(() => {
+        setHeroTypedWord(
+          heroIsDeleting
+            ? currentWord.slice(0, heroTypedWord.length - 1)
+            : currentWord.slice(0, heroTypedWord.length + 1)
+        );
+      }, heroIsDeleting ? HERO_DELETING_SPEED : HERO_TYPING_SPEED);
+    }
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [heroIsDeleting, heroTypedWord, heroTypedWordIndex]);
 
 
   const [query, setQuery] = useState("");
@@ -617,6 +653,8 @@ useEffect(() => {
 
   const [selectedtopcollge, setSelectedtopcollge] = useState("");
   const [selectedExamFilter, setSelectedExamFilter] = useState("All");
+  const [studentUpdateNews, setStudentUpdateNews] = useState<HomeNewsArticle[]>([]);
+  const [studentUpdateNewsLoading, setStudentUpdateNewsLoading] = useState(true);
  const [filteredStates, setFilteredStates] = useState<string[]>([]);
 
 
@@ -666,6 +704,53 @@ useEffect(() => {
       cancelled = true;
     };
   }, [fallbackCourses]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadStudentUpdateNews = async () => {
+      setStudentUpdateNewsLoading(true);
+
+      try {
+        const response = await fetch(HOME_NEWS_API_URL);
+        if (!response.ok) {
+          throw new Error("Failed to load homepage news");
+        }
+
+        const payload = await response.json();
+        const articles = Array.isArray(payload?.articles)
+          ? payload.articles
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload)
+              ? payload
+              : [];
+
+        const normalizedArticles = articles
+          .map((article: any) => normalizeHomeNewsArticle(article))
+          .filter(Boolean) as HomeNewsArticle[];
+
+        if (!cancelled) {
+          setStudentUpdateNews(normalizedArticles);
+        }
+      } catch (err) {
+        console.error("Student updates news API error", err);
+        if (!cancelled) {
+          setStudentUpdateNews([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setStudentUpdateNewsLoading(false);
+        }
+      }
+    };
+
+    loadStudentUpdateNews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const courses = exploreCourses.length > 0 ? exploreCourses : fallbackCourses;
 
@@ -1512,7 +1597,16 @@ const HERO_TAGS = [
           sm:text-[42px] sm:leading-[52px]
           md:text-[52px] md:leading-[64px]">
           Find Your <br />
-          <span>Dream College.</span>
+          <span className="inline-flex items-baseline whitespace-nowrap">
+            <span>Dream&nbsp; {""} </span>
+            <span className="inline-block min-w-[10.5ch] text-[#f4a71d]">
+              {heroTypedWord} 
+            </span>
+            <span
+              aria-hidden="true"
+              className=""
+            />
+          </span>
         </h1>
 
         {/* SUBTEXT */}
@@ -2109,8 +2203,25 @@ const HERO_TAGS = [
 
 
           </div>
-        </section>
-    
+        </section> 
+
+    <section className="bg-slate-50 md:mt-4 mt-2 ">
+  <div className="max-w-7xl mx-auto">
+    <div className="rounded-3xl bg-white border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+   
+
+      <div className="md:p-10 p-0">
+        <img
+          src="./icons/Poster_1.webp"
+          alt="Poster"
+          loading="lazy"
+          className="w-full h-auto rounded-2xl object-contain"
+        />
+      </div>
+    </div>
+  </div>
+</section>
+
 
       {/* Top Study Places Section */}
       <section className="py-3 bg-[#F8F9FA] relative overflow-hidden">
@@ -2629,29 +2740,41 @@ const HERO_TAGS = [
           {/* News List */}
           <div className="relative flex-1 overflow-hidden">
             <div className="h-[220px] sm:h-[320px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
-              {loopingNews.map((news, i) => (
-                <div
-                  key={i}
-                  className="flex gap-2 sm:gap-4 items-center p-1.5 sm:p-2 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 cursor-pointer"
-                >
-                  {/* Thumbnail */}
-                  <img
-                    src={news.imageUrl}
-                    alt=""
-                    className="w-10 h-10 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0 shadow-sm"
-                  />
-
-                  <div className="min-w-0">
-                    {/* Title: 2 Lines on mobile for professional look */}
-                    <p className="text-[10px] sm:text-[15px] font-semibold text-slate-800 leading-[1.3] line-clamp-2">
-                      {news.title}
-                    </p>
-                    <p className="text-[8px] sm:text-xs text-slate-500 mt-0.5">
-                      {news.date}
-                    </p>
-                  </div>
+              {studentUpdateNewsLoading ? (
+                <div className="flex items-center justify-center h-full text-xs sm:text-sm text-slate-500">
+                  Loading latest news...
                 </div>
-              ))}
+              ) : studentUpdateNews.length > 0 ? (
+                studentUpdateNews.map((news, index) => (
+                  <a
+                    key={`${news.link}-${index}`}
+                    href={news.link}
+                    className="flex gap-2 sm:gap-4 items-center p-1.5 sm:p-2 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 cursor-pointer"
+                  >
+                    <img
+                      src={news.image || "./icons/latestnews.png"}
+                      alt={news.title}
+                      className="w-10 h-10 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0 shadow-sm"
+                    />
+
+                    <div className="min-w-0">
+                      <p className="text-[10px] sm:text-[15px] font-semibold text-slate-800 leading-[1.3] line-clamp-1">
+                        {news.title}
+                      </p>
+                      <p className="text-[8px] sm:text-xs text-slate-500 mt-0.5 line-clamp-1">
+                        {news.description}
+                      </p>
+                      <p className="text-[8px] sm:text-xs text-slate-500 mt-0.5">
+                        {formatHomeNewsDate(news.pubDate)}
+                      </p>
+                    </div>
+                  </a>
+                ))
+              ) : (
+                <div className="flex items-center justify-center h-full text-xs sm:text-sm text-slate-500">
+                  No latest news available right now.
+                </div>
+              )}
             </div>
             
             {/* Bottom Gradient Fade */}
@@ -2701,20 +2824,48 @@ const HERO_TAGS = [
       overflow: hidden;
     }
   `}</style>
+</section> 
+
+<section className="bg-slate-50 pb-8 sm:pb-16">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="rounded-3xl bg-white border border-slate-100 shadow-xl shadow-blue-900/5 overflow-hidden">
+   
+
+      <div className="md:p-10 p-0">
+        <img
+          src="./icons/Poster_2.webp"
+          alt="Poster"
+          loading="lazy"
+          className="w-full h-auto rounded-2xl object-contain"
+        />
+      </div>
+    </div>
+  </div>
 </section>
 
         {/* Trusted by Students Section */}
  <section className="py-16 bg-white">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
 
-    <h2 className="text-lg md:text-xl font-semibold text-[#0A225A] mb-10">
-      Top Universities We Work With
-    </h2>
+   <div className="flex items-center gap-4 mb-10">
+  <h2 className="text-lg md:text-xl font-semibold text-[#0A225A] whitespace-nowrap">
+    Top Universities We Work With
+  </h2>
+  <div className="flex-1 h-[2px] bg-gray-300"></div>
+</div>
 
     <div className="relative overflow-hidden">
       <div className="flex min-w-max items-center gap-3 whitespace-nowrap animate-logoScroll sm:gap-6">
         {[
           { src: "/logos/doon.png", alt: "Doon Business School" },
+          { src: "/logos/download.jpg", alt: "Asian Business School" },
+          { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
+          { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
+          { src: "/logos/doon.png", alt: "Doon Business School" },
+          { src: "/logos/download.jpg", alt: "Asian Business School" },
+          { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
+          { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
+           { src: "/logos/doon.png", alt: "Doon Business School" },
           { src: "/logos/download.jpg", alt: "Asian Business School" },
           { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
           { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
@@ -2734,7 +2885,8 @@ const HERO_TAGS = [
             />
           </div>
         ))}
-      </div>
+      </div> 
+      
     </div>
   </div>
 </section>
