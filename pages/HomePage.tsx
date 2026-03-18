@@ -3187,7 +3187,22 @@ const HERO_TAGS = [
 
       {/* Blog preview */}
    
+<section className=" pb-8 sm:pb-16">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <div className="rounded-3xl  overflow-hidden">
+   
 
+      <div className="md:p-10 p-0">
+        <img
+          src="./icons/Poster_3.webp"
+          alt="Poster"
+          loading="lazy"
+          className="w-full h-auto rounded-2xl object-contain"
+        />
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* Contact section */}
       <section className="py-8 bg-white">
