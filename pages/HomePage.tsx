@@ -1017,7 +1017,7 @@ const filteredColleges = useMemo(() => {
       name: "Engineering",
       description: "Innovate the future with cutting-edge technology.",
       color: "bg-[#1f5fd6]",
-      courseCount: COURSE_STREAMS["Engineering"].length,
+      courseCount: 500,
       iconPath: "/icons/technology.png",
 
     },
@@ -1025,7 +1025,7 @@ const filteredColleges = useMemo(() => {
       name: "Management",
       description: "Lead organizations and shape the business world.",
       color: "bg-[#1ea35a]",
-      courseCount: COURSE_STREAMS["Management"].length,
+      courseCount: 1000,
       iconPath: "/icons/project-management.png",
 
     },
@@ -1033,14 +1033,14 @@ const filteredColleges = useMemo(() => {
       name: "Medical",
       description: "Embark on a journey to heal and care for others.",
       color: "bg-[#f59e0b]",
-      courseCount: COURSE_STREAMS["Medical"].length,
+      courseCount: 800,
       iconPath: "/icons/medical-symbol (1).png",
     },
     {
       name: "Commerce",
       description: "Build strong foundations in finance and trade.",
       color: "bg-[#8b5cf6]",
-      courseCount: COURSE_STREAMS["Commerce"]?.length || 90,
+      courseCount: 200,
       iconPath: "/icons/smart-shopping.png"
       ,
     },
@@ -1048,7 +1048,7 @@ const filteredColleges = useMemo(() => {
       name: "Arts",
       description: "Explore creativity and the humanities.",
       color: "bg-[#f97316]",
-      courseCount: COURSE_STREAMS["Arts & Science"]?.length || 95,
+      courseCount: 300,
       iconPath:
         "/icons/inspiration.png",
     },
