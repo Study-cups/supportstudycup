@@ -127,6 +127,12 @@ const getCollegeAccreditations = (college: any): string[] => {
 const getCleanStringValue = (value: unknown): string =>
   typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
 
+const isFeaturedCollege = (college: any): boolean =>
+  getCleanStringValue(college?.featured_college).toLowerCase() === "featured";
+
+const compareFeaturedFirst = (a: any, b: any): number =>
+  Number(isFeaturedCollege(b)) - Number(isFeaturedCollege(a));
+
 const getLocationParts = (college: any): string[] => {
   if (typeof college?.location !== "string") return [];
 
@@ -1152,15 +1158,25 @@ const ListingPage: React.FC<ListingPageProps> = ({
     const list = [...filteredColleges];
 
     if (sortBy === "fee-low-high") {
-      return list.sort((a, b) => getFeeLakhs(a) - getFeeLakhs(b));
+      return list.sort((a, b) => {
+        const featuredDiff = compareFeaturedFirst(a, b);
+        if (featuredDiff !== 0) return featuredDiff;
+        return getFeeLakhs(a) - getFeeLakhs(b);
+      });
     }
 
     if (sortBy === "fee-high-low") {
-      return list.sort((a, b) => getFeeLakhs(b) - getFeeLakhs(a));
+      return list.sort((a, b) => {
+        const featuredDiff = compareFeaturedFirst(a, b);
+        if (featuredDiff !== 0) return featuredDiff;
+        return getFeeLakhs(b) - getFeeLakhs(a);
+      });
     }
 
     if (sortBy === "highest-placement") {
       return list.sort((a, b) => {
+        const featuredDiff = compareFeaturedFirst(a, b);
+        if (featuredDiff !== 0) return featuredDiff;
         const aPlacement = parseMoney((a as any)?.placements?.highestPackage ?? (a as any)?.placements?.averagePackage);
         const bPlacement = parseMoney((b as any)?.placements?.highestPackage ?? (b as any)?.placements?.averagePackage);
         return bPlacement - aPlacement;
@@ -1168,10 +1184,16 @@ const ListingPage: React.FC<ListingPageProps> = ({
     }
 
     if (sortBy === "highest-rated") {
-      return list.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+      return list.sort((a, b) => {
+        const featuredDiff = compareFeaturedFirst(a, b);
+        if (featuredDiff !== 0) return featuredDiff;
+        return Number(b.rating || 0) - Number(a.rating || 0);
+      });
     }
 
     return list.sort((a, b) => {
+      const featuredDiff = compareFeaturedFirst(a, b);
+      if (featuredDiff !== 0) return featuredDiff;
       const ratingDiff = Number(b.rating || 0) - Number(a.rating || 0);
       if (ratingDiff !== 0) return ratingDiff;
       return Number((b as any).reviewCount || 0) - Number((a as any).reviewCount || 0);

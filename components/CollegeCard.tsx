@@ -62,10 +62,15 @@ const rankingText =
           .join(" | ")
       : "N/A";
 
+const isFeaturedCollege =
+  typeof college.featured_college === "string" &&
+  college.featured_college.trim().toLowerCase() === "featured";
+
 
   return (
     <div 
       className="
+        relative
         bg-white
         rounded-xl 
         border-borderWhite/20
@@ -77,6 +82,14 @@ const rankingText =
         max-w-[380px] md:max-w-none
       "
     >
+      {isFeaturedCollege && (
+        <span
+          className="absolute left-3 top-3 z-20 inline-flex items-center rounded-full bg-[#f0a018] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#10233e] shadow-md"
+        >
+          Featured
+        </span>
+      )}
+
       {/* IMAGE + GRADIENT */}
       <div 
       onClick={() =>
