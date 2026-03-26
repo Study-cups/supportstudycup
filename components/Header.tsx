@@ -115,7 +115,8 @@ const COURSE_CATEGORY_MAP: Record<string, string> = {
   "BBA": "management",
   "M.E / M.Tech": "engineering",
   "MCA": "engineering",
-  "B.Ed": "education",
+  "B.Ed": "education", 
+   
 };
 
 const getExamsForCourse = (courseName: string) => {
