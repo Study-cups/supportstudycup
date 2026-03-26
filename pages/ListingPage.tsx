@@ -343,10 +343,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     accreditationCounts,
     ratingCounts,
   } = useMemo(() => {
-    console.log("FIRST COLLEGE OBJECT:", colleges[0]);
-    console.log("BASIC DATA:", colleges[0]?.basic);
-    console.log("COLLEGE TYPE:", colleges[0]?.basic?.college_type);
-    console.log("RAW SCRAPED:", colleges[0]?.rawScraped);
     const streamSet = new Set<string>();
     const typeSet = new Set<string>();
     const stateSet = new Set<string>();
@@ -746,8 +742,6 @@ const ListingPage: React.FC<ListingPageProps> = ({
 
   const { stream, seoSlug } = useParams();
 
-  console.log("ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢ ROUTE PARAMS:", { stream, seoSlug });
-
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -845,12 +839,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
 
     setFilters(p => ({ ...p, ...nextFilters }));
     hasInitializedRef.current = true;
-
-    console.log("ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ INIT FILTERS FROM URL:", nextFilters);
   }, [stream, seoSlug, colleges]);
-
-
-  console.log("Applied stream filter:", filters.stream);
   const selectedRegion = location.state?.region || null;
 
   const normalizeText = (s = "") =>
@@ -1230,9 +1219,6 @@ const ListingPage: React.FC<ListingPageProps> = ({
       .replace(/\s+/g, "-");
     return `/university/${college.id}-${slug}`;
   };
-
-
-  console.log("FILTER COUNT:", filteredColleges.length);
   const seoTitle = (() => {
     if (filters.stream && filters.stream !== "All") {
       if (filters.region) {

@@ -1,6 +1,6 @@
 /* 🔥 Landing page font isolation */
 .landing-root {
-  font-family: 'Inter', sans-serif !important;
+  font-family: inherit;
 }
 
 /* Reset aggressive tailwind font weights */

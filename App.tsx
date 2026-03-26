@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-
+import { Analytics } from "@vercel/analytics/react"
 /* ===== COMMON COMPONENTS ===== */
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -463,7 +463,8 @@ useEffect(() => {
           hideNewsletterOnMobile={hideNewsletterOnMobile}
         />
       )}
-  <ChatbotWidget />
+  <ChatbotWidget /> 
+      <Analytics />
     </>
   );
 

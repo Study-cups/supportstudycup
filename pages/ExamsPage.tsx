@@ -7,6 +7,9 @@ interface ExamsPageProps {
   setView: (view: View) => void;
 }
 
+const API_BASE =
+  "https://studycupsbackend-wb8p.onrender.com/api";
+
 const toExamSlug = (exam: any) =>
   exam.name
     .toLowerCase()
@@ -46,7 +49,7 @@ const ExamsPage: React.FC = () => {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const res = await fetch("https://studycupsbackend-wb8p.onrender.com/api/exams");
+        const res = await fetch(`${API_BASE}/exams`);
         const json = await res.json();
         setExams(json.data || []);
       } catch (err) {

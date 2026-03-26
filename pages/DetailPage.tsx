@@ -558,10 +558,8 @@ useEffect(() => {
       if (json.success && json.data?.length) {
   setCourses(json.data[0].courses || []);
 }
-console.log("COURSE API RESPONSE:", json);
 
     } catch (err) {
-      console.error("Courses API error", err);
     } finally {
       setLoadingCourses(false);
     }
@@ -717,7 +715,6 @@ console.log("COURSE API RESPONSE:", json);
 
         setCourseOfferingColleges(uniqueColleges);
       } catch (err) {
-        console.error("Course offering colleges API error", err);
         if (!isCancelled) {
           setCourseOfferingColleges([]);
         }
@@ -982,7 +979,6 @@ const getTabHeading = () => {
         }
 
       } catch (err) {
-        console.error("Detail fetch error", err);
       } finally {
         setLoadingCollege(false);
       }

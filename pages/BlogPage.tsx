@@ -52,10 +52,11 @@ type BlogNewsArticle = {
   image: string;
 };
 
-const BLOG_NEWS_API_URL =
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "https://studycupsbackend-wb8p.onrender.com/api/news"
-    : "https://studycupsbackend-wb8p.onrender.com/api/news";
+const API_BASE =
+ 
+  "https://studycupsbackend-wb8p.onrender.com/api";
+
+const BLOG_NEWS_API_URL = `${API_BASE}/news`;
 
 const normalizeBlogNewsText = (value = "") =>
   value.replace(/\s+/g, " ").trim();
@@ -159,7 +160,7 @@ const BlogPage: React.FC = () => {
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const res = await fetch("https://studycupsbackend-wb8p.onrender.com/api/blogs");
+        const res = await fetch(`${API_BASE}/blogs`);
         const json = await res.json();
         setArticles(json.data || []);
       } catch (err) {
