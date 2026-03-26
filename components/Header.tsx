@@ -3,8 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import type { College } from "../types";
 import { toCourseSlug } from "../pages/Seo";
 
-
-
 interface HeaderProps {
   colleges: College[];
   exams: any[];
