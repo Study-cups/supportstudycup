@@ -24,6 +24,9 @@ import ChatbotWidget from "./components/ChatWidget";
 /* ===== TYPES ===== */
 import type { College } from "./types";
 import { useParams } from "react-router-dom";
+
+/* ===== VERCEL ANALYTICS ===== */
+import { SpeedInsights } from "@vercel/speed-insights/react";
 const toSeoSlug = (value: string) =>
   value
     .toLowerCase()
@@ -463,7 +466,8 @@ useEffect(() => {
           hideNewsletterOnMobile={hideNewsletterOnMobile}
         />
       )}
-  <ChatbotWidget />
+      <ChatbotWidget />
+      <SpeedInsights />
     </>
   );
 
