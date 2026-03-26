@@ -56,6 +56,21 @@ const OldCollegesRedirect = ({ withLocation }: { withLocation?: boolean }) => {
   return <Navigate to={`/${safeStream}/top-colleges`} replace />;
 };
 
+const LegacyUniversityCourseRedirect = () => {
+  const { collegeIdSlug, courseSlug } = useParams();
+
+  if (!collegeIdSlug || !courseSlug) {
+    return <Navigate to="/courses" replace />;
+  }
+
+  return (
+    <Navigate
+      to={`/university/${collegeIdSlug}/course/${courseSlug}`}
+      replace
+    />
+  );
+};
+
 
 
 
@@ -379,15 +394,7 @@ useEffect(() => {
 
       <Route
   path="/university/:collegeIdSlug/:courseSlug"
-  element={
-    <DetailPage
-      colleges={colleges}
-      compareList={compareList}
-      onCompareToggle={handleCompareToggle}
-      onOpenApplyNow={handleApplyNow}
-      onOpenBrochure={handleBrochure}
-    />
-  }
+  element={<LegacyUniversityCourseRedirect />}
 />
       <Route
   path="/university/:collegeIdSlug/course/:courseSlug"

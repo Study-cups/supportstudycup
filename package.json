@@ -13,6 +13,7 @@
     "@lottiefiles/dotlottie-react": "^0.17.10",
     "@studio-freight/lenis": "^1.0.42",
     "@tailwindcss/vite": "^4.1.18",
+    "@vercel/analytics": "^2.0.1",
     "build": "^0.1.4",
     "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
