@@ -1264,6 +1264,133 @@ const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
     [sectionKey]: !previous[sectionKey],
   }));
 };
+
+const renderCompactCourseCardSkeleton = (key: string) => (
+  <div
+    key={key}
+    className="flex h-full flex-col overflow-hidden rounded-[24px] border border-[#d6cec2] bg-white shadow-[0_10px_22px_rgba(15,35,63,0.06)] animate-pulse"
+  >
+    <div className="p-4 md:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="h-12 w-12 rounded-2xl bg-slate-200" />
+        <div className="h-7 w-28 rounded-full bg-slate-200" />
+      </div>
+
+      <div className="mt-4 h-3 w-24 rounded-full bg-slate-200" />
+      <div className="mt-3 h-8 w-4/5 rounded-xl bg-slate-200" />
+
+      <div className="mt-4 space-y-2">
+        <div className="h-3 rounded-full bg-slate-200" />
+        <div className="h-3 w-11/12 rounded-full bg-slate-200" />
+        <div className="h-3 w-3/4 rounded-full bg-slate-200" />
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {[...Array(3)].map((_, index) => (
+          <div
+            key={`${key}-tag-${index}`}
+            className="h-6 w-20 rounded-full bg-slate-200"
+          />
+        ))}
+      </div>
+    </div>
+
+    <div className="mt-auto grid grid-cols-3 border-y border-[#d8cdbd] bg-[#f7f2e9]">
+      {[...Array(3)].map((_, index) => (
+        <div
+          key={`${key}-meta-${index}`}
+          className={`px-3 py-3 text-center ${index === 1 ? "border-x border-[#d8cdbd]" : ""}`}
+        >
+          <div className="mx-auto h-4 w-12 rounded-full bg-slate-200" />
+          <div className="mx-auto mt-2 h-2 w-14 rounded-full bg-slate-200" />
+        </div>
+      ))}
+    </div>
+
+    <div className="grid grid-cols-[1fr_auto] gap-3 p-4">
+      <div className="h-11 rounded-xl bg-slate-200" />
+      <div className="h-11 w-11 rounded-xl bg-slate-200" />
+    </div>
+  </div>
+);
+
+const renderWideCourseCardSkeleton = (key: string) => (
+  <div
+    key={key}
+    className="flex items-start justify-between gap-6 rounded-[20px] border border-[#d7cfc3] bg-white px-5 py-5 shadow-[0_10px_24px_rgba(15,35,63,0.05)] animate-pulse"
+  >
+    <div className="flex min-w-0 flex-1 gap-4">
+      <div className="h-12 w-12 shrink-0 rounded-2xl bg-slate-200" />
+
+      <div className="min-w-0 flex-1">
+        <div className="h-3 w-24 rounded-full bg-slate-200" />
+        <div className="mt-3 h-8 w-2/3 rounded-xl bg-slate-200" />
+
+        <div className="mt-4 space-y-2">
+          <div className="h-3 rounded-full bg-slate-200" />
+          <div className="h-3 w-11/12 rounded-full bg-slate-200" />
+          <div className="h-3 w-4/5 rounded-full bg-slate-200" />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          {[...Array(4)].map((_, index) => (
+            <div
+              key={`${key}-highlight-${index}`}
+              className="h-3 w-20 rounded-full bg-slate-200"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="hidden shrink-0 flex-col items-end gap-6 md:flex">
+      <div className="h-7 w-24 rounded-full bg-slate-200" />
+      <div className="h-11 w-32 rounded-xl bg-slate-200" />
+    </div>
+  </div>
+);
+
+const renderCoursesLoadingState = () => (
+  <div className="space-y-14">
+    {COURSE_SECTION_CONFIG.map((section) => (
+      <section
+        key={section.key}
+        className="border-t border-[#d8d0c3] pt-10 first:border-t-0 first:pt-0"
+      >
+        <div className="mb-6 flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="h-10 w-56 rounded-full bg-slate-200 animate-pulse" />
+          <div className="hidden h-4 w-32 rounded-full bg-slate-200 animate-pulse md:block" />
+        </div>
+
+        <div className="flex gap-4 overflow-hidden px-2 pb-3 md:hidden">
+          {[...Array(3)].map((_, index) => (
+            <div
+              key={`${section.key}-mobile-${index}`}
+              className="min-w-[240px] max-w-[260px] shrink-0"
+            >
+              {renderCompactCourseCardSkeleton(`${section.key}-mobile-card-${index}`)}
+            </div>
+          ))}
+        </div>
+
+        {section.desktopLayout === "grid" ? (
+          <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-8">
+            {[...Array(4)].map((_, index) =>
+              renderCompactCourseCardSkeleton(`${section.key}-grid-${index}`)
+            )}
+          </div>
+        ) : (
+          <div className="hidden space-y-4 md:block">
+            {[...Array(3)].map((_, index) =>
+              renderWideCourseCardSkeleton(`${section.key}-row-${index}`)
+            )}
+          </div>
+        )}
+      </section>
+    ))}
+  </div>
+);
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f5f7fb] md:overflow-visible">
        <Helmet>
@@ -1791,7 +1918,9 @@ const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
 
         {/* COURSES SECTIONS */}
         <div className="min-w-0 flex-1">
-          {sectionViews.some((section) => section.courses.length > 0) ? (
+          {loading ? (
+            renderCoursesLoadingState()
+          ) : sectionViews.some((section) => section.courses.length > 0) ? (
             <div className="space-y-14">
               {sectionViews.map((section) => {
                 if (section.courses.length === 0) {
