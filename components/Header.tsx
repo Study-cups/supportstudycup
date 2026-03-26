@@ -152,7 +152,15 @@ const [activeCourse, setActiveCourse] = useState<{
 const [activeCollege, setActiveCollege] = useState<any | null>(null);
 const activeCollegeRef = React.useRef<any | null>(null);
 const collegeMenuRequestRef = React.useRef(0);
+const shouldPrepareMenuData =
+  showCoursesMenu ||
+  showCollegesMenu ||
+  Boolean(activeCourse) ||
+  Boolean(activeCollege);
+
 const collegeLookupById = useMemo(() => {
+  if (!shouldPrepareMenuData) return new Map<number, any>();
+
   const resultMap = new Map<number, any>();
 
   colleges.forEach((college: any) => {
@@ -161,9 +169,11 @@ const collegeLookupById = useMemo(() => {
   });
 
   return resultMap;
-}, [colleges]);
+}, [colleges, shouldPrepareMenuData]);
 
 const allMenuColleges = useMemo(() => {
+  if (!shouldPrepareMenuData) return [];
+
   const resultMap = new Map<number, any>();
 
   colleges.forEach((college: any) => {
@@ -177,12 +187,12 @@ const allMenuColleges = useMemo(() => {
   });
 
   return Array.from(resultMap.values());
-}, [colleges]);
+}, [colleges, shouldPrepareMenuData]);
 
 const allMenuExams = useMemo(() => {
-  const resultMap = new Map<string | number, any>();
+  if (!shouldPrepareMenuData || !Array.isArray(exams)) return [];
 
-  if (!Array.isArray(exams)) return [];
+  const resultMap = new Map<string | number, any>();
 
   exams.forEach((exam: any) => {
     const examKey = exam?.id ?? `${exam?.name}-${exam?.year ?? ""}`;
@@ -196,7 +206,7 @@ const allMenuExams = useMemo(() => {
   });
 
   return Array.from(resultMap.values());
-}, [exams]);
+}, [exams, shouldPrepareMenuData]);
 
 const getMenuCourses = () => {
   return Object.keys(COURSE_REGEX_MAP).map(name => ({
@@ -1013,11 +1023,13 @@ const CollegesMegaMenu = () => {
   <header 
   className="
     fixed top-0 left-0 right-0 z-50
-    bg-white/10 
-    backdrop-blur-xl
-    border-b border-white/20
+    bg-white/95
+    border-b border-slate-200/80
     shadow-[0_8px_25px_rgba(0,0,0,0.08)]
     rounded-bl-[18px] rounded-br-[18px]
+    md:bg-white/10
+    md:backdrop-blur-xl
+    md:border-white/20
   "
 >
 
@@ -1037,8 +1049,9 @@ const CollegesMegaMenu = () => {
 
     md:px-6 md:py-2   /* Normal size on desktop */
     md:rounded-10px   /* Fully rounded on desktop */
-      bg-white/10 
-    backdrop-blur-xl
+    bg-white
+    md:bg-white/10 
+    md:backdrop-blur-xl
   "
         >
 
@@ -1049,7 +1062,15 @@ const CollegesMegaMenu = () => {
             onClick={() => navigate("/")}
             className="flex items-center gap-2 cursor-pointer"
           >
-            <img src="/logos/StudyCups.png" className="h-8 w-auto md:h-10" />
+            <img
+              src="/logos/StudyCups.png"
+              alt="StudyCups"
+              width="160"
+              height="40"
+              fetchPriority="high"
+              decoding="async"
+              className="h-8 w-auto md:h-10"
+            />
           </div>
 
           {/* DESKTOP MENU */}

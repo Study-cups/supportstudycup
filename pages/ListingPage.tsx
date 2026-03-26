@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useRef } from "react";
+﻿﻿import React, { useState, useMemo, useEffect, useRef } from "react";
 import type { College } from "../types";
 import CollegeCard from "../components/CollegeCard";
 
@@ -868,7 +868,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [sortBy, setSortBy] = useState("most-popular");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [visibleCount, setVisibleCount] = useState(18);
+  const [visibleCount, setVisibleCount] = useState(36);
   const [desktopSidebarTop, setDesktopSidebarTop] = useState(DESKTOP_FILTER_STICKY_TOP);
   const [heroStats, setHeroStats] = useState({
     colleges: 0,
@@ -1197,7 +1197,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
   const hasMoreColleges = visibleCount < sortedColleges.length;
 
   useEffect(() => {
-    setVisibleCount(18);
+    setVisibleCount(36);
   }, [filters, sortBy]);
 
   const compareIdSet = useMemo(
@@ -1738,7 +1738,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
                 <button
                   onClick={() =>
                     setVisibleCount((prev) =>
-                      Math.min(prev + 18, sortedColleges.length)
+                      Math.min(prev + 36, sortedColleges.length)
                     )
                   }
                   className="rounded-full border border-[#d3cdbf] bg-white px-8 py-3 text-base md:text-lg font-semibold text-[#10233e]"

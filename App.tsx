@@ -1,30 +1,33 @@
-import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { Analytics } from "@vercel/analytics/react"
-import { io } from "socket.io-client";
+import React, { lazy, Suspense, startTransition, useEffect, useRef, useState } from "react";
+import { Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 /* ===== COMMON COMPONENTS ===== */
 import Header from "./components/Header";
-import Footer from "./components/Footer";
-import ApplyNowModal from "./components/ApplyNowModal";
-import LandingApp from "./LandingPage/LandingApp"; 
+import SmoothScrollProvider from "./components/SmoothScrollProvider";
 
 /* ===== PAGES ===== */
 import HomePage from "./pages/HomePage";
-import ListingPage from "./pages/ListingPage";
-import CoursesPage from "./pages/CoursesPage";
-import CourseDetailPage from "./pages/CourseDetailPage";
-import ExamsPage from "./pages/ExamsPage";
-import ExamDetailPage from "./pages/ExamDetailPage";
-import BlogPage from "./pages/BlogPage";
-import BlogDetailPage from "./pages/BlogDetailPage";
-import ComparePage from "./pages/ComparePage";
-import DetailPage from "./pages/DetailPage";
-import ErrorBoundary from "./pages/ErrorBoundary"; 
-import ChatbotWidget from "./components/ChatWidget";
 
 /* ===== TYPES ===== */
 import type { College } from "./types";
-import { useParams } from "react-router-dom";
+
+const Footer = lazy(() => import("./components/Footer"));
+const ApplyNowModal = lazy(() => import("./components/ApplyNowModal"));
+const LandingApp = lazy(() => import("./LandingPage/LandingApp"));
+const ListingPage = lazy(() => import("./pages/ListingPage"));
+const CoursesPage = lazy(() => import("./pages/CoursesPage"));
+const CourseDetailPage = lazy(() => import("./pages/CourseDetailPage"));
+const ExamsPage = lazy(() => import("./pages/ExamsPage"));
+const ExamDetailPage = lazy(() => import("./pages/ExamDetailPage"));
+const BlogPage = lazy(() => import("./pages/BlogPage"));
+const BlogDetailPage = lazy(() => import("./pages/BlogDetailPage"));
+const ComparePage = lazy(() => import("./pages/ComparePage"));
+const DetailPage = lazy(() => import("./pages/DetailPage"));
+const ErrorBoundary = lazy(() => import("./pages/ErrorBoundary"));
+const ChatbotWidget = lazy(() => import("./components/ChatWidget"));
+const Analytics = lazy(() =>
+  import("@vercel/analytics/react").then((module) => ({ default: module.Analytics }))
+);
+
 const toSeoSlug = (value: string) =>
   value
     .toLowerCase()
@@ -35,6 +38,31 @@ const toSeoSlug = (value: string) =>
 
 const getPopupKeyForRoute = (pathname: string) =>
 `popup_shown_${pathname}`;
+
+const withSmoothScroll = (element: React.ReactNode) => (
+  <SmoothScrollProvider>{element}</SmoothScrollProvider>
+);
+
+type IdleDeadlineLike = {
+  didTimeout: boolean;
+  timeRemaining: () => number;
+};
+
+type IdleScheduler = {
+  requestIdleCallback?: (
+    callback: (deadline: IdleDeadlineLike) => void,
+    options?: { timeout?: number }
+  ) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
+const getIdleScheduler = (): IdleScheduler => {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  return window as Window & typeof globalThis & IdleScheduler;
+};
 
 const OldCollegesRedirect = ({ withLocation }: { withLocation?: boolean }) => {
   const { streamSlug, locationSlug } = useParams();
@@ -101,6 +129,10 @@ const App: React.FC = () => {
   const [compareList, setCompareList] = useState<string[]>([]);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [applyMode, setApplyMode] = useState<"apply" | "brochure">("apply");
+  const [showDeferredUi, setShowDeferredUi] = useState(false);
+  const collegesFetchStartedRef = useRef(false);
+  const examsFetchStartedRef = useRef(false);
+  const blogsFetchStartedRef = useRef(false);
   const location = useLocation();
   const isLanding = location.pathname.startsWith("/registration");
   const hideNewsletterOnMobile =
@@ -131,7 +163,7 @@ const App: React.FC = () => {
     setApplyModalOpen(true);
   };
 
-  const handleBrochure = (college) => {
+  const handleBrochure = () => {
     setApplyMode("brochure");
     setApplyModalOpen(true);
   };
@@ -141,25 +173,168 @@ const App: React.FC = () => {
     setApplyModalOpen(true);
   };
 
+  const loadColleges = () => {
+    if (collegesFetchStartedRef.current) return Promise.resolve();
+    collegesFetchStartedRef.current = true;
+
+    return fetch(`${API_BASE}/colleges?all=true`)
+      .then((response) => response.json())
+      .then((payload) => {
+        startTransition(() => {
+          setColleges(payload?.data || []);
+        });
+      })
+      .catch((err) => {
+        console.error("COLLEGES API ERROR", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  const loadExams = () => {
+    if (examsFetchStartedRef.current) return Promise.resolve();
+    examsFetchStartedRef.current = true;
+
+    return fetch(`${API_BASE}/exams`)
+      .then((response) => response.json())
+      .then((payload) => {
+        startTransition(() => {
+          setExams(payload?.data || []);
+        });
+      })
+      .catch((err) => {
+        console.error("EXAMS API ERROR", err);
+      });
+  };
+
+  const loadBlogs = () => {
+    if (blogsFetchStartedRef.current) return Promise.resolve();
+    blogsFetchStartedRef.current = true;
+
+    return fetch(`${API_BASE}/blogs`)
+      .then((response) => response.json())
+      .then((payload) => {
+        startTransition(() => {
+          setBlogs(payload?.data || []);
+        });
+      })
+      .catch((err) => {
+        console.error("BLOGS API ERROR", err);
+      });
+  };
+
 
 
   /* 🔥 GLOBAL DATA – FAST (ONLY ONCE) */
   useEffect(() => {
-    Promise.all([
-      fetch(`${API_BASE}/colleges?all=true`).then(r => r.json()),
-      fetch(`${API_BASE}/exams`).then(r => r.json()),
-      fetch(`${API_BASE}/blogs`).then(r => r.json()),
-    ])
-      .then(([c, e, b]) => {
-        setColleges(c.data);
-        setExams(e.data);
-        setBlogs(b.data);
-      })
-      .catch(err => {
-        console.error("API ERROR", err);
-      })
-      .finally(() => setLoading(false));
+    const initialPathname = location.pathname;
+    const idleScheduler = getIdleScheduler();
+
+    if (initialPathname === "/") {
+      if (idleScheduler.requestIdleCallback) {
+        const idleId = idleScheduler.requestIdleCallback(() => {
+          void loadColleges();
+        }, {
+          timeout: 2500,
+        });
+
+        return () => {
+          idleScheduler.cancelIdleCallback?.(idleId);
+        };
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        void loadColleges();
+      }, 1200);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+
+    void Promise.all([loadColleges(), loadExams(), loadBlogs()]);
   }, []);
+
+  useEffect(() => {
+    if (showDeferredUi) {
+      void loadExams();
+      void loadBlogs();
+    }
+  }, [showDeferredUi]);
+
+  useEffect(() => {
+    const needsColleges =
+      location.pathname === "/colleges" ||
+      location.pathname.includes("top-colleges") ||
+      location.pathname.startsWith("/university") ||
+      location.pathname === "/compare";
+
+    const needsExams = location.pathname.startsWith("/exams");
+    const needsBlogs = location.pathname.startsWith("/blog");
+
+    if (needsColleges) {
+      void loadColleges();
+    }
+
+    if (needsExams) {
+      void loadExams();
+    }
+
+    if (needsBlogs) {
+      void loadBlogs();
+    }
+  }, [location.pathname]);
+
+useEffect(() => {
+  if (location.pathname !== "/") {
+    setShowDeferredUi(true);
+    return;
+  }
+
+  setShowDeferredUi(false);
+
+  const idleScheduler = getIdleScheduler();
+  let idleId: number | undefined;
+  let timeoutId = 0;
+
+  const revealDeferredUi = () => {
+    setShowDeferredUi(true);
+    window.removeEventListener("scroll", handleScroll);
+    window.removeEventListener("pointerdown", revealDeferredUi);
+    window.removeEventListener("keydown", revealDeferredUi);
+  };
+
+  const handleScroll = () => {
+    if (window.scrollY > 480) {
+      revealDeferredUi();
+    }
+  };
+
+  window.addEventListener("scroll", handleScroll, { passive: true });
+  window.addEventListener("pointerdown", revealDeferredUi, { passive: true });
+  window.addEventListener("keydown", revealDeferredUi);
+
+  if (idleScheduler.requestIdleCallback) {
+    idleId = idleScheduler.requestIdleCallback(() => {
+      if (window.scrollY > 240) {
+        revealDeferredUi();
+      }
+    }, { timeout: 12000 });
+  }
+
+  timeoutId = window.setTimeout(revealDeferredUi, 12000);
+
+  return () => {
+    if (idleId !== undefined) {
+      idleScheduler.cancelIdleCallback?.(idleId);
+    }
+    window.clearTimeout(timeoutId);
+    window.removeEventListener("scroll", handleScroll);
+    window.removeEventListener("pointerdown", revealDeferredUi);
+    window.removeEventListener("keydown", revealDeferredUi);
+  };
+}, [location.pathname]);
 
 useEffect(() => {
   const pathname = location.pathname; 
@@ -203,30 +378,43 @@ useEffect(() => {
 }, [location.pathname]);
 
 useEffect(() => {
-  const socket = io("https://studycupsbackend-wb8p.onrender.com");
+  if (location.pathname === "/") {
+    return;
+  }
 
-  // backend room join
-  socket.emit("subscribe", "colleges");
+  let socket: { emit: (...args: any[]) => void; on: (...args: any[]) => void; disconnect: () => void; } | null = null;
+  const timeoutId = window.setTimeout(async () => {
+    const { io } = await import("socket.io-client");
+    socket = io("https://studycupsbackend-wb8p.onrender.com");
 
-  socket.on("college:list:changed", (payload) => {
-    if (!payload?.listItem) return;
+    socket.emit("subscribe", "colleges");
 
-    setColleges((prev) => {
-      const exists = prev.some(
-        (c) => String(c.id) === String(payload.listItem.id)
-      );
+    socket.on("college:list:changed", (payload: any) => {
+      if (!payload?.listItem) return;
 
-      if (exists) return prev;
+      startTransition(() => {
+        setColleges((prev) => {
+          const exists = prev.some(
+            (c) => String(c.id) === String(payload.listItem.id)
+          );
 
-      return [payload.listItem, ...prev];
+          if (exists) return prev;
+
+          return [payload.listItem, ...prev];
+        });
+      });
     });
-  });
+  }, 2000);
 
   return () => {
-    socket.emit("unsubscribe", "colleges");
-    socket.disconnect();
+    window.clearTimeout(timeoutId);
+
+    if (socket) {
+      socket.emit("unsubscribe", "colleges");
+      socket.disconnect();
+    }
   };
-}, []);
+}, [location.pathname]);
 
   return (
     <>
@@ -245,13 +433,15 @@ useEffect(() => {
 
       {/* ================= ROUTES (NEVER BLOCKED BY LOADING) ================= */}
 
+      <Suspense fallback={null}>
       <Routes>
 
         <Route path="/registration" element={<LandingApp />} />
         <Route
           path="/"
           element={
-            <HomePage
+            withSmoothScroll(
+              <HomePage
               colleges={colleges}
               exams={exams}
               loading={loading}   // 👈 pass loading instead of blocking
@@ -260,7 +450,8 @@ useEffect(() => {
               onCompareToggle={handleCompareToggle}
               onOpenApplyNow={handleApplyNow}
 
-            />
+              />
+            )
           }
         />
 
@@ -272,13 +463,13 @@ useEffect(() => {
         <Route
           path="/:stream/top-colleges"
           element={
-            <ListingPage
+            withSmoothScroll(<ListingPage
               colleges={colleges}
               compareList={compareList}
               onCompareToggle={handleCompareToggle}
               onOpenApplyNow={handleApplyNow}
               onOpenBrochure={handleBrochure}
-            />
+            />)
           }
         />
 
@@ -316,13 +507,13 @@ useEffect(() => {
         <Route
           path="/:stream/:seoSlug"
           element={
-            <ListingPage
+            withSmoothScroll(<ListingPage
               colleges={colleges}
               compareList={compareList}
               onCompareToggle={handleCompareToggle}
               onOpenApplyNow={handleApplyNow}
               onOpenBrochure={handleBrochure}
-            />
+            />)
           }
         />
 
@@ -339,13 +530,13 @@ useEffect(() => {
         <Route
           path="/colleges"
           element={
-            <ListingPage
+            withSmoothScroll(<ListingPage
               colleges={colleges}
               compareList={compareList}
               onCompareToggle={handleCompareToggle}
               onOpenApplyNow={handleApplyNow}
               onOpenBrochure={handleBrochure}
-            />
+            />)
           }
         />
         {/* ================= OLD URL → SEO REDIRECTS ================= */}
@@ -397,13 +588,13 @@ useEffect(() => {
         <Route
           path="/university/:collegeIdSlug"
           element={
-            <DetailPage
+            withSmoothScroll(<DetailPage
               colleges={colleges}
               compareList={compareList}
               onCompareToggle={handleCompareToggle}
               onOpenApplyNow={handleApplyNow}
               onOpenBrochure={handleBrochure}
-            />
+            />)
           }
         />
       
@@ -421,13 +612,13 @@ useEffect(() => {
       <Route
   path="/university/:collegeIdSlug/course/:courseSlug"
   element={
-    <DetailPage
+    withSmoothScroll(<DetailPage
       colleges={colleges}
       compareList={compareList}
       onCompareToggle={handleCompareToggle}
       onOpenApplyNow={handleApplyNow}
       onOpenBrochure={handleBrochure}
-    />
+    />)
   }
 />
 
@@ -466,27 +657,42 @@ useEffect(() => {
 
         <Route path="*" element={<ErrorBoundary />} />
       </Routes>
+      </Suspense>
 
       {/* ================= APPLY MODAL ================= */}
-      <ApplyNowModal
-        isOpen={applyModalOpen}
-        mode={applyMode}
-        onClose={() => {
-          sessionStorage.setItem(getPopupKeyForRoute(location.pathname), "1");
-          setApplyModalOpen(false);
-        }}
-      />
+      {applyModalOpen && (
+        <Suspense fallback={null}>
+          <ApplyNowModal
+            isOpen={applyModalOpen}
+            mode={applyMode}
+            onClose={() => {
+              sessionStorage.setItem(getPopupKeyForRoute(location.pathname), "1");
+              setApplyModalOpen(false);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* ================= FOOTER ================= */}
-      {!isLanding && (
-        <Footer
-          exams={exams}
-          colleges={colleges}
-          hideNewsletterOnMobile={hideNewsletterOnMobile}
-        />
+      {!isLanding && (showDeferredUi || location.pathname !== "/") && (
+        <Suspense fallback={null}>
+          <Footer
+            exams={exams}
+            colleges={colleges}
+            hideNewsletterOnMobile={hideNewsletterOnMobile}
+          />
+        </Suspense>
       )}
-  <ChatbotWidget /> 
-      <Analytics />
+      {showDeferredUi && (
+        <Suspense fallback={null}>
+          <ChatbotWidget />
+        </Suspense>
+      )}
+      {showDeferredUi && (
+        <Suspense fallback={null}>
+          <Analytics />
+        </Suspense>
+      )}
     </>
   );
 

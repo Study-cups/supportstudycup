@@ -1,23 +1,16 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
-import type { View, College } from "../types";
-import { PARTNER_LOGOS } from "../logos";
+import React, { useState, useMemo, useEffect } from "react";
+import type { College } from "../types";
 import CollegeCard from "../components/CollegeCard";
 import { lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { buildCourseDetailPath, toCourseSlug } from "./Seo"
 import { Helmet } from "react-helmet-async";
-import SuccessCarousel from "@/LandingPage/components/SuccessCarousel";
-
-import {
-
-  BLOG_POSTS_DATA,
-  TESTIMONIALS_DATA,
-  COURSE_STREAMS,
-} from "../constants";
 import { useOnScreen } from "../hooks/useOnScreen";
-import ContactForm from "../components/ContactForm";
 import { useLocation } from "react-router-dom";
 import { TESTIMONIALS } from "@/LandingPage/constants";
+
+const SuccessCarousel = lazy(() => import("@/LandingPage/components/SuccessCarousel"));
+const ContactForm = lazy(() => import("../components/ContactForm"));
 
 type HomeNewsArticle = {
   title: string;
@@ -25,6 +18,31 @@ type HomeNewsArticle = {
   link: string;
   pubDate: string;
   image: string;
+};
+
+type HomeCollege = College & {
+  stream?: string | string[];
+};
+
+type IdleDeadlineLike = {
+  didTimeout: boolean;
+  timeRemaining: () => number;
+};
+
+type IdleScheduler = {
+  requestIdleCallback?: (
+    callback: (deadline: IdleDeadlineLike) => void,
+    options?: { timeout?: number }
+  ) => number;
+  cancelIdleCallback?: (id: number) => void;
+};
+
+const getIdleScheduler = (): IdleScheduler => {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  return window as Window & typeof globalThis & IdleScheduler;
 };
 
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
@@ -98,53 +116,13 @@ const HERO_DELETING_SPEED = 70;
 const HERO_WORD_PAUSE_MS = 1300;
 const HERO_WORD_SWITCH_DELAY_MS = 250;
 
-const useScroll = () => {
-  const [scrollY, setScrollY] = useState(0);
-  const ticking = useRef(false);
-
-  useEffect(() => {
-    const onScroll = () => {
-      if (!ticking.current) {
-        window.requestAnimationFrame(() => {
-          setScrollY(window.scrollY);
-          ticking.current = false;
-        });
-        ticking.current = true;
-      }
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return scrollY;
-};
-
-
-
-
-
-const FadeSection = ({ children, delay = 0 }) => {
-  const [ref, visible] = useOnScreen<HTMLDivElement>({ threshold: 0.25 });
-  return (
-    <div
-      ref={ref}
-      style={{ animationDelay: `${delay}ms` }}
-      className={`opacity-0 translate-y-10 transition-all duration-[1200ms]
-                ${visible ? "opacity-100 translate-y-0" : ""}
-            `}
-    >
-      {children}
-    </div>
-  );
-};
-
 
 interface HomePageProps {
 
-  colleges: College[];
+  colleges: HomeCollege[];
 
   exams: any[];
+   loading?: boolean;
    onOpenBrochure: () => void;
    onCompareToggle: (id: string) => void;
   compareList: string[]; // 🔥 ADD THIS 
@@ -169,12 +147,77 @@ const AnimatedContainer: React.FC<{
   );
 };
 
-const HeroTypedWord: React.FC = () => {
-  const [typedWord, setTypedWord] = useState("");
-  const [typedWordIndex, setTypedWordIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
+const DeferredMount: React.FC<{
+  children: React.ReactNode;
+  placeholderHeight: number | string;
+  rootMargin?: string;
+  onVisible?: () => void;
+}> = ({ children, placeholderHeight, rootMargin = "500px 0px", onVisible }) => {
+  const [ref, isVisible] = useOnScreen<HTMLDivElement>({
+    threshold: 0,
+    rootMargin,
+  });
 
   useEffect(() => {
+    if (isVisible) {
+      onVisible?.();
+    }
+  }, [isVisible, onVisible]);
+
+  return (
+    <div ref={ref}>
+      {isVisible ? children : <div aria-hidden="true" style={{ minHeight: placeholderHeight }} />}
+    </div>
+  );
+};
+
+const shouldSkipHomeAnimations = () => {
+  if (typeof window === "undefined") {
+    return true;
+  }
+
+  return (
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.innerWidth < 768
+  );
+};
+
+const HeroTypedWord: React.FC = () => {
+  const [typedWord, setTypedWord] = useState(HERO_TYPED_WORDS[0]);
+  const [typedWordIndex, setTypedWordIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+
+  useEffect(() => {
+    if (shouldSkipHomeAnimations()) {
+      return;
+    }
+
+    const idleScheduler = getIdleScheduler();
+
+    if (idleScheduler.requestIdleCallback) {
+      const idleId = idleScheduler.requestIdleCallback(() => {
+        setShouldAnimate(true);
+      }, { timeout: 3000 });
+
+      return () => {
+        idleScheduler.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShouldAnimate(true);
+    }, 2500);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldAnimate) return;
+
     const currentWord = HERO_TYPED_WORDS[typedWordIndex];
     let timeoutId: number;
 
@@ -200,7 +243,7 @@ const HeroTypedWord: React.FC = () => {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [isDeleting, typedWord, typedWordIndex]);
+  }, [isDeleting, shouldAnimate, typedWord, typedWordIndex]);
 
   return (
     <span className="inline-block min-w-[10.5ch] text-[#f4a71d]">
@@ -208,6 +251,23 @@ const HeroTypedWord: React.FC = () => {
     </span>
   );
 };
+
+const deferredSectionStyle = {
+  contentVisibility: "auto",
+  containIntrinsicSize: "1px 900px",
+} as React.CSSProperties;
+
+const deferredLargeSectionStyle = {
+  contentVisibility: "auto",
+  containIntrinsicSize: "1px 1200px",
+} as React.CSSProperties;
+
+const EMPTY_HOME_COLLEGE_META = {
+  regionList: [],
+  cityStateList: [],
+  stateList: [],
+  dynamicStreams: [],
+} as const;
 
 
 
@@ -494,6 +554,7 @@ const HomePage: React.FC<HomePageProps> = ({
 
   colleges,
   exams,
+  loading: _loading,
   onOpenBrochure,
   onCompareToggle,
   compareList , 
@@ -503,32 +564,27 @@ const HomePage: React.FC<HomePageProps> = ({
   const navigate = useNavigate();
   const [selectedStream, setSelectedStream] = useState<string | null>(null);
   const [heroCollege, setHeroCollege] = useState("");
-const [heroCity, setHeroCity] = useState("");
-
-
+  const [heroCity, setHeroCity] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [heroFilters, setHeroFilters] = useState({
-    college: "",
-    city: "",
-    course: "",
-  });
-
-
   const [query, setQuery] = useState("");
-  const [activeCity, setActiveCity] = useState<string | null>(null);
-
   const [error, setError] = useState("");
-  // STREAM FILTER FOR EXPLORE COURSES
   const [exploreLevel, setExploreLevel] = useState("All");
   const [exploreCourses, setExploreCourses] = useState<any[]>([]);
-  // UNIQUE STREAMS FROM COURSES
-  const [applyModalOpen, setApplyModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"apply" | "brochure">("apply");
+  const [selectedtopcollge, setSelectedtopcollge] = useState("");
+  const [studentUpdateNews, setStudentUpdateNews] = useState<HomeNewsArticle[]>([]);
+  const [studentUpdateNewsLoading, setStudentUpdateNewsLoading] = useState(true);
+  const [filteredStates, setFilteredStates] = useState<string[]>([]);
+  const [shouldRenderCollegeSections, setShouldRenderCollegeSections] = useState(false);
+  const [shouldRenderExploreCourses, setShouldRenderExploreCourses] = useState(false);
+  const [shouldRenderTopExams, setShouldRenderTopExams] = useState(false);
+  const [shouldLoadStudentNews, setShouldLoadStudentNews] = useState(false);
 
-const location = useLocation();
+const location = useLocation() as ReturnType<typeof useLocation> & {
+  state?: { region?: string | null } | null;
+};
 const selectedRegion = location.state?.region || null;
 
-  const collegeMatchesStream = (college: any, selectedStream: string) => {
+  const collegeMatchesStream = (college: HomeCollege, selectedStream: string) => {
     if (!selectedStream || selectedStream === "All Streams") return true;
 
     const stream = college?.stream; // ✅ TOP LEVEL
@@ -579,7 +635,7 @@ const selectedRegion = location.state?.region || null;
   return null;
 }; 
 
-const filterByRegion = (college, region) => {
+const filterByRegion = (college: HomeCollege, region: string | null) => {
   if (!region) return true;
 
   const config = REGION_MAP[region];
@@ -596,21 +652,54 @@ const isFeaturedCollege = (college: any) =>
   typeof college?.featured_college === "string" &&
   college.featured_college.trim().toLowerCase() === "featured";
 
-const regionList = useMemo(() => {
-  const set = new Set<string>();
+const collegeMeta = useMemo(() => {
+  if (!shouldRenderCollegeSections) {
+    return EMPTY_HOME_COLLEGE_META;
+  }
 
-  (Array.isArray(colleges) ? colleges : []).forEach(college => {
+  const regionSet = new Set<string>();
+  const stateSet = new Set<string>();
+  const streamSet = new Set<string>();
+  const cityMap = new Map<string, { city: string; state: string | null }>();
+
+  (Array.isArray(colleges) ? colleges : []).forEach((college) => {
     const parsed = extractCityState(college?.location);
-    if (!parsed?.city) return;
 
-    const region = resolveRegion(parsed.city);
-    if (region) set.add(region);
+    if (parsed?.city) {
+      const region = resolveRegion(parsed.city);
+      if (region) {
+        regionSet.add(region);
+      }
+
+      const cityKey = parsed.city.toLowerCase();
+      if (!cityMap.has(cityKey)) {
+        cityMap.set(cityKey, parsed);
+      }
+
+      if (parsed.state) {
+        stateSet.add(parsed.state.trim());
+      }
+    }
+
+    const stream = college?.stream;
+    if (Array.isArray(stream)) {
+      stream.forEach((value) => {
+        if (typeof value === "string" && value.trim()) {
+          streamSet.add(value.trim());
+        }
+      });
+    } else if (typeof stream === "string" && stream.trim()) {
+      streamSet.add(stream.trim());
+    }
   });
 
-  return Array.from(set);
-}, [colleges]);
-
-
+  return {
+    regionList: Array.from(regionSet),
+    cityStateList: Array.from(cityMap.values()),
+    stateList: Array.from(stateSet),
+    dynamicStreams: Array.from(streamSet).sort(),
+  };
+}, [colleges, shouldRenderCollegeSections]);
 
   const streamFilters = [
     "BE/B.Tech",
@@ -626,93 +715,82 @@ const regionList = useMemo(() => {
   ];
 
 
-  const cityStateList = useMemo(() => {
-    const map = new Map<string, { city: string; state: string | null }>();
-
-    (Array.isArray(colleges) ? colleges : []).forEach(college => {
-      const parsed = extractCityState(college?.location);
-      if (!parsed) return;
-
-      const key = parsed.city.toLowerCase();
-      if (!map.has(key)) {
-        map.set(key, parsed);
-      }
-    });
-
-    return Array.from(map.values());
-  }, [colleges]);
-   
-  const stateList = useMemo(() => {
-  const set = new Set<string>();
-
-  cityStateList.forEach(item => {
-    if (item.state) {
-      set.add(item.state.trim());
-    }
-  });
-
-  return Array.from(set);
-}, [cityStateList]);
-useEffect(() => {
-  setFilteredStates(stateList);
-}, [stateList]);
-
-
-  const [selectedtopcollge, setSelectedtopcollge] = useState("");
-  const [selectedExamFilter, setSelectedExamFilter] = useState("All");
-  const [studentUpdateNews, setStudentUpdateNews] = useState<HomeNewsArticle[]>([]);
-  const [studentUpdateNewsLoading, setStudentUpdateNewsLoading] = useState(true);
- const [filteredStates, setFilteredStates] = useState<string[]>([]);
-
-
-
-  const cityRefs = useMemo(() => {
-    const refs: Record<string, React.RefObject<HTMLDivElement>> = {};
-    cityStateList.forEach(c => {
-      refs[c.city] = React.createRef();
-    });
-    return refs;
-  }, [cityStateList]);
-
-  const fallbackCourses = useMemo(() => {
-    if (!Array.isArray(colleges) || colleges.length === 0) return [];
-    return extractCourses(colleges);
-  }, [colleges]);
+  const cityStateList = collegeMeta.cityStateList;
+  const stateList = collegeMeta.stateList;
+  const dynamicStreams = collegeMeta.dynamicStreams;
 
   useEffect(() => {
+    setFilteredStates(stateList);
+  }, [stateList]);
+
+  const fallbackCourses = useMemo(() => {
+    if (!shouldRenderExploreCourses || !Array.isArray(colleges) || colleges.length === 0) {
+      return [];
+    }
+
+    return extractCourses(colleges);
+  }, [colleges, shouldRenderExploreCourses]);
+
+  useEffect(() => {
+    if (!shouldRenderExploreCourses) {
+      return;
+    }
+
     let cancelled = false;
+    const idleScheduler = getIdleScheduler();
 
-    fetch(`${API_BASE}/main-course-card?page=1&limit=60`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load main course cards");
-        return res.json();
-      })
-      .then((json) => {
-        if (cancelled) return;
+    const loadExploreCourses = () => {
+      fetch(`${API_BASE}/main-course-card?page=1&limit=60`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load main course cards");
+          return res.json();
+        })
+        .then((json) => {
+          if (cancelled) return;
 
-        const normalized = Array.isArray(json?.data)
-          ? json.data.map((course: any) => normalizeExploreCourse(course))
-          : [];
+          const normalized = Array.isArray(json?.data)
+            ? json.data.map((course: any) => normalizeExploreCourse(course))
+            : [];
 
-        if (normalized.length > 0) {
-          setExploreCourses(normalized);
-        } else {
-          setExploreCourses(fallbackCourses);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setExploreCourses(fallbackCourses);
-        }
+          if (normalized.length > 0) {
+            setExploreCourses(normalized);
+          } else {
+            setExploreCourses(fallbackCourses);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setExploreCourses(fallbackCourses);
+          }
+        });
+    };
+
+    if (idleScheduler.requestIdleCallback) {
+      const idleId = idleScheduler.requestIdleCallback(() => loadExploreCourses(), {
+        timeout: 3500,
       });
+
+      return () => {
+        cancelled = true;
+        idleScheduler.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(loadExploreCourses, 1800);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
-  }, [fallbackCourses]);
+  }, [fallbackCourses, shouldRenderExploreCourses]);
 
   useEffect(() => {
+    if (!shouldLoadStudentNews) {
+      return;
+    }
+
     let cancelled = false;
+    const idleScheduler = getIdleScheduler();
 
     const loadStudentUpdateNews = async () => {
       setStudentUpdateNewsLoading(true);
@@ -750,12 +828,24 @@ useEffect(() => {
       }
     };
 
-    loadStudentUpdateNews();
+    if (idleScheduler.requestIdleCallback) {
+      const idleId = idleScheduler.requestIdleCallback(() => loadStudentUpdateNews(), {
+        timeout: 4000,
+      });
+
+      return () => {
+        cancelled = true;
+        idleScheduler.cancelIdleCallback?.(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(loadStudentUpdateNews, 2200);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeoutId);
     };
-  }, []);
+  }, [shouldLoadStudentNews]);
 
   const courses = exploreCourses.length > 0 ? exploreCourses : fallbackCourses;
 
@@ -811,42 +901,7 @@ const CITY_ICON_MAP: Record<string, string> = {
   "Lucknow": "/icons/red-fort_3806647.png",
 };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setHeroFilters((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    navigate("/colleges", {
-      state: heroFilters,
-    });
-  };
-  
-  function orderCities(cities) {
-  const priority = [];
-  const others = [];
-
-  cities.forEach(city => {
-    if (PRIORITY_CITIES.includes(city.name)) {
-      priority.push(city);
-    } else {
-      others.push(city);
-    }
-  });
-
   // Optional: baaki cities A–Z
-  others.sort((a, b) => a.name.localeCompare(b.name));
-
-  return [...priority, ...others];
-}
-
- const orderedStates = useMemo(
-  () => orderStatesLikeCollegeApply(filteredStates),
-  [filteredStates]
-);
-
   const handleCitySearch = () => {
   const value = normalize(query.trim());
 
@@ -884,28 +939,10 @@ const CITY_ICON_MAP: Record<string, string> = {
 
 
 
-  const dynamicStreams = useMemo(() => {
-    const set = new Set<string>();
-
-    (Array.isArray(colleges) ? colleges : []).forEach(college => {
-      const stream = college?.stream; // ✅ FIX
-
-      if (Array.isArray(stream)) {
-        stream.forEach(s => {
-          if (typeof s === "string" && s.trim()) set.add(s.trim());
-        });
-      } else if (typeof stream === "string" && stream.trim()) {
-        set.add(stream.trim());
-      }
-    });
-
-    return Array.from(set).sort();
-  }, [colleges]);
-
 
 
 const filteredColleges = useMemo(() => {
-  if (!Array.isArray(colleges)) return [];
+  if (!shouldRenderCollegeSections || !Array.isArray(colleges)) return [];
 
   const filtered = colleges.filter(college => {
     const streamOk = collegeMatchesStream(
@@ -923,7 +960,7 @@ const filteredColleges = useMemo(() => {
   );
 
   return sorted.slice(0, 8);
-}, [colleges, selectedStream, selectedRegion]);
+}, [colleges, selectedStream, selectedRegion, shouldRenderCollegeSections]);
 
 
   const whyChooseUsFeatures = [
@@ -1251,15 +1288,6 @@ const toExamSlug = (exam: any) =>
     .trim()
     .replace(/\s+/g, "-") +
   (exam.year ? `-${exam.year}` : "");
-
-
-  const filteredExams =
-    selectedExamFilter === "All"
-      ? exams
-      : exams.filter((exam) => exam.stream === selectedExamFilter);
-
-
-
   // FILTERED COURSES
   const exploreLevels = useMemo(() => {
     const availableLevels = HOME_EXPLORE_LEVEL_ORDER.filter((level) =>
@@ -1274,16 +1302,6 @@ const toExamSlug = (exam: any) =>
       setExploreLevel("All");
     }
   }, [exploreLevel, exploreLevels]);
-
-const HOME_REGIONS = [
-  "Delhi NCR",
-  "Uttar Pradesh",
-  "Rajasthan",
-  "Punjab",
-  "Uttarakhand",
-  "Himachal Pradesh",
-  "Odisha"
-]; 
 
 const HOME_CITIES = [
   "Delhi NCR",
@@ -1300,6 +1318,7 @@ const HOME_CITIES = [
 ]; 
 
 const visibleRegions = HOME_CITIES;
+const visibleHomeExams = useMemo(() => exams.slice(0, 10), [exams]);
  const FireIcon = () => (
   <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
     <path strokeLinecap="round" strokeLinejoin="round"
@@ -1468,9 +1487,9 @@ const HERO_TAGS = [
       </Helmet>
 <section className="relative w-full h-[600px] max-md:h-auto max-md:pt-20 max-md:pb-4 overflow-hidden bg-white">
   {/* ================= BACKGROUND GLOWS ================= */}
-  <div className="absolute top-[-10%] left-[10%] w-[35%] h-[45%] rounded-full bg-[#E6F0FF] blur-[120px] opacity-80 pointer-events-none" />
-  <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[40%] rounded-full bg-[#EDF4FF] blur-[100px] opacity-70 pointer-events-none" />
-  <div className="absolute bottom-[5%] right-[-5%] w-[25%] h-[35%] rounded-full bg-[#EBF3FF] blur-[90px] opacity-60 pointer-events-none" />
+  <div className="absolute top-[-10%] left-[10%] hidden h-[45%] w-[35%] rounded-full bg-[#E6F0FF] opacity-80 blur-[120px] pointer-events-none md:block" />
+  <div className="absolute bottom-[-5%] left-[-5%] hidden h-[40%] w-[30%] rounded-full bg-[#EDF4FF] opacity-70 blur-[100px] pointer-events-none md:block" />
+  <div className="absolute bottom-[5%] right-[-5%] hidden h-[35%] w-[25%] rounded-full bg-[#EBF3FF] opacity-60 blur-[90px] pointer-events-none md:block" />
 
   {/* ================= ABSTRACT SHAPES (DESKTOP ONLY) ================= */}
  <div
@@ -1531,6 +1550,10 @@ const HERO_TAGS = [
     <img
       src={HERO_HUMAN_IMAGE}
       alt="Students"
+      width="420"
+      height="340"
+      fetchPriority="high"
+      decoding="async"
       className="absolute top-[200px] left-[200px] w-[420px] h-[340px] object-contain"
     />
   </div> 
@@ -1835,7 +1858,16 @@ const HERO_TAGS = [
           <div className="flex items-center gap-4 flex-wrap">
             {HERO_COLLEGES.map((college) => (
               <div key={college.name} className="flex items-center gap-2 opacity-60">
-                <img src={college.logo} alt={college.name} className="h-6 sm:h-8 w-auto" />
+                <img
+                  src={college.logo}
+                  alt={college.name}
+                  width="96"
+                  height="32"
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
+                  className="h-6 sm:h-8 w-auto"
+                />
                 <span className=" text-[11px] font-semibold text-slate-700">
                   {college.name}
                 </span>
@@ -1896,7 +1928,10 @@ const HERO_TAGS = [
       {/* -------------------------------------------------- */}
 
       <div className="bg-white">
-  <section className="pb-10 pt-2 md:pt-5 bg-white shadow-[0_20px_40px_rgba(0,0,0,0.06)]">
+  <section
+    className="pb-10 pt-2 md:pt-5 bg-white shadow-[0_20px_40px_rgba(0,0,0,0.06)]"
+    style={deferredSectionStyle}
+  >
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
       {/* HEADER */}
@@ -1975,6 +2010,8 @@ const HERO_TAGS = [
                   <img
                     src={category.iconPath}
                     alt={category.name}
+                    loading="lazy"
+                    decoding="async"
                     className="
                       md:h-6 md:w-6
                       max-md:h-5 max-md:w-5
@@ -2019,9 +2056,15 @@ const HERO_TAGS = [
       {/* -------------------------------------------------- */}
 
     
+      <DeferredMount
+        placeholderHeight={1500}
+        rootMargin="350px 0px"
+        onVisible={() => setShouldRenderCollegeSections(true)}
+      >
         <section
-
-          className="pb-0 md:pb-6 bg-white mt-5 pt-8 shadow-[0_12px_28px_rgba(0,0,0,0.06)] rounded-2xl">
+          className="pb-0 md:pb-6 bg-white mt-5 pt-8 shadow-[0_12px_28px_rgba(0,0,0,0.06)] rounded-2xl"
+          style={deferredLargeSectionStyle}
+        >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
  
             {/* Heading */}
@@ -2337,9 +2380,11 @@ const HERO_TAGS = [
 >
 
     <div className="h-8 w-8 md:h-14 md:w-14">
-   <img
+<img
   src={CITY_ICON_MAP[region] || "/icons/university.png"}
   alt={region}
+  loading="lazy"
+  decoding="async"
   className="
     h-full w-full object-contain
     opacity-70
@@ -2390,12 +2435,18 @@ const HERO_TAGS = [
 
         </div>
       </section>
+      </DeferredMount>
 
 
 
       {/* EXPLORE COURSES SECTION */}
+      <DeferredMount
+        placeholderHeight={560}
+        rootMargin="320px 0px"
+        onVisible={() => setShouldRenderExploreCourses(true)}
+      >
       <Suspense fallback={<div className="py-20 text-center">Loading...</div>}>
-        <section className="py-8 bg-white">
+        <section className="py-8 bg-white" style={deferredLargeSectionStyle}>
           <div className="max-w-7xl mx-auto px-6">
 
 
@@ -2596,27 +2647,19 @@ const HERO_TAGS = [
 
           </div>
         </section>
-      </Suspense>  
+      </Suspense>
+      </DeferredMount>  
 
          {/* -------------------------------------------------- */}
       {/* EXPLORE EXAMS SECTION (Updated with unique stream filters) */}
       {/* -------------------------------------------------- */}
 
-
+      <DeferredMount
+        placeholderHeight={440}
+        rootMargin="320px 0px"
+        onVisible={() => setShouldRenderTopExams(true)}
+      >
       <section className="py-10 bg-white">
-
-        {/* Build unique streams from backend exam.stream */}
-        {(() => {
-          const uniqueStreams = new Set<string>();
-          exams.forEach((exam) => {
-            if (exam.stream) uniqueStreams.add(exam.stream.trim());
-          });
-          var examFilters = ["All", ...Array.from(uniqueStreams)];
-          return null;
-        })()}
-
-        {/* Exam Filters */}
-
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -2633,12 +2676,7 @@ const HERO_TAGS = [
               id="examCarousel"
               className="flex gap-5 overflow-x-auto scroll-smooth pb-3 px-1 scrollbar-hide"
             >
-              {exams
-                .filter((exam) =>
-                  selectedExamFilter === "All"
-                    ? true
-                    : exam.stream?.trim() === selectedExamFilter
-                )
+              {(shouldRenderTopExams ? visibleHomeExams : [])
                 .map((exam) => (
                   <div
                     key={exam.id}
@@ -2657,6 +2695,8 @@ const HERO_TAGS = [
                           src={exam.logoUrl}
                           className="h-10 w-10 rounded-full border object-contain"
                           alt={exam.name}
+                          loading="lazy"
+                          decoding="async"
                         />
                         <div>
                           <p className="font-semibold text-sm text-slate-900">
@@ -2717,9 +2757,14 @@ const HERO_TAGS = [
 
         </div>
       </section>
+      </DeferredMount>
    
 {/* ================= STUDENT UPDATE STRIP ================= */}
-<section className="bg-slate-50 py-6 sm:py-16">
+<DeferredMount
+  placeholderHeight={420}
+  onVisible={() => setShouldLoadStudentNews(true)}
+>
+<section className="bg-slate-50 py-6 sm:py-16" style={deferredSectionStyle}>
   <div className="max-w-7xl mx-auto px-4 sm:px-6">
     <div className="relative rounded-3xl bg-white shadow-xl shadow-blue-900/5 overflow-hidden border border-slate-100">
       
@@ -2757,6 +2802,8 @@ const HERO_TAGS = [
                     <img
                       src={news.image || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbmKDMrnfbPcR2TwpnuRFu7CDi_A_mu-mnkw&s"}
                       alt={news.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-10 h-10 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0 shadow-sm"
                     />
 
@@ -2790,6 +2837,8 @@ const HERO_TAGS = [
           <img
             src="./icons/latestnews.png"
             alt="Student"
+            loading="lazy"
+            decoding="async"
             className="w-[180px] xs:w-[200px]
       h-auto
       object-contain
@@ -2799,6 +2848,8 @@ const HERO_TAGS = [
           <img
     src="https://media.gettyimages.com/id/1920428247/vector/online-examinations-illustrations-concept-trendy-vector-style-confirmation.jpg?s=612x612&w=0&k=20&c=yOGQmJD3DcSh4A1Tb4pqqW6aHc8DS4ONLH2MH7temtY="
     alt="Education Illustration"
+    loading="lazy"
+    decoding="async"
     className=" 
       
       block sm:hidden
@@ -2828,6 +2879,7 @@ const HERO_TAGS = [
     }
   `}</style>
 </section> 
+</DeferredMount>
 
 <section className=" pb-8 sm:pb-16">
   <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -2847,7 +2899,8 @@ const HERO_TAGS = [
 </section>
 
         {/* Trusted by Students Section */}
- <section className="py-16 bg-white">
+<DeferredMount placeholderHeight={260}>
+ <section className="py-16 bg-white" style={deferredSectionStyle}>
   <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
 
    <div className="flex items-center gap-4 mb-10">
@@ -2884,6 +2937,8 @@ const HERO_TAGS = [
             <img
               src={logo.src}
               alt={logo.alt}
+              loading="lazy"
+              decoding="async"
               className="h-full w-full object-contain"
             />
           </div>
@@ -2893,6 +2948,7 @@ const HERO_TAGS = [
     </div>
   </div>
 </section>
+</DeferredMount>
 
 
      {/*   <section className="py-16 bg-[#f4f6fb]">
@@ -3025,7 +3081,11 @@ const HERO_TAGS = [
       {/* -------------------------------------------------- */}
 
       {/* Ranking Table Container */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-md mt-8 max-w-7xl mx-auto">
+      <DeferredMount placeholderHeight={760}>
+      <div
+        className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-md mt-8 max-w-7xl mx-auto"
+        style={deferredLargeSectionStyle}
+      >
 
         {/* TABLE HEAD SECTION */}
         <div className="px-5 pt-6 pb-3 ">
@@ -3086,6 +3146,8 @@ const HERO_TAGS = [
                     <div className="flex items-start gap-3">
                       <img
                         src={college.logoUrl}
+                        loading="lazy"
+                        decoding="async"
                         className="h-10 w-10 rounded-full object-cover border"
                       />
                       <div>
@@ -3115,6 +3177,7 @@ const HERO_TAGS = [
           </table>
         </div>
       </div>
+      </DeferredMount>
  
       {/* -------------------------------------------------- */}
       {/* OPTIONAL: FAQ + BLOG + CONTACT (keep functionality) */}
@@ -3123,17 +3186,28 @@ const HERO_TAGS = [
       {/* -------------------------------------------------- */} 
 
    
-          <section className="py-24 sm:py-32 px-4 bg-white overflow-hidden">
+      <DeferredMount placeholderHeight={680}>
+          <section
+            className="py-24 sm:py-32 px-4 bg-white overflow-hidden"
+            style={deferredSectionStyle}
+          >
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">Our <span className="text-[#f4a71d]">Alumni</span> Success</h2>
             <p className="text-slate-500 mt-5 text-base sm:text-xl">Students from our partner schools now at top global firms.</p>
           </div>
-          <SuccessCarousel testimonials={TESTIMONIALS} />
+          <Suspense fallback={<div className="min-h-[420px]" />}>
+            <SuccessCarousel testimonials={TESTIMONIALS} />
+          </Suspense>
         </div>
       </section>
+      </DeferredMount>
    
-      <section className="py-16 md:py-2 bg-white">
+      <DeferredMount placeholderHeight={520}>
+      <section
+        className="py-16 md:py-2 bg-white"
+        style={deferredSectionStyle}
+      >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-xl md:text-2xl font-bold text-slate-900">
@@ -3187,10 +3261,11 @@ const HERO_TAGS = [
           </div>
         </div>
       </section>
+      </DeferredMount>
 
       {/* Blog preview */}
    
-<section className=" pb-8 sm:pb-16">
+<section className=" pb-8 sm:pb-16" style={deferredSectionStyle}>
   <div className="max-w-7xl mx-auto px-4 sm:px-6">
     <div className="rounded-3xl  overflow-hidden">
    
@@ -3211,7 +3286,8 @@ const HERO_TAGS = [
 </section>
 
       {/* Contact section */}
-      <section className="py-8 bg-white">
+      <DeferredMount placeholderHeight={760}>
+      <section className="py-8 bg-white" style={deferredLargeSectionStyle}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Heading */}
@@ -3235,6 +3311,8 @@ const HERO_TAGS = [
                 <img
                   src="/icons/studycups_contact.png"
                   alt="StudyCups Support"
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -3297,12 +3375,15 @@ const HERO_TAGS = [
 
             {/* RIGHT SIDE FORM */}
             <AnimatedContainer delay={150}>
-              <ContactForm />
+              <Suspense fallback={<div className="min-h-[540px] rounded-3xl border border-slate-100 bg-white" />}>
+                <ContactForm />
+              </Suspense>
             </AnimatedContainer>
 
           </div>
         </div>
       </section>
+      </DeferredMount>
 
 
 
