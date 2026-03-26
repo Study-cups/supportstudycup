@@ -6,6 +6,7 @@ import './index.css';
 import SmoothScrollProvider from './components/SmoothScrollProvider'
 import ScrollToTop from './components/ScrollToTop'
 import { HelmetProvider } from "react-helmet-async";
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 
 const rootElement = document.getElementById('root');
@@ -21,8 +22,7 @@ root.render(
          <SmoothScrollProvider>
             <App />
          </SmoothScrollProvider>
-
-
+         <SpeedInsights />
       </BrowserRouter>
    </HelmetProvider>
 );
