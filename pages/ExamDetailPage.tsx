@@ -89,8 +89,7 @@ const ExamDetailPage: React.FC<{ exams: any[] }> = ({ exams }) => {
       } else {
         setExam(null);
       }
-    } catch (err) {
-      console.error("Exam API Error", err);
+    } catch {
       setExam(null);
     } finally {
       setLoading(false); // ✅ GUARANTEED

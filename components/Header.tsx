@@ -770,7 +770,6 @@ const handleCollegeHover = async (college: any) => {
   } catch (error) {
     if (collegeMenuRequestRef.current !== requestId) return;
 
-    console.error("College menu courses API error:", error);
     setCollegeMenuCourses(getCoursesForCollege(sourceCollege));
     setCollegeMenuExams(getExamsForCollege(sourceCollege));
   } finally {

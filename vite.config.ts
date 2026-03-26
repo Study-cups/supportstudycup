@@ -10,6 +10,11 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
+      esbuild: mode === 'production'
+        ? {
+            drop: ['console', 'debugger'],
+          }
+        : undefined,
       plugins: [react(), tailwindcss()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),

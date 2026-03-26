@@ -2,7 +2,6 @@ import React from "react";
 
 const EditorRenderer = ({ data }) => {
   if (!data) {
-    console.warn("EditorRenderer: no data");
     return null;
   }
 
@@ -10,12 +9,10 @@ const EditorRenderer = ({ data }) => {
   try {
     parsed = typeof data === "string" ? JSON.parse(data) : data;
   } catch (e) {
-    console.error("Invalid EditorJS JSON", e);
     return null;
   }
 
   if (!parsed.blocks || !Array.isArray(parsed.blocks)) {
-    console.warn("EditorRenderer: blocks missing", parsed);
     return null;
   }
 
@@ -136,7 +133,6 @@ const EditorRenderer = ({ data }) => {
 
 
         /* ================= FALLBACK ================= */
-        console.warn("Unknown block type:", block);
         return null;
       })}
     </div>

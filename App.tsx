@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Analytics } from "@vercel/analytics/react"
+import { io } from "socket.io-client";
 /* ===== COMMON COMPONENTS ===== */
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -201,7 +202,31 @@ useEffect(() => {
   };
 }, [location.pathname]);
 
+useEffect(() => {
+  const socket = io("https://studycupsbackend-wb8p.onrender.com");
 
+  // backend room join
+  socket.emit("subscribe", "colleges");
+
+  socket.on("college:list:changed", (payload) => {
+    if (!payload?.listItem) return;
+
+    setColleges((prev) => {
+      const exists = prev.some(
+        (c) => String(c.id) === String(payload.listItem.id)
+      );
+
+      if (exists) return prev;
+
+      return [payload.listItem, ...prev];
+    });
+  });
+
+  return () => {
+    socket.emit("unsubscribe", "colleges");
+    socket.disconnect();
+  };
+}, []);
 
 
 

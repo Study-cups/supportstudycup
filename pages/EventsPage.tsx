@@ -99,8 +99,7 @@ const EventsPage: React.FC<EventsPageProps> = ({ setView }) => {
                 const json = await res.json();
                 if (json.success) setEvents(json.data);
                 setLoading(false);
-            } catch (err) {
-                console.error("Events API Error:", err);
+            } catch {
                 setLoading(false);
             }
         };

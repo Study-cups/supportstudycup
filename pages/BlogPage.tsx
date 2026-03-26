@@ -163,8 +163,7 @@ const BlogPage: React.FC = () => {
         const res = await fetch(`${API_BASE}/blogs`);
         const json = await res.json();
         setArticles(json.data || []);
-      } catch (err) {
-        console.error("Articles API error", err);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -201,8 +200,7 @@ const BlogPage: React.FC = () => {
         if (!cancelled) {
           setLatestNewsItems(normalizedArticles);
         }
-      } catch (err) {
-        console.error("Blog latest news API error", err);
+      } catch {
         if (!cancelled) {
           setLatestNewsItems([]);
         }

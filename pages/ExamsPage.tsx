@@ -52,8 +52,7 @@ const ExamsPage: React.FC = () => {
         const res = await fetch(`${API_BASE}/exams`);
         const json = await res.json();
         setExams(json.data || []);
-      } catch (err) {
-        console.error("Exam API Error:", err);
+      } catch {
       } finally {
         setLoading(false);
       }

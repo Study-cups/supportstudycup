@@ -35,8 +35,7 @@ const ContactForm: React.FC = () => {
         let data: any = {};
         try {
             data = await res.json();
-        } catch (jsonErr) {
-            console.warn("API returned no JSON response");
+        } catch {
         }
 
         if (!res.ok) {

@@ -696,8 +696,7 @@ useEffect(() => {
           setExploreCourses(fallbackCourses);
         }
       })
-      .catch((err) => {
-        console.error("Home explore courses API error", err);
+      .catch(() => {
         if (!cancelled) {
           setExploreCourses(fallbackCourses);
         }
@@ -736,8 +735,7 @@ useEffect(() => {
         if (!cancelled) {
           setStudentUpdateNews(normalizedArticles);
         }
-      } catch (err) {
-        console.error("Student updates news API error", err);
+      } catch {
         if (!cancelled) {
           setStudentUpdateNews([]);
         }

@@ -101,6 +101,40 @@
 </head>
 <body>
     <div id="root"></div>
+    <script>
+      (function () {
+        const fallbackSvg =
+          "data:image/svg+xml;charset=UTF-8," +
+          encodeURIComponent(
+            "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'>" +
+              "<rect width='1200' height='800' fill='#f1f5f9'/>" +
+              "<rect x='360' y='220' width='480' height='300' rx='28' fill='#dbe4ee'/>" +
+              "<path d='M430 470l110-120 90 90 70-70 120 100' fill='none' stroke='#94a3b8' stroke-width='32' stroke-linecap='round' stroke-linejoin='round'/>" +
+              "<circle cx='760' cy='320' r='34' fill='#94a3b8'/>" +
+              "<text x='50%' y='640' text-anchor='middle' fill='#64748b' font-family='Poppins, Arial, sans-serif' font-size='44' font-weight='600'>Image unavailable</text>" +
+            "</svg>"
+          );
+
+        window.addEventListener(
+          "error",
+          function (event) {
+            const target = event.target;
+
+            if (!(target instanceof HTMLImageElement)) {
+              return;
+            }
+
+            if (target.dataset.fallbackApplied === "true") {
+              return;
+            }
+
+            target.dataset.fallbackApplied = "true";
+            target.src = fallbackSvg;
+          },
+          true
+        );
+      })();
+    </script>
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>
