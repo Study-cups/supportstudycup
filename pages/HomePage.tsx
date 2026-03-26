@@ -592,6 +592,10 @@ const filterByRegion = (college, region) => {
   );
 };
 
+const isFeaturedCollege = (college: any) =>
+  typeof college?.featured_college === "string" &&
+  college.featured_college.trim().toLowerCase() === "featured";
+
 const regionList = useMemo(() => {
   const set = new Set<string>();
 
@@ -914,7 +918,11 @@ const filteredColleges = useMemo(() => {
     return streamOk && regionOk;
   });
 
-  return filtered.slice(0, 8);
+  const sorted = [...filtered].sort(
+    (a, b) => Number(isFeaturedCollege(b)) - Number(isFeaturedCollege(a))
+  );
+
+  return sorted.slice(0, 8);
 }, [colleges, selectedStream, selectedRegion]);
 
 

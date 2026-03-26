@@ -228,9 +228,6 @@ useEffect(() => {
   };
 }, []);
 
-
-
-
   return (
     <>
       {/* ================= HEADER (ALWAYS INSTANT) ================= */}
