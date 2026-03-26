@@ -169,6 +169,46 @@ const AnimatedContainer: React.FC<{
   );
 };
 
+const HeroTypedWord: React.FC = () => {
+  const [typedWord, setTypedWord] = useState("");
+  const [typedWordIndex, setTypedWordIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const currentWord = HERO_TYPED_WORDS[typedWordIndex];
+    let timeoutId: number;
+
+    if (!isDeleting && typedWord === currentWord) {
+      timeoutId = window.setTimeout(() => {
+        setIsDeleting(true);
+      }, HERO_WORD_PAUSE_MS);
+    } else if (isDeleting && typedWord.length === 0) {
+      timeoutId = window.setTimeout(() => {
+        setIsDeleting(false);
+        setTypedWordIndex((prev) => (prev + 1) % HERO_TYPED_WORDS.length);
+      }, HERO_WORD_SWITCH_DELAY_MS);
+    } else {
+      timeoutId = window.setTimeout(() => {
+        setTypedWord(
+          isDeleting
+            ? currentWord.slice(0, typedWord.length - 1)
+            : currentWord.slice(0, typedWord.length + 1)
+        );
+      }, isDeleting ? HERO_DELETING_SPEED : HERO_TYPING_SPEED);
+    }
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isDeleting, typedWord, typedWordIndex]);
+
+  return (
+    <span className="inline-block min-w-[10.5ch] text-[#f4a71d]">
+      {typedWord}
+    </span>
+  );
+};
+
 
 
 
@@ -460,17 +500,10 @@ const HomePage: React.FC<HomePageProps> = ({
   onOpenApplyNow
 
 }) => {
-  useEffect(() => {
-
-  }, [colleges, exams]);
-
   const navigate = useNavigate();
   const [selectedStream, setSelectedStream] = useState<string | null>(null);
   const [heroCollege, setHeroCollege] = useState("");
 const [heroCity, setHeroCity] = useState("");
-  const [heroTypedWord, setHeroTypedWord] = useState("");
-  const [heroTypedWordIndex, setHeroTypedWordIndex] = useState(0);
-  const [heroIsDeleting, setHeroIsDeleting] = useState(false);
 
 
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -479,38 +512,6 @@ const [heroCity, setHeroCity] = useState("");
     city: "",
     course: "",
   });
-
-  useEffect(() => {
-  console.log("TESTIMONIALS =>", TESTIMONIALS);
-}, []);
-
-  useEffect(() => {
-    const currentWord = HERO_TYPED_WORDS[heroTypedWordIndex];
-    let timeoutId: number;
-
-    if (!heroIsDeleting && heroTypedWord === currentWord) {
-      timeoutId = window.setTimeout(() => {
-        setHeroIsDeleting(true);
-      }, HERO_WORD_PAUSE_MS);
-    } else if (heroIsDeleting && heroTypedWord.length === 0) {
-      timeoutId = window.setTimeout(() => {
-        setHeroIsDeleting(false);
-        setHeroTypedWordIndex((prev) => (prev + 1) % HERO_TYPED_WORDS.length);
-      }, HERO_WORD_SWITCH_DELAY_MS);
-    } else {
-      timeoutId = window.setTimeout(() => {
-        setHeroTypedWord(
-          heroIsDeleting
-            ? currentWord.slice(0, heroTypedWord.length - 1)
-            : currentWord.slice(0, heroTypedWord.length + 1)
-        );
-      }, heroIsDeleting ? HERO_DELETING_SPEED : HERO_TYPING_SPEED);
-    }
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [heroIsDeleting, heroTypedWord, heroTypedWordIndex]);
 
 
   const [query, setQuery] = useState("");
@@ -1245,20 +1246,6 @@ const toExamSlug = (exam: any) =>
     .replace(/\s+/g, "-") +
   (exam.year ? `-${exam.year}` : "");
 
-  const bgImages = [
-    "https://res.cloudinary.com/alishakhan987/image/upload/v1765219557/Gemini_Generated_Image_3xjtay3xjtay3xjt-Photoroom_nx9j6s.png",
-    "https://res.cloudinary.com/alishakhan987/image/upload/v1765219972/Gemini_Generated_Image_mnbzv6mnbzv6mnbz_1_-Photoroom_f5zilz.png"
-  ];
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % bgImages.length);
-    }, 4000); // every 4 seconds switch
-
-    return () => clearInterval(interval);
-  }, []);
-
 
   const filteredExams =
     selectedExamFilter === "All"
@@ -1601,9 +1588,7 @@ const HERO_TAGS = [
           Find Your <br />
           <span className="inline-flex items-baseline whitespace-nowrap">
             <span>Dream&nbsp; {""} </span>
-            <span className="inline-block min-w-[10.5ch] text-[#f4a71d]">
-              {heroTypedWord} 
-            </span>
+            <HeroTypedWord />
             <span
               aria-hidden="true"
               className=""

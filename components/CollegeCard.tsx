@@ -100,7 +100,10 @@ const isFeaturedCollege =
       
       
       className="relative w-full h-[180px]">
-        <img src={`${mainImage}?v=${Date.now()}`} 
+        <img src={mainImage}
+          alt={college.name}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover"
         
         />

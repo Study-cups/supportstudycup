@@ -4,6 +4,10 @@ import React, { useState, useEffect, useRef } from 'react';
 export const useOnScreen = <T extends Element,>(options?: IntersectionObserverInit): [React.RefObject<T>, boolean] => {
   const ref = useRef<T>(null);
   const [isIntersecting, setIntersecting] = useState(false);
+  const root = options?.root ?? null;
+  const rootMargin = options?.rootMargin ?? "0px";
+  const threshold = options?.threshold ?? 0;
+  const thresholdKey = Array.isArray(threshold) ? threshold.join(",") : String(threshold);
 
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
@@ -14,19 +18,20 @@ export const useOnScreen = <T extends Element,>(options?: IntersectionObserverIn
           observer.unobserve(ref.current);
         }
       }
-    }, options);
+    }, {
+      root,
+      rootMargin,
+      threshold,
+    });
 
     if (ref.current) {
       observer.observe(ref.current);
     }
 
     return () => {
-      if (ref.current) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        observer.unobserve(ref.current);
-      }
+      observer.disconnect();
     };
-  }, [ref, options]);
+  }, [root, rootMargin, threshold, thresholdKey]);
 
   return [ref, isIntersecting];
 };
