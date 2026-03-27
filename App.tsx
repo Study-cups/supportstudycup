@@ -607,7 +607,15 @@ useEffect(() => {
 
       <Route
   path="/university/:collegeIdSlug/:courseSlug"
-  element={<LegacyUniversityCourseRedirect />}
+  element={
+    withSmoothScroll(<DetailPage
+      colleges={colleges}
+      compareList={compareList}
+      onCompareToggle={handleCompareToggle}
+      onOpenApplyNow={handleApplyNow}
+      onOpenBrochure={handleBrochure}
+    />)
+  }
 />
       <Route
   path="/university/:collegeIdSlug/course/:courseSlug"
