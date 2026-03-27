@@ -152,7 +152,7 @@ const isFeaturedCollege =
         {/* FEES */}
       <p className="text-blue-600 font-semibold text-sm mt-1">
   ₹
-  {college.feesRange?.min
+  {college.feesRange?.max
     ? Number(college.feesRange.min).toLocaleString("en-IN")
     : "N/A"}
   <span className="text-slate-500 font-normal"> / year</span>
