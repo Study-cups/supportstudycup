@@ -39,6 +39,9 @@ const toSeoSlug = (value: string) =>
 const getPopupKeyForRoute = (pathname: string) =>
 `popup_shown_${pathname}`;
 
+const isCollegeDetailBasePath = (pathname: string) =>
+  /^\/university\/[^/]+$/.test(pathname);
+
 const withSmoothScroll = (element: React.ReactNode) => (
   <SmoothScrollProvider>{element}</SmoothScrollProvider>
 );
@@ -108,6 +111,10 @@ const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api"; */
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api"; // LOCAL DEV
 
 const canShowPopup = (pathname: string) => {
+  if (pathname.startsWith("/university/") && !isCollegeDetailBasePath(pathname)) {
+    return false;
+  }
+
   const pagePopupKey = getPopupKeyForRoute(pathname);
 
   const shownOnThisPage =
