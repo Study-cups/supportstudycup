@@ -1,4 +1,4 @@
-﻿﻿import React, { useState, useMemo, useEffect, useRef } from "react";
+﻿import React, { useState, useMemo, useEffect, useRef } from "react";
 import type { College } from "../types";
 import CollegeCard from "../components/CollegeCard";
 
@@ -1620,7 +1620,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
 
             {/* CARDS */}
             {viewMode === "grid" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 justify-items-center md:justify-items-stretch">
+           <div className="grid grid-cols-1 justify-items-center gap-5 md:grid-cols-2 md:justify-items-stretch lg:grid-cols-3">
                 {visibleColleges.map((college) => (
                   <CollegeCard
                     key={college.id}
