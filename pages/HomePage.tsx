@@ -2151,23 +2151,18 @@ const HERO_TAGS = [
                   {filteredColleges.map((college, index) => (
                     <div
   key={college.id}
-  className="
+ 
+    className="
     flex-shrink-0
 
-    /* MOBILE */
     min-w-[240px]
     max-w-[260px]
-    h-[360px]
 
-    /* TABLET */
     sm:min-w-[280px]
     sm:max-w-[300px]
-    sm:h-[400px]
 
-    /* DESKTOP (unchanged) */
     lg:min-w-[300px]
     lg:max-w-[330px]
-    lg:h-[430px]
   "
 >
 
@@ -2177,7 +2172,7 @@ const HERO_TAGS = [
                             onOpenBrochure={onOpenBrochure}
                           onCompareToggle={onCompareToggle}
   isCompared={compareList.includes(String(college.id))}
-                          className="mb-0" />
+                          className="mb-0 h-full" />
                       </AnimatedContainer>
                     </div>
                   ))}

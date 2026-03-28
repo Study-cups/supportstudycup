@@ -126,6 +126,7 @@ const CollegeCard: React.FC<CollegeCardProps> = ({
 }) => {
   const collegeData = college as College & Record<string, any>;
   const navigate = useNavigate();
+  const isCarouselCard = !isListingCard;
 
   const route = `/university/${collegeData.id}-${getCollegeSlug(collegeData.name || "")}`;
   const rankingText = getRankingText(collegeData);
@@ -139,28 +140,38 @@ const CollegeCard: React.FC<CollegeCardProps> = ({
     collegeData.featured_college.trim().toLowerCase() === "featured";
 
   const cardPadding = isListingCard ? "p-4 sm:p-5" : "p-4";
+  const wrapperClassName = isListingCard
+    ? "self-start md:max-w-none"
+    : "h-full md:max-w-none";
+  const contentClassName = isCarouselCard ? "h-full" : "";
+  const badgeSlotClassName = isCarouselCard ? "min-h-[32px]" : "";
+  const headerClassName = "";
+  const infoClassName = isCarouselCard ? "min-h-[110px] sm:min-h-[118px]" : "";
 
   return (
     <div
       className={[
-        "relative flex w-full max-w-[360px] self-start flex-col overflow-hidden rounded-[26px] sm:max-w-[370px]",
+        "relative flex w-full max-w-[360px] flex-col overflow-hidden rounded-[26px] sm:max-w-[370px]",
         "border border-[#e4e8f0] bg-[linear-gradient(180deg,#ffffff_0%,#fbfcff_58%,#f5f7fb_100%)]",
         "shadow-[0_14px_36px_rgba(15,23,42,0.08)] transition-all duration-300",
-        "hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.14)] md:max-w-none",
+        "hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,23,42,0.14)]",
+        wrapperClassName,
         className ?? "",
       ].join(" ")}
     >
-      <div className={`flex flex-col ${cardPadding}`}>
-        {isFeaturedCollege && (
-          <span className="inline-flex w-fit items-center rounded-full bg-[#f3ab1b] px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-[#10233e] shadow-[0_8px_18px_rgba(243,171,27,0.24)]">
-            Featured
-          </span>
-        )}
+      <div className={`flex flex-col ${cardPadding} ${contentClassName}`}>
+        <div className={badgeSlotClassName}>
+          {isFeaturedCollege && (
+            <span className="inline-flex w-fit items-center rounded-full bg-[#f3ab1b] px-3 py-1 text-[8px] font-bold uppercase tracking-[0.22em] text-[#10233e] shadow-[0_8px_18px_rgba(243,171,27,0.24)] mb-4">
+              Featured
+            </span>
+          )}
+        </div>
 
         <button
           type="button"
           onClick={() => navigate(route)}
-          className={`flex w-full items-start gap-3 text-left ${isFeaturedCollege ? "mt-4" : ""}`}
+          className={`flex w-full items-start gap-3 text-left ${isFeaturedCollege ? "mt-1" : ""} ${headerClassName}`}
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#d8dde8] bg-white shadow-sm sm:h-14 sm:w-14">
             {logoSrc ? (
@@ -190,7 +201,7 @@ const CollegeCard: React.FC<CollegeCardProps> = ({
 
         <div className="mt-4 border-t border-[#d9e0ea]" />
 
-        <div className="mt-4">
+        <div className={`mt-4 ${infoClassName}`}>
           <div className="flex flex-row gap-2 sm:flex-row sm:items-start justify-between sm:gap-4">
             <p className="min-w-0 text-[16px] font-semibold leading-tight text-[#10233e] sm:text-[15px]">
               {displayStream}
@@ -219,7 +230,7 @@ const CollegeCard: React.FC<CollegeCardProps> = ({
 
         <div className="mt-4 border-t border-[#d9e0ea]" />
 
-        <div className="mt-2 flex flex-col gap-0.5">
+        <div className={`mt-2 flex flex-col gap-0.5 ${isCarouselCard ? "mt-auto" : ""}`}>
           <button
             type="button"
             onClick={() => navigate(route)}
