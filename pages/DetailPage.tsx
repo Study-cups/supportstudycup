@@ -1036,7 +1036,7 @@ const getTabHeading = () => {
 
   const MAIN_TABS = [
     "basic",
-    "Courses & Fees",
+    /*  "Courses & Fees", */
     "admission",
     "placement",
     "cutoff",
