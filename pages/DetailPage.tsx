@@ -3145,7 +3145,7 @@ if (blockType === "heading") {
 
 
           <img
-            src={college.heroImages}
+            src={college.heroImage}
             alt={college.name}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
