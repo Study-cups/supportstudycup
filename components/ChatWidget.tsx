@@ -306,7 +306,7 @@ const ChatbotWidget: React.FC = () => {
 
       {/* CHAT WINDOW */}
       {open && (
-        <div className="fixed bottom-6 right-6 w-[360px] h-[520px] max-h-[80vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[9999]">
+        <div className="fixed bottom-3 right-3 z-[9999] flex h-[520px] max-h-[80vh] w-[calc(100vw-1.5rem)] max-w-[360px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:bottom-6 sm:right-6 sm:w-[360px]">
           {/* HEADER */}
           <div className="bg-[#1E4A7A] text-white px-4 py-3 flex justify-between items-center">
             <div>
@@ -341,9 +341,9 @@ const ChatbotWidget: React.FC = () => {
 
           {/* INPUT */}
           {step !== "done" && (
-            <div className="border-t p-3 flex gap-2 bg-white">
+            <div className="flex items-center gap-2 border-t bg-white p-2.5 sm:p-3">
               <input
-                className="flex-1 border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-11 w-0 min-w-0 flex-1 rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Type your message..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -351,7 +351,7 @@ const ChatbotWidget: React.FC = () => {
               />
               <button
                 onClick={handleSend}
-                className="bg-[#f4a71d] text-white px-4 rounded-xl text-sm font-semibold"
+                className="h-11 shrink-0 whitespace-nowrap rounded-xl bg-[#f4a71d] px-3 text-sm font-semibold text-white sm:px-4"
               >
                 Send
               </button>
