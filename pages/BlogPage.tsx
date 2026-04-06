@@ -105,6 +105,10 @@ interface Article {
   category?: string;
 }
 
+interface BlogPageProps {
+  blogs?: Article[];
+}
+
 /* ===================== FEEDBACK ===================== */
 
 const FeedbackSection = () => (
@@ -149,7 +153,7 @@ const toBlogSlug = (blog: any) =>
 
 /* ===================== MAIN PAGE ===================== */
 
-const BlogPage: React.FC = () => {
+const BlogPage: React.FC<BlogPageProps> = () => {
   const navigate = useNavigate();
 
   const [articles, setArticles] = useState<Article[]>([]);

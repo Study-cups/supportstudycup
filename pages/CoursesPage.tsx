@@ -553,7 +553,7 @@ const getCategorySlugFromStream = (courseName: string) => {
     .toLowerCase()
     .replace(/\s+/g, "-");
 };
-function formatToLakhs(num) {
+function formatToLakhs(num:any) {
   if (!num) return "N/A";
 
   let lakhs = num / 100000;
@@ -1969,13 +1969,13 @@ const renderCoursesLoadingState = () => (
                     <div className="md:hidden">
                       {isMobileSectionExpanded ? (
                         <div className="space-y-4">
-                          {section.courses.map((course) => (
+                          {section.courses.map((course:any) => (
                             <div key={course.courseKey}>{renderCompactCourseCard(course)}</div>
                           ))}
                         </div>
                       ) : (
                         <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory px-2 pb-3">
-                          {mobilePreviewCourses.map((course) => (
+                          {mobilePreviewCourses.map((course:any) => (
                             <div
                               key={course.courseKey}
                               className="min-w-[240px] max-w-[260px] shrink-0 snap-start"
@@ -1995,11 +1995,11 @@ const renderCoursesLoadingState = () => (
 
                     {section.desktopLayout === "grid" ? (
                       <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-8">
-                        {section.pagedCourses.map((course) => renderCompactCourseCard(course))}
+                        {section.pagedCourses.map((course:any) => renderCompactCourseCard(course))}
                       </div>
                     ) : (
                       <div className="hidden space-y-4 md:block">
-                        {section.pagedCourses.map((course) => renderWideCourseCard(course))}
+                        {section.pagedCourses.map((course:any) => renderWideCourseCard(course))}
                       </div>
                     )}
 

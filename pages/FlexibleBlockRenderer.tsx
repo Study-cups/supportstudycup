@@ -2,11 +2,11 @@ import React, { useState } from "react";
 
 const SHOW_CONTENT_IMAGES = false;
 
-type Block =
+export type Block =
   | { type: "text"; value: string }
   | { type: "list"; value: string[] }
   | { type: "table"; value: string[][] }
-  | { type: "image"; value: string }
+  | { type: "image"; value?: string; src?: string }
   | { type: "video"; src: string }
   | { type: "heading"; value: string; level?: string };
 

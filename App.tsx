@@ -46,6 +46,21 @@ const withSmoothScroll = (element: React.ReactNode) => (
   <SmoothScrollProvider>{element}</SmoothScrollProvider>
 );
 
+const UNIVERSITY_DETAIL_TAB_SLUGS = [
+  "basic",
+  "info",
+  "courses-fees",
+  "admission",
+  "placement",
+  "cutoff",
+  "scholarship",
+  "ranking",
+  "faculty",
+  "qna",
+  "reviews",
+  "gallery",
+];
+
 type IdleDeadlineLike = {
   didTimeout: boolean;
   timeRemaining: () => number;
@@ -86,6 +101,16 @@ const OldCollegesRedirect = ({ withLocation }: { withLocation?: boolean }) => {
   }
 
   return <Navigate to={`/${safeStream}/top-colleges`} replace />;
+};
+
+const LegacyCourseListingRedirect = () => {
+  const { courseSlug } = useParams();
+
+  if (!courseSlug) {
+    return <Navigate to="/colleges" replace />;
+  }
+
+  return <Navigate to={`/${toSeoSlug(courseSlug)}/top-colleges`} replace />;
 };
 
 const LegacyUniversityCourseRedirect = () => {
@@ -146,7 +171,6 @@ const App: React.FC = () => {
     location.pathname === "/colleges" || location.pathname.includes("top-colleges");
 
 
-
   const handleCompareToggle = (id: string | number) => {
     const normalizedId = String(id);
 
@@ -179,6 +203,16 @@ const App: React.FC = () => {
     setApplyMode("brochure");
     setApplyModalOpen(true);
   };
+
+  const detailPageElement = withSmoothScroll(
+    <DetailPage
+      colleges={colleges}
+      compareList={compareList}
+      onCompareToggle={handleCompareToggle}
+      onOpenApplyNow={handleApplyNow}
+      onOpenBrochure={handleBrochure}
+    />
+  );
 
   const loadColleges = () => {
     if (collegesFetchStartedRef.current) return Promise.resolve();
@@ -483,12 +517,7 @@ useEffect(() => {
         {/* 🔁 LEGACY SEO REDIRECT */}
         <Route
           path="/:courseSlug-colleges"
-          element={
-            <Navigate
-              to={(window.location.pathname.replace("-colleges", "/colleges"))}
-              replace
-            />
-          }
+          element={<LegacyCourseListingRedirect />}
         />
 
         <Route
@@ -594,16 +623,16 @@ useEffect(() => {
 
         <Route
           path="/university/:collegeIdSlug"
-          element={
-            withSmoothScroll(<DetailPage
-              colleges={colleges}
-              compareList={compareList}
-              onCompareToggle={handleCompareToggle}
-              onOpenApplyNow={handleApplyNow}
-              onOpenBrochure={handleBrochure}
-            />)
-          }
+          element={detailPageElement}
         />
+
+        {UNIVERSITY_DETAIL_TAB_SLUGS.map((tabSlug) => (
+          <Route
+            key={tabSlug}
+            path={`/university/:collegeIdSlug/${tabSlug}`}
+            element={detailPageElement}
+          />
+        ))}
       
 
         <Route
@@ -614,27 +643,11 @@ useEffect(() => {
 
       <Route
   path="/university/:collegeIdSlug/:courseSlug"
-  element={
-    withSmoothScroll(<DetailPage
-      colleges={colleges}
-      compareList={compareList}
-      onCompareToggle={handleCompareToggle}
-      onOpenApplyNow={handleApplyNow}
-      onOpenBrochure={handleBrochure}
-    />)
-  }
+  element={<LegacyUniversityCourseRedirect />}
 />
       <Route
   path="/university/:collegeIdSlug/course/:courseSlug"
-  element={
-    withSmoothScroll(<DetailPage
-      colleges={colleges}
-      compareList={compareList}
-      onCompareToggle={handleCompareToggle}
-      onOpenApplyNow={handleApplyNow}
-      onOpenBrochure={handleBrochure}
-    />)
-  }
+  element={detailPageElement}
 />
 
         <Route

@@ -39,6 +39,7 @@ export interface College {
     };
     courses: Course[];
     placements: Placements;
+      rawScraped?: any;
 }
 type Step =
   | "welcome"

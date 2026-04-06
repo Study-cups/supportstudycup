@@ -1175,7 +1175,7 @@ const CollegesMegaMenu = () => {
               onClick={onOpenApplyNow}
               className="bg-[#f4a71d] text-white px-4 py-2 rounded-full font-semibold hover:bg-[#1E4A7A]"
             >
-              Apply Now
+              Free Counselling
             </button>
           </nav>
 
@@ -1222,7 +1222,7 @@ const CollegesMegaMenu = () => {
               onClick={onOpenApplyNow}
               className="w-full mt-3 py-3 bg-[#1E4A7A] rounded-full font-semibold"
             >
-              Apply Now
+              Free Counselling
             </button>
           </div>
         )}

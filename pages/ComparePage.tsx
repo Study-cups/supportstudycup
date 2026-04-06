@@ -238,7 +238,7 @@ const getPackageValue = (college: any, kind: "highest" | "average") =>
     findPackageSourceInText(college, kind),
   ]
     .map((candidate) => parsePackageAmount(candidate))
-    .find((value): value is number => Number.isFinite(value) && value > 0) ?? null;
+   .find((value): value is number => value !== null && Number.isFinite(value) && value > 0);
 
 const getPackageLabel = (college: any, kind: "highest" | "average") => {
   const source =
@@ -268,7 +268,7 @@ const getAnnualFeeValue = (college: any) => {
       college?.courses?.[0]?.fees,
     ]
       .map((value) => parseCurrencyValue(value))
-      .find((value): value is number => Number.isFinite(value) && value > 0) ?? null;
+     .find((value): value is number => value !== null && Number.isFinite(value) && value > 0);
 
   if (directFeeValue) return directFeeValue;
 

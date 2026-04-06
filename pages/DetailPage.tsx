@@ -4,7 +4,7 @@ import { getCollegeImages } from "../collegeImages";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
-import FlexibleBlockRenderer from './FlexibleBlockRenderer'
+import FlexibleBlockRenderer, { type Block as FlexibleBlock } from './FlexibleBlockRenderer'
 import { toCourseSlug, toSeoSlug } from "./Seo"
 import { Helmet } from "react-helmet-async"
 
@@ -113,9 +113,10 @@ const buildCollegeCodePrefix = (shortName: string = "") => {
 
 
 interface DetailPageProps {
-
+  colleges?: College[];
   compareList: string[];
   onCompareToggle: (id: string) => void;
+  setView?: (view: View) => void;
   onOpenApplyNow: () => void;
   onOpenBrochure: () => void;
 }
@@ -128,9 +129,13 @@ type CollegeDetail = {
   placements?: any;
   reviews?: any[];
   gallery?: string[];
-
+  description?: string;
   ranking_data?: any[];
   rawScraped?: any;
+  basic?: any;
+  established_year?: any;
+  accreditation?: any;
+  affiliations?: any;
   type?: string;
 };
 
@@ -598,7 +603,7 @@ useEffect(() => {
 
   useEffect(() => {
     if (detail?.rawScraped?.qna?.length > 0) {
-      setQnaOpen(Array(detail.rawScraped.qna.length).fill(false));
+      setQnaOpen(Array(detail?.rawScraped.qna.length).fill(false));
     }
   }, [detail]);
 
@@ -790,13 +795,13 @@ useEffect(() => {
         reviews_data: college?.reviews_page || {},
 
         // GALLERY
-        gallery: college?.gallery?.map(g => g.src) || [],
+        gallery: college?.gallery?.map((g:any) => g.src) || [],
 
         // QNA
-        questions_answers: college?.qna?.map(q => ({
+        questions_answers: college?.qna?.map((q:any) => ({
           question: q.question,
           answer_text: Array.isArray(q.answers)
-            ? q.answers.flatMap(a => a.answer).join(" ")
+            ? q.answers.flatMap((a:any) => a.answer).join(" ")
             : ""
         })) || []
       }
@@ -1267,7 +1272,7 @@ const getTabHeading = () => {
       ),
     ];
   };
-  const normalizeBlock = (block: any) => {
+  const normalizeBlock = (block: any): FlexibleBlock | null => {
     if (!block) return null;
 
     // Determine block type
@@ -1326,7 +1331,7 @@ if (blockType === "heading") {
     return null;
   };
 
-  const normalizeBlocksArray = (data: any) => {
+  const normalizeBlocksArray = (data: any): FlexibleBlock[] => {
     if (!data) return [];
 
     // If single object (like your about)
@@ -1338,7 +1343,7 @@ if (blockType === "heading") {
     // If already array
     return data
       .map((b: any) => normalizeBlock(b))
-      .filter(Boolean);
+      .filter((block): block is FlexibleBlock => Boolean(block));
   };
   const mergeBlocks = (section: any) => [
     ...(section?.about ?? []),
@@ -1864,14 +1869,14 @@ if (blockType === "heading") {
 
             {detail?.rawScraped?.courses_full_time?.length > 0 && (() => {
 
-              const packageRows = detail.rawScraped.courses_full_time.filter(
+              const packageRows = detail?.rawScraped.courses_full_time.filter(
                 (r: any) =>
                   ["Highest Package", "Median Package", "Average Package"].includes(
                     r.course.trim()
                   )
               );
 
-              const courseRows = detail.rawScraped.courses_full_time.filter(
+              const courseRows = detail?.rawScraped.courses_full_time.filter(
                 (r: any) =>
                   !["Highest Package", "Median Package", "Average Package"].includes(
                     r.course.trim()
@@ -1937,7 +1942,7 @@ if (blockType === "heading") {
                       </h3>
 
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                        {detail.rawScraped.info_facilities.map(
+                        {detail?.rawScraped.info_facilities.map(
                           (f: any, i: number) => (
                             <div
                               key={i}
@@ -2033,7 +2038,7 @@ if (blockType === "heading") {
         md:overflow-visible
       "
                       >
-                        {detail.rawScraped.info_faculty.map(
+                        {detail?.rawScraped.info_faculty.map(
                           (f: any, i: number) => (
                             <div
                               key={i}
@@ -2556,7 +2561,7 @@ if (blockType === "heading") {
   const reviews = college?.reviews_page ?? {};
 
   const overall = reviews?.overall_rating ?? {};
-  const categories = reviews?.category_ratings ?? {};
+  const categories: Record<string, string | number> = reviews?.category_ratings ?? {};
   const say = reviews?.what_students_say ?? {};
 
   const likes = say?.likes ?? [];

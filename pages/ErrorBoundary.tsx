@@ -1,7 +1,7 @@
 import React, { Component, ReactNode } from "react";
 
 type Props = {
-  children: ReactNode;
+  children?: ReactNode;
 };
 
 type State = {
@@ -24,6 +24,6 @@ export default class ErrorBoundary extends Component<Props, State> {
       return <h2>Error occurred</h2>;
     }
 
-    return ;
+    return this.props.children ?? null;
   }
 }

@@ -4,7 +4,8 @@ import { useOnScreen } from "../hooks/useOnScreen";
 import { useNavigate } from "react-router-dom";
 
 interface ExamsPageProps {
-  setView: (view: View) => void;
+  exams?: any[];
+  setView?: (view: View) => void;
 }
 
 const API_BASE =
@@ -35,7 +36,7 @@ const AnimatedCard: React.FC<{ children: React.ReactNode; delay: number }> = ({
 };
 
 
-const ExamsPage: React.FC = () => {
+const ExamsPage: React.FC<ExamsPageProps> = () => {
   const navigate = useNavigate();
   const [exams, setExams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
