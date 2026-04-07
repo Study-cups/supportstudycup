@@ -146,10 +146,10 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
         {/* CLOSE */}
         <button
           onClick={handleClose}
-          className="absolute top-3 right-3 h-9 w-9 rounded-full
-                     text-gray-600
-                     flex items-center justify-end
-                     hover:bg-gray-100 transition"
+          className="absolute top-4 right-4 h-9 w-9 rounded-full
+                     text-gray-500
+                     flex items-center justify-center
+                     hover:bg-gray-200 transition"
         >
           ✕
         </button>
