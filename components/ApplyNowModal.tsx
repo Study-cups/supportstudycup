@@ -62,7 +62,7 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
     email: "",
     phone: "",
     course: "",
-    city:"",
+    city: "",
   });
 
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -93,7 +93,7 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
     e.preventDefault();
     if (loading) return;
     setLoading(true);
-   sessionStorage.setItem("applyFormSubmitted", "true");
+    sessionStorage.setItem("applyFormSubmitted", "true");
     try {
       const response = await fetch(`${API_BASE}/api/registration`, {
         method: "POST",
@@ -121,7 +121,7 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
   const handleClose = () => {
     setIsSubmitted(false);
     setLoading(false);
-    setFormData({ name: "", email: "", phone: "", course: "" , city:""});
+    setFormData({ name: "", email: "", phone: "", course: "", city: "" });
     onClose();
   };
 
@@ -129,200 +129,174 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center
-                 bg-black/50 backdrop-blur-sm px-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md px-4 sm:px-6 transition-all"
       onClick={handleClose}
     >
       <div
-        className="
-          relative w-full max-w-4xl rounded-[28px]
-          bg-[#F2F5FA]
-          text-gray-900
-          shadow-[0_50px_120px_rgba(0,0,0,0.35)]
-          px-6 py-6 md:px-12 md:py-6
-        "
+        className="relative w-full max-w-5xl rounded-[2rem] bg-white text-slate-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col md:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* CLOSE */}
+        {/* CLOSE BUTTON */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 h-9 w-9 rounded-full
-                     text-gray-500
-                     flex items-center justify-center
-                     hover:bg-gray-200 transition"
+          className="absolute top-5 right-5 z-20 h-10 w-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 hover:text-slate-800 transition-colors shadow-sm"
+          aria-label="Close modal"
         >
-          ✕
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
         </button>
 
         {!isSubmitted ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* LEFT */}
-           <div className="hidden md:flex items-center justify-center rounded-[22px]
-                bg-[#1E40AF] relative overflow-hidden p-10">
-
-  {/* Decorative circles */}
-  <div className="absolute -top-16 -left-16 w-48 h-48 bg-blue-500/30 rounded-full"></div>
-  <div className="absolute bottom-[-60px] right-[-60px] w-56 h-56 bg-indigo-400/20 rounded-full"></div>
-
-  {/* Content */}
-  <div className="relative z-10 text-center text-white max-w-sm">
-    <img
-      src={APPLY_MODAL_IMAGE_SRC}
-      alt="Student Illustration"
-      loading="eager"
-      decoding="async"
-      fetchPriority="high"
-      width={512}
-      height={512}
-      className="mx-auto w-72"
-    />
-
-    <h2 className="mt-8 text-2xl font-semibold leading-snug">
-      Start Your Academic Journey
-    </h2>
-
-    <p className="mt-3 text-sm text-blue-100">
-      Discover colleges, courses & expert guidance tailored for you
-    </p>
-  </div>
-</div>
-
-
-            {/* RIGHT FORM */}
-            <div className="bg-white rounded-2xl p-7 md:p-9 shadow-md">
-              <h2 className="text-xl font-semibold text-center mb-1">
-                {mode === "brochure"
-                  ? "Register to Download Brochure"
-                  : "Connect With Us Today"}
-              </h2>
-
-              <p className="text-center text-gray-500 text-sm mb-6">
-                Get details and latest updates
-              </p>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <input
-                  name="name"
-                  placeholder="Full Name"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="input-light"
+          <>
+            {/* LEFT SIDE: Brand Branding & Illustration */}
+            <div className="hidden md:flex flex-col items-center justify-center w-5/12 bg-[#0B2B5E] relative overflow-hidden p-10">
+              {/* Background Geometric Shapes inspired by screenshot */}
+              <div className="absolute top-0 right-0 w-[150%] h-[150%] bg-[#123b7a] rounded-bl-[100px] transform rotate-12 translate-x-1/4 -translate-y-1/4 opacity-50"></div>
+              <div className="absolute bottom-[-10%] left-[-20%] w-64 h-64 bg-[#F5A623] rounded-full blur-3xl opacity-20"></div>
+              
+              {/* Content */}
+              <div className="relative z-10 flex flex-col items-center text-center text-white">
+                <img
+                  src={APPLY_MODAL_IMAGE_SRC}
+                  alt="Student Illustration"
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                  className="w-64 h-auto drop-shadow-2xl mb-8"
                 />
-
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email Address"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="input-light"
-                />
-
-                <input
-                  name="phone"
-                  type="tel"
-                  placeholder="Mobile Number"
-                  required
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="input-light"
-                /> 
- <input
-                  name="city"
-                  type="text"
-                  placeholder="City"
-                  required
-                  value={formData.city}
-                  onChange={handleChange}
-                  className="input-light"
-                />
-                <select
-                  name="course"
-                  required
-                  value={formData.course}
-                  onChange={handleChange}
-                  className="input-light"
-                >
-                  <option value="">Preferred Course Level</option>
-                  <option>Undergraduate</option>
-                  <option>Postgraduate</option>
-                  <option>Diploma</option>
-                </select>
-
-                <label className="flex items-start gap-2 text-xs text-gray-600">
-                  <input type="checkbox" required />
-                  <span >I agree to <a 
-                  target="_blank"
-  rel="noopener noreferrer"
-                  href="https://www.termsfeed.com/live/417bdd06-e677-4181-b70f-efa4edb0e654" className="text-blue-600 hover:underline">Terms & Privacy Policy</a></span>
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="
-                    w-full mt-2 py-3 rounded-xl font-semibold text-white
-                    bg-gradient-to-r from-orange-500 to-orange-600
-                    hover:from-orange-600 hover:to-orange-700
-                    shadow-md shadow-orange-500/30
-                    transition disabled:opacity-60
-                  "
-                >
-                  {loading
-                    ? "Submitting..."
-                    : mode === "brochure"
-                    ? "REGISTER & DOWNLOAD"
-                    : "Start My Journey"}
-                </button>
-              </form>
+                <h2 className="text-3xl font-bold leading-tight mb-3">
+                  Find Your <span className="text-[#F5A623]">Dream</span> College
+                </h2>
+                <p className="text-[#93A5C9] text-base px-4">
+                  Compare colleges, courses, fees, and real placement outcomes — all in one place.
+                </p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <h2 className="text-2xl font-bold">Thank You!</h2>
-            <p className="mt-2 text-gray-600">
-              Our team will contact you shortly.
-            </p>
 
+            {/* RIGHT SIDE: Form */}
+            <div className="w-full md:w-7/12 p-8 sm:p-12 bg-white relative">
+              <div className="max-w-md mx-auto">
+                <div className="mb-8 text-center md:text-left">
+                  <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                    {mode === "brochure"
+                      ? "Register to Download Brochure"
+                      : "Get Free Counselling"}
+                  </h2>
+                  <p className="text-slate-500 text-sm">
+                    Fill out the form below and our experts will guide you to the right path.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input
+                      name="name"
+                      placeholder="Full Name"
+                      required
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all placeholder-slate-400"
+                    />
+                    <input
+                      name="phone"
+                      type="tel"
+                      placeholder="Mobile Number"
+                      required
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all placeholder-slate-400"
+                    />
+                  </div>
+
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="Email Address"
+                    required
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all placeholder-slate-400"
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <input
+                      name="city"
+                      type="text"
+                      placeholder="City"
+                      required
+                      value={formData.city}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all placeholder-slate-400"
+                    />
+                    <select
+                      name="course"
+                      required
+                      value={formData.course}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all"
+                    >
+                      <option value="" disabled className="text-slate-400">Select Course Level</option>
+                      <option value="Undergraduate">Undergraduate</option>
+                      <option value="Postgraduate">Postgraduate</option>
+                      <option value="Diploma">Diploma</option>
+                    </select>
+                  </div>
+
+                  <label className="flex items-start gap-3 mt-4 mb-6 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      required 
+                      className="mt-1 w-4 h-4 rounded border-slate-300 text-[#F5A623] focus:ring-[#F5A623]"
+                    />
+                    <span className="text-xs text-slate-500 leading-relaxed">
+                      I agree to the{" "}
+                      <a
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        href="https://www.termsfeed.com/live/417bdd06-e677-4181-b70f-efa4edb0e654"
+                        className="text-[#0B2B5E] font-medium hover:underline"
+                      >
+                        Terms & Privacy Policy
+                      </a>
+                    </span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3.5 rounded-xl font-bold text-white bg-[#F5A623] hover:bg-[#E09612] shadow-[0_8px_20px_rgba(245,166,35,0.25)] transition-all transform hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none text-base"
+                  >
+                    {loading
+                      ? "Submitting..."
+                      : mode === "brochure"
+                      ? "REGISTER & DOWNLOAD"
+                      : "Start My Journey"}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="w-full p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
+            <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Thank You!</h2>
+            <p className="text-slate-500 max-w-sm mb-8">
+              Your details have been successfully submitted. Our academic counselor will contact you shortly.
+            </p>
             <button
               onClick={handleClose}
-              className="mt-6 w-full rounded-xl py-3
-                         font-semibold text-white
-                         bg-orange-500 hover:bg-orange-600"
+              className="px-10 py-3 rounded-xl font-bold text-white bg-[#0B2B5E] hover:bg-[#123b7a] transition-colors shadow-md"
             >
-              Close
+              Close Window
             </button>
           </div>
         )}
       </div>
-
-      {/* INPUT STYLE */}
-      <style>
-        {`
-          .input-light {
-            width: 100%;
-            padding: 0.75rem 0.95rem;
-            border-radius: 0.75rem;
-            border: 1px solid #D1D5DB;
-            background: #FFFFFF;
-            font-size: 14px;
-            color: #111827;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-          }
-
-          .input-light::placeholder {
-            color: #9CA3AF;
-          }
-
-          .input-light:focus {
-            border-color: #F97316;
-            box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
-          }
-        `}
-      </style>
     </div>
   );
 };
