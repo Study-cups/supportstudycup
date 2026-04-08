@@ -2051,11 +2051,10 @@ const HERO_TAGS = [
 </div>
 
 
-      {/* -------------------------------------------------- */}
+{/* -------------------------------------------------- */}
       {/* FIND YOUR IDEAL COLLEGE (Top Universities cards)  */}
       {/* -------------------------------------------------- */}
 
-    
       <DeferredMount
         placeholderHeight={1500}
         rootMargin="350px 0px"
@@ -2066,12 +2065,11 @@ const HERO_TAGS = [
           style={deferredLargeSectionStyle}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
- 
+
             {/* Heading */}
             <div className="mb-8">
-
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-
+                
                 {/* LEFT SIDE: Heading */}
                 <div className="flex-shrink-0">
                   <h2
@@ -2090,40 +2088,33 @@ const HERO_TAGS = [
                 </div>
 
                 {/* RIGHT SIDE: Stream Filters */}
-                <div className="flex overflow-x-auto
-           
-            scrollbar-hide
-            snap-x snap-mandatory md:flex-wrap gap-1 lg:justify-end lg:max-w-[60%] mb-[3px] md:mb-0 ">
+                <div className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory md:flex-wrap gap-1 lg:justify-end lg:max-w-[60%] mb-[3px] md:mb-0">
                   {dynamicStreams.map((stream) => (
                     <button
-  key={stream}
-  onClick={() => setSelectedStream(stream)}
-  className={`
-    inline-flex items-center
-    whitespace-nowrap
-    px-3 py-1.5 md:px-5 md:py-2
-    rounded-full
-    text-[11px] md:text-sm
-    font-medium
-    border
-    transition-all
-    ${selectedStream === stream
-      ? "bg-[#1f4fa8] text-white border-[#1f4fa8] shadow-md"
-      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
-    }
-  `}
-  style={{ fontFamily: "Roboto, sans-serif" }}
->
-  {stream}
-</button>
-
+                      key={stream}
+                      onClick={() => setSelectedStream(stream)}
+                      className={`
+                        inline-flex items-center
+                        whitespace-nowrap
+                        px-3 py-1.5 md:px-5 md:py-2
+                        rounded-full
+                        text-[11px] md:text-sm
+                        font-medium
+                        border
+                        transition-all
+                        ${selectedStream === stream
+                          ? "bg-[#1f4fa8] text-white border-[#1f4fa8] shadow-md"
+                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
+                        }
+                      `}
+                      style={{ fontFamily: "Roboto, sans-serif" }}
+                    >
+                      {stream}
+                    </button>
                   ))}
                 </div>
-
               </div>
-
             </div>
-
 
             {/* Horizontal Carousel */}
             {filteredColleges.length > 0 ? (
@@ -2150,29 +2141,25 @@ const HERO_TAGS = [
                 >
                   {filteredColleges.map((college, index) => (
                     <div
-  key={college.id}
- 
-    className="
-    flex-shrink-0
-
-    min-w-[240px]
-    max-w-[260px]
-
-    sm:min-w-[280px]
-    sm:max-w-[300px]
-
-    lg:min-w-[300px]
-    lg:max-w-[330px]
-  "
->
-
+                      key={college.id}
+                      className="
+                        flex-shrink-0
+                        min-w-[240px]
+                        max-w-[260px]
+                        sm:min-w-[280px]
+                        sm:max-w-[300px]
+                        lg:min-w-[300px]
+                        lg:max-w-[330px]
+                      "
+                    >
                       <AnimatedContainer delay={index * 90} className="h-full">
                         <CollegeCard
                           college={college}
-                            onOpenBrochure={onOpenBrochure}
+                          onOpenBrochure={onOpenBrochure}
                           onCompareToggle={onCompareToggle}
-  isCompared={compareList.includes(String(college.id))}
-                          className="mb-0 h-full" />
+                          isCompared={compareList.includes(String(college.id))}
+                          className="mb-0 h-full"
+                        />
                       </AnimatedContainer>
                     </div>
                   ))}
@@ -2206,35 +2193,36 @@ const HERO_TAGS = [
               </div>
             )}
 
-            {/* View All Button */}
-           <div className="text-center mt-4 md:mt-0">
-  <button
-    onClick={() => navigate("/colleges")}
-    className="
-      rounded-full
-      bg-[#1f4fa8]
-      text-white
-      font-semibold
-      shadow-lg
-      hover:bg-[#163a7a]
-      transition-all
-      mb-8
+            {/* View All Button - 🟢 FIXED MARGIN (mt-8 md:mt-12) */}
+            <div className="text-center mt-8 md:mt-12">
+              <button
+                onClick={() => navigate("/colleges")}
+                className="
+                  rounded-full
+                  bg-[#1f4fa8]
+                  text-white
+                  font-semibold
+                  shadow-lg
+                  hover:bg-[#163a7a]
+                  transition-all
+                  mb-8
 
-      /* MOBILE */
-      px-5 py-2 text-xs
+                  /* MOBILE */
+                  px-5 py-2 text-xs
 
-      /* DESKTOP (unchanged) */
-      md:px-8 md:py-3 md:text-base
-    "
-    style={{ fontFamily: "Roboto, sans-serif" }}
-  >
-    View All Colleges
-  </button>
-</div>
-
+                  /* DESKTOP (unchanged) */
+                  md:px-8 md:py-3 md:text-base
+                "
+                style={{ fontFamily: "Roboto, sans-serif" }}
+              >
+                View All Colleges
+              </button>
+            </div>
 
           </div>
-        </section> 
+        </section>
+      </DeferredMount>
+      
 
     <section className=" md:mt-4 mt-2 ">
   <div className="max-w-7xl mx-auto">
