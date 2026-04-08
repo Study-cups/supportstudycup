@@ -55,6 +55,89 @@ const buildCollegeCodePrefix = (shortName: string = "") => {
   return `${first.toLowerCase()}${second[0].toLowerCase()}`;
 };
 
+type MobileMenuItem = {
+  label: string;
+  path: string;
+};
+
+const MOBILE_COURSE_FILTER_ITEMS = [
+  { label: "B.E / B.Tech", stream: "engineer" },
+  { label: "MBA / PGDM", stream: "management" },
+  { label: "MBBS", stream: "doctor" },
+  { label: "BCA", stream: "commerce" },
+  { label: "BBA", stream: "art" },
+];
+
+const COLLEGE_STREAM_ROUTE_MAP: Record<string, string> = {
+  engineering: "btech",
+  management: "mba",
+  medical: "mbbs",
+  commerce: "bcom",
+  science: "bsc",
+  arts: "ba",
+  law: "law",
+  design: "design",
+  education: "bed",
+};
+
+const buildCollegeStreamPath = (stream: string) => {
+  const normalizedStream = toSeoSlug(stream);
+  const streamSlug = COLLEGE_STREAM_ROUTE_MAP[normalizedStream] || normalizedStream;
+  return `/${streamSlug}/top-colleges`;
+};
+
+const buildCoursesPagePath = (stream: string) => {
+  const searchParams = new URLSearchParams();
+
+  if (stream) {
+    searchParams.set("stream", stream);
+  }
+
+  const query = searchParams.toString();
+  return query ? `/courses?${query}` : "/courses";
+};
+
+const MobileMenuSection: React.FC<{
+  title: string;
+  items: MobileMenuItem[];
+  onItemClick: (path: string) => void;
+  viewAllPath: string;
+  viewAllLabel?: string;
+}> = ({
+  title,
+  items,
+  onItemClick,
+  viewAllPath,
+  viewAllLabel,
+}) => {
+  if (!items.length) return null;
+
+  return (
+    <div className="px-1 py-1 text-white">
+      <p className="text-base font-bold text-white">{title}</p>
+
+      <div className="mt-3 border-l border-white/15 pl-4">
+        {items.map((item) => (
+          <button
+            key={`${title}-${item.label}`}
+            onClick={() => onItemClick(item.path)}
+            className="block w-full py-2 text-left text-sm text-slate-200 transition hover:text-white"
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={() => onItemClick(viewAllPath)}
+        className="mt-3 text-sm font-semibold text-white"
+      >
+        {viewAllLabel || `View All ${title}`}
+      </button>
+    </div>
+  );
+};
+
 const Header: React.FC<HeaderProps> = ({ onOpenApplyNow  , colleges ,exams}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -788,6 +871,43 @@ const handleCollegeHover = async (college: any) => {
   }
 };
 
+const navigateAndCloseMenu = (path: string) => {
+  navigate(path);
+  setIsMenuOpen(false);
+};
+
+const mobileCollegeItems = useMemo<MobileMenuItem[]>(
+  () => [
+   
+    { label: "Engineering Colleges", path: buildCollegeStreamPath("engineering") },
+    { label: "MBA Colleges", path: buildCollegeStreamPath("management") },
+    { label: "Medical Colleges", path: buildCollegeStreamPath("medical") },
+    { label: "Science Colleges", path: buildCollegeStreamPath("science") },
+  ],
+  []
+);
+
+const mobileCourseItems = useMemo<MobileMenuItem[]>(
+  () =>
+    MOBILE_COURSE_FILTER_ITEMS.map((course) => ({
+      label: course.label,
+      path: buildCoursesPagePath(course.stream),
+    })),
+  []
+);
+
+const mobileExamItems = useMemo<MobileMenuItem[]>(
+  () =>
+    (Array.isArray(exams) ? exams : [])
+      .filter((exam: any) => exam?.name)
+      .slice(0, 5)
+      .map((exam: any) => ({
+        label: exam.name,
+        path: `/exams/${toSeoSlug(exam.name)}${exam.year ? `-${exam.year}` : ""}`,
+      })),
+  [exams]
+);
+
  const tabClass = (path: string) =>
   `relative pb-1 transition ${
     activePage === path
@@ -1193,25 +1313,45 @@ const CollegesMegaMenu = () => {
 
         {/* MOBILE MENU */}
         {isMenuOpen && (
-          <div className="lg:hidden bg-[#0F2D52] text-white mt-3 rounded-2xl px-5 py-5 space-y-3 shadow-xl">
+          <div className="lg:hidden bg-[#0F2D52] text-white mt-3 rounded-2xl px-5 py-5 space-y-4 shadow-xl max-h-[calc(100vh-96px)] overflow-y-auto overscroll-y-contain [webkit-overflow-scrolling:touch]">
+            <button
+              onClick={() => navigateAndCloseMenu("/")}
+              className="block w-full text-left py-2 text-base font-semibold"
+            >
+              Home
+            </button>
+
+            <MobileMenuSection
+              title="Colleges"
+              items={mobileCollegeItems}
+              onItemClick={navigateAndCloseMenu}
+              viewAllPath="/colleges"
+              viewAllLabel="View All Colleges"
+            />
+
+            <MobileMenuSection
+              title="Courses"
+              items={mobileCourseItems}
+              onItemClick={navigateAndCloseMenu}
+              viewAllPath="/courses"
+              viewAllLabel="View All Courses"
+            />
+
+            <MobileMenuSection
+              title="Exams"
+              items={mobileExamItems}
+              onItemClick={navigateAndCloseMenu}
+              viewAllPath="/exams"
+              viewAllLabel="View All Exams"
+            />
 
             {[
-              ["Home", "home"],
-              ["Colleges", "colleges"],
-              ["Courses", "courses"],
-              ["Exams", "exams"],
-              ["Blog", "blog"],
-              ["Compare", "compare"],
-            ].map(([label, page]) => (
+              ["Blog", "/blog"],
+              ["Compare", "/compare"],
+            ].map(([label, path]) => (
               <button
-                key={page}
-              onClick={() => {
-  navigate(
-    page === "home" ? "/" : `/${page}`
-  );
-  setIsMenuOpen(false);
-}}
-
+                key={path}
+                onClick={() => navigateAndCloseMenu(path)}
                 className="block w-full text-left py-2 text-base font-semibold"
               >
                 {label}
@@ -1219,7 +1359,10 @@ const CollegesMegaMenu = () => {
             ))}
 
             <button
-              onClick={onOpenApplyNow}
+              onClick={() => {
+                setIsMenuOpen(false);
+                onOpenApplyNow();
+              }}
               className="w-full mt-3 py-3 bg-[#1E4A7A] rounded-full font-semibold"
             >
               Free Counselling

@@ -301,13 +301,48 @@ const getStreamSeoSlug = (stream: string): string => {
 
 const COURSE_SLUG_MAP: Record<string, string[]> = {
   mba: ["MBA", "PGDM", "Management"],
+  management: ["MBA", "PGDM", "Management"],
   btech: ["B.Tech", "BTech", "BE", "B.E", "Engineering"],
+  engineering: ["B.Tech", "BTech", "BE", "B.E", "Engineering"],
   bca: ["BCA", "Computer Applications"],
+  science: ["B.Sc", "BSc", "Science"],
+  bsc: ["B.Sc", "BSc", "Science"],
   mbbs: ["MBBS", "Medical"],
-  bcom: ["bcom"],
-  bsc: ["bsc"],
-  ba: ["ba"],
-  bba: ["bba"],
+  medical: ["MBBS", "Medical"],
+  bcom: ["B.Com", "BCom", "Commerce"],
+  commerce: ["B.Com", "BCom", "Commerce"],
+  ba: ["BA", "Arts"],
+  arts: ["BA", "Arts"],
+  bba: ["BBA", "Business Administration"],
+  law: ["LLB", "Law"],
+  design: ["Design", "Fashion Design"],
+  education: ["B.Ed", "Education"],
+};
+
+const ROUTE_STREAM_FILTER_MAP: Record<string, string> = {
+  mba: "MBA",
+  btech: "Engineering",
+  bca: "BCA",
+  mbbs: "Medical",
+  bcom: "Commerce",
+  bsc: "Science",
+  ba: "Arts",
+  bba: "BBA",
+  law: "Law",
+  design: "Design",
+  bed: "Education",
+};
+
+const getStreamFilterFromRoute = (streamSlug?: string) => {
+  if (!streamSlug) return "All";
+
+  const normalizedSlug = normalize(streamSlug);
+  return (
+    ROUTE_STREAM_FILTER_MAP[normalizedSlug] ||
+    streamSlug
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  );
 };
 
 /* ================= FILTER SIDEBAR ================= */
@@ -749,11 +784,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
     college: "",
     city: "",
     course: "",
-    stream: stream
-      ? stream
-        .replace(/-/g, " ")
-        .replace(/\b\w/g, l => l.toUpperCase())
-      : "All",
+    stream: getStreamFilterFromRoute(stream),
     collegeType: "All",
     accreditation: "",
     minRating: 0,
@@ -778,12 +809,17 @@ const ListingPage: React.FC<ListingPageProps> = ({
       nextUrl += `-in-${toSeoSlug(filters.region)}`;
     }
 
+    if (location.pathname === nextUrl) {
+      lastUrlRef.current = nextUrl;
+      return;
+    }
+
     // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ¢â‚¬Ëœ Prevent infinite loops
     if (lastUrlRef.current === nextUrl) return;
     lastUrlRef.current = nextUrl;
 
     navigate(nextUrl, { replace: true });
-  }, [filters.stream, filters.city, filters.region, navigate]);
+  }, [filters.stream, filters.city, filters.region, navigate, location.pathname]);
 
 
 
@@ -794,23 +830,17 @@ const ListingPage: React.FC<ListingPageProps> = ({
   const hasInitializedRef = React.useRef(false);
 
   useEffect(() => {
-    if (hasInitializedRef.current) return;
-
-    const nextFilters: Partial<Filters> = {};
+    const nextFilters: Partial<Filters> = {
+      stream: getStreamFilterFromRoute(stream),
+      city: "",
+      region: undefined,
+    };
 
     // STREAM
-    if (stream) {
-      nextFilters.stream = stream
-        .replace(/-/g, " ")
-        .replace(/\b\w/g, l => l.toUpperCase());
-    }
-
     // LOCATION FROM SEO SLUG
     const parsed = parseSeoSlug(seoSlug);
 
     if (parsed.location) {
-      if (colleges.length === 0) return;
-
       const raw = parsed.location.replace(/-/g, " ");
       const normalized = normalize(raw);
 
@@ -837,7 +867,20 @@ const ListingPage: React.FC<ListingPageProps> = ({
       }
     }
 
-    setFilters(p => ({ ...p, ...nextFilters }));
+    setFilters((previousFilters) => {
+      const mergedFilters = { ...previousFilters, ...nextFilters };
+
+      if (
+        previousFilters.stream === mergedFilters.stream &&
+        previousFilters.city === mergedFilters.city &&
+        previousFilters.region === mergedFilters.region
+      ) {
+        return previousFilters;
+      }
+
+      return mergedFilters;
+    });
+
     hasInitializedRef.current = true;
   }, [stream, seoSlug, colleges]);
   const selectedRegion = location.state?.region || null;

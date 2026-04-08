@@ -63,11 +63,11 @@ const normalizeFacetKey = (value = "") =>
   value.toLowerCase().replace(/[^a-z]/g, "");
 
 const STREAM_MATCHERS = {
-  engineering: ["engineering", "btech", "technology", "be"],
+  engineering: ["engineering", "engineer", "btech", "technology", "be"],
   management: ["management", "mba", "pgdm", "business", "executive"],
-  medical: ["medical", "mbbs", "health", "nursing", "pharma"],
+  medical: ["medical", "doctor", "mbbs", "health", "nursing", "pharma"],
   commerce: ["commerce", "bcom", "account", "finance", "economics"],
-  arts: ["arts", "humanities", "social", "science", "ba", "bsc"],
+  arts: ["arts", "art", "humanities", "social", "science", "ba", "bsc"],
   law: ["law", "llb", "legal"],
   design: ["design", "fashion"],
 } as const;
@@ -658,12 +658,25 @@ useEffect(() => {
     navState?.initialStream ||
     initialStream ||
     "";
+  const resolvedStream = requestedStream
+    ? resolveRequestedStream(requestedStream, streams)
+    : "All";
 
-  if (!requestedStream) return;
-
-  const resolvedStream = resolveRequestedStream(requestedStream, streams);
   setSelectedStream(resolvedStream);
 }, [initialStream, location.search, location.state, streams]);
+
+useEffect(() => {
+  const navState =
+    location.state && typeof location.state === "object"
+      ? (location.state as any)
+      : null;
+  const requestedSearch =
+    new URLSearchParams(location.search).get("search") ||
+    navState?.initialSearchTerm ||
+    "";
+
+  setSearchTerm(requestedSearch);
+}, [location.search, location.state]);
 
 
 const levels = useMemo(() => {
