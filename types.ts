@@ -37,6 +37,7 @@ export interface College {
         min: number;
         max: number;
     };
+      stream?: string | string[];
     courses: Course[];
     placements: Placements;
       rawScraped?: any;

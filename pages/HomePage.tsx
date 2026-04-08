@@ -22,6 +22,9 @@ type HomeNewsArticle = {
 
 type HomeCollege = College & {
   stream?: string | string[];
+   rawScraped?: {
+    courses?: any[];
+  };
 };
 
 type IdleDeadlineLike = {
@@ -177,9 +180,9 @@ const shouldSkipHomeAnimations = () => {
   }
 
   return (
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-    window.matchMedia("(pointer: coarse)").matches ||
-    window.innerWidth < 768
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches 
+   
+ 
   );
 };
 
@@ -263,11 +266,11 @@ const deferredLargeSectionStyle = {
 } as React.CSSProperties;
 
 const EMPTY_HOME_COLLEGE_META = {
-  regionList: [],
-  cityStateList: [],
-  stateList: [],
-  dynamicStreams: [],
-} as const;
+  regionList: [] as string[],
+  cityStateList: [] as any[],
+  stateList: [] as string[],
+  dynamicStreams: [] as string[],
+};
 
 
 
@@ -447,7 +450,7 @@ const preferValue = (currentValue: string, nextValue: string, fallback = "N/A") 
   return currentValue;
 };
 
-const extractCourses = (colleges = []) => {
+const extractCourses = (colleges: HomeCollege[] = []) => {
   const map = new Map<string, any>();
 
   (Array.isArray(colleges) ? colleges : []).forEach(col => {
@@ -529,7 +532,7 @@ const normalizeExploreCourse = (course: any) => {
 };
 
 // src/constants/regionMap.ts
-const REGION_MAP = {
+const REGION_MAP: Record<string, { cities: string[] }> = {
   "Delhi NCR": {
     cities: [
       "Delhi",
@@ -720,7 +723,7 @@ const collegeMeta = useMemo(() => {
   const dynamicStreams = collegeMeta.dynamicStreams;
 
   useEffect(() => {
-    setFilteredStates(stateList);
+    setFilteredStates([...stateList]);
   }, [stateList]);
 
   const fallbackCourses = useMemo(() => {
@@ -1520,7 +1523,7 @@ const HERO_TAGS = [
     <div
       className="absolute right-[12%] overflow-hidden"
       style={{
-        miwidth: "400px", 
+        minWidth: "400px", 
         width: "450px",
         height: "500px",
         top: "24%",
@@ -2218,7 +2221,8 @@ const HERO_TAGS = [
       shadow-lg
       hover:bg-[#163a7a]
       transition-all
-      mb-8
+      mb-8 
+      mt-5
 
       /* MOBILE */
       px-5 py-2 text-xs
@@ -2551,21 +2555,21 @@ const HERO_TAGS = [
                     </div>
 
                     {/* Title */}
-                 <h3
+     <h3
   className="
-    text-[14px]
-    mb-3
-    leading-snug
+    text-[13px]
+    font-semibold
+    text-gray-700
+    w-full
     overflow-hidden
-    text-ellipsis
     whitespace-nowrap
-    max-w-full
+    text-ellipsis
+    min-h-[18px]
   "
   title={course.name}
 >
   {course.name}
 </h3>
-
 
                     {/* Info Boxes */}
                   <div className="grid grid-cols-2 gap-2 text-[10px] md:text-xs mb-3 mt-3">
@@ -2862,7 +2866,7 @@ const HERO_TAGS = [
     </div>
   </div>
 
-  <style jsx>{`
+  <style>{`
     .custom-scrollbar::-webkit-scrollbar { width: 3px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }

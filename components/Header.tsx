@@ -1346,7 +1346,7 @@ const CollegesMegaMenu = () => {
                 setIsMenuOpen(false);
                 onOpenApplyNow();
               }}
-              className="w-full mt-3 py-3 bg-[#1E4A7A] rounded-full font-semibold text-white"
+              className="w-full mt-3 py-3 bg-[#f4a71d] rounded-full font-semibold text-white"
             >
               Free Counselling
             </button>

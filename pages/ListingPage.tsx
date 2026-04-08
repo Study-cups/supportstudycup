@@ -138,7 +138,7 @@ const getLocationParts = (college: any): string[] => {
 
   return college.location
     .split(",")
-    .map((part) => getCleanStringValue(part))
+    .map((part:string) => getCleanStringValue(part))
     .filter(Boolean);
 };
 
@@ -354,6 +354,85 @@ const toSeoSlug = (value: string) =>
     .replace(/[.\s]+/g, "-")   // ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ removes dots AND spaces
     .replace(/\//g, "-")
     .replace(/--+/g, "-");
+
+const SEO_DATA = {
+  cities: [
+    "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Kolkata", "Pune",
+    "Ahmedabad", "Jaipur", "Lucknow", "Chandigarh", "Bhopal", "Indore", "Nagpur",
+    "Coimbatore", "Kochi", "Visakhapatnam", "Patna", "Bhubaneswar", "Dehradun",
+    "Noida", "Gurgaon", "Navi Mumbai", "Thane", "Surat", "Vadodara", "Amritsar",
+    "Mysore", "Mangalore", "Thiruvananthapuram"
+  ],
+  keywords: [
+    "best MBA colleges in India",
+    "top engineering colleges 2026",
+    "medical colleges with low fees",
+    "MBA colleges accepting CAT scores",
+    "top law colleges India",
+    "best BBA colleges",
+    "NIRF ranked colleges",
+    "MBA with 100% placement",
+    "colleges accepting MAT scores",
+    "distance MBA programs India",
+    "executive MBA India",
+    "top private universities India",
+    "deemed universities India",
+    "AICTE approved colleges",
+    "UGC recognized universities"
+  ],
+  categories: [
+    { label: "Top MBA Colleges", count: "200+", icon: "🎓", color: "#F5A623" },
+    { label: "Medical Colleges", count: "100+", icon: "🏥", color: "#4ECDC4" },
+    { label: "Engineering Colleges", count: "150+", icon: "⚙️", color: "#A8E6CF" },
+    { label: "Avg Placement Package", count: "7.2Lpa", icon: "💼", color: "#F5A623" },
+    { label: "Law Colleges", count: "80+", icon: "⚖️", color: "#C3B1E1" },
+  ],
+  stats: [
+    { value: "500+", label: "Partner Colleges" },
+    { value: "28", label: "States Covered" },
+    { value: "6", label: "Disciplines" },
+    { value: "Free", label: "Counselling" },
+  ]
+} as const;
+
+const COLLEGE_DIRECTORY_WEBSITE_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "College Directory India",
+  "description":
+    "Find the best MBA, Engineering, Medical, and Law colleges across all cities in India. Compare fees, placements, cutoffs and admission details.",
+  "url": "https://studycups.in/colleges",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "https://studycups.in/search?q={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+};
+
+const COLLEGE_DIRECTORY_FAQ_SCHEMA = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Which are the best MBA colleges in India in 2026?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text":
+          "The top MBA colleges in India include IIM Ahmedabad, IIM Bangalore, IIM Calcutta, XLRI, FMS Delhi, and 200+ other partner colleges across 28 states."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the average placement package for MBA in India?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text":
+          "The average placement package for MBA graduates in India is 7.2 LPA, with top institutes offering packages of 20 to 30 LPA."
+      }
+    }
+  ]
+};
 
 const FilterSidebar: React.FC<FilterSidebarProps> = ({
   filters,
@@ -888,14 +967,14 @@ const ListingPage: React.FC<ListingPageProps> = ({
   const normalizeText = (s = "") =>
     s.toLowerCase().replace(/\s+/g, "").replace(/[.,]/g, "");
 
-  const filterByRegion = (college, region) => {
+  const filterByRegion = (college: College, region: string) => {
     if (!region) return true;
 
     const location = normalizeText(college.location || "");
     const collegeState = normalizeText(getCollegeStateValue(college));
 
     // 1ÃƒÂ¯Ã‚Â¸Ã‚ÂÃƒÂ¢Ã†â€™Ã‚Â£ NCR special handling (existing behavior preserved)
-    const ncrConfig = REGION_MAP[region];
+   const ncrConfig = REGION_MAP[region as keyof typeof REGION_MAP];
     if (ncrConfig) {
       return ncrConfig.cities.some(city =>
         location.includes(normalizeText(city))
@@ -909,6 +988,7 @@ const ListingPage: React.FC<ListingPageProps> = ({
 
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isHeroExpanded, setIsHeroExpanded] = useState(false);
   const [sortBy, setSortBy] = useState("most-popular");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [visibleCount, setVisibleCount] = useState(36);
@@ -918,6 +998,8 @@ const ListingPage: React.FC<ListingPageProps> = ({
     states: 0,
     disciplines: 0,
   });
+  const [heroCityIndex, setHeroCityIndex] = useState(0);
+  const [isHeroCityVisible, setIsHeroCityVisible] = useState(true);
   const hasRunHeroStatsRef = useRef(false);
   const desktopSidebarRef = useRef<HTMLElement | null>(null);
 
@@ -940,6 +1022,24 @@ const ListingPage: React.FC<ListingPageProps> = ({
 
     return () => {
       timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, []);
+
+  useEffect(() => {
+    let timeoutId: number | undefined;
+
+    const intervalId = window.setInterval(() => {
+      setIsHeroCityVisible(false);
+
+      timeoutId = window.setTimeout(() => {
+        setHeroCityIndex((previousIndex) => (previousIndex + 1) % SEO_DATA.cities.length);
+        setIsHeroCityVisible(true);
+      }, 280);
+    }, 2200);
+
+    return () => {
+      window.clearInterval(intervalId);
+      if (timeoutId) window.clearTimeout(timeoutId);
     };
   }, []);
 
@@ -1289,10 +1389,65 @@ const ListingPage: React.FC<ListingPageProps> = ({
         : "Across India"
       : `Top ${filters.stream} Colleges${filters.city ? ` in ${filters.city}` : !filters.city && filters.region ? ` in ${filters.region}` : ""}`;
 
+  const shouldAnimateHeroCity =
+    (!filters.stream || filters.stream === "All") && !filters.city && !filters.region;
+
   const mobileHeroDescription =
     filters.stream && filters.stream !== "All"
       ? `Browse our curated network of ${filters.stream} colleges. Compare fees, cutoffs, placements and get free admission help from our counsellors.`
       : "Browse our curated network of 500+ MBA, MBBS, B.Tech, BBA, Law and Fashion Design colleges. Compare fees, cutoffs and placements, then get free admission help from our counsellors.";
+
+  const handleHeroSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+  };
+
+  const handleHeroCategoryAction = (label: string) => {
+    if (label === "Avg Placement Package") {
+      setSortBy("highest-placement");
+      return;
+    }
+
+    const streamByLabel: Record<string, string> = {
+      "Top MBA Colleges": "MBA",
+      "Medical Colleges": "Medical",
+      "Engineering Colleges": "Engineering",
+      "Law Colleges": "Law",
+    };
+
+    const nextStream = streamByLabel[label];
+    if (!nextStream) return;
+
+    setFilters((previousFilters) => ({
+      ...previousFilters,
+      stream: nextStream,
+      city: "",
+      region: undefined,
+    }));
+  };
+
+  const handleHeroKeywordAction = (keyword: string) => {
+    const lowerKeyword = keyword.toLowerCase();
+
+    setFilters((previousFilters) => ({
+      ...previousFilters,
+      college: "",
+      stream:
+        lowerKeyword.includes("mba") ? "MBA" :
+        lowerKeyword.includes("engineering") ? "Engineering" :
+        lowerKeyword.includes("medical") ? "Medical" :
+        lowerKeyword.includes("law") ? "Law" :
+        lowerKeyword.includes("bba") ? "BBA" :
+        previousFilters.stream,
+    }));
+  };
+
+  const handleHeroCityAction = (city: string) => {
+    setFilters((previousFilters) => ({
+      ...previousFilters,
+      city,
+      region: undefined,
+    }));
+  };
 
 
   return (
@@ -1307,175 +1462,256 @@ const ListingPage: React.FC<ListingPageProps> = ({
           rel="canonical"
           href={`https://studycups.in${location.pathname}`}
         />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(COLLEGE_DIRECTORY_WEBSITE_SCHEMA),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(COLLEGE_DIRECTORY_FAQ_SCHEMA),
+          }}
+        />
       </Helmet>
+      <h1 className="sr-only">
+        Find Best Colleges in India 2026 - MBA, Engineering, Medical, Law Colleges Across All Cities
+      </h1>
+      <p className="sr-only">
+        Discover top MBA colleges, engineering colleges, medical colleges, and law colleges across
+        Mumbai, Delhi, Bangalore, Hyderabad, Chennai, Pune, Kolkata, Ahmedabad, Jaipur and all
+        cities in India. Compare fees, cutoffs, placements and admission details for 2026 batch.
+        NIRF ranked, AICTE approved, UGC recognized institutions. Free counselling available.
+      </p>
       {/* HERO */}
-      <section className="mt-0 mb-0 md:mt-20">
-
-        {/* MOBILE: full width | DESKTOP: centered */}
+      <section className="mt-0 mb-0 md:mt-20" aria-label="College directory hero section">
         <div className="w-full">
+          <div className="relative overflow-hidden rounded-none border border-[#20476c]/60 bg-gradient-to-br from-[#07192f] via-[#082540] to-[#0f3a5f] text-white">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 opacity-35"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+                backgroundSize: "40px 40px",
+              }}
+            />
+            <div className="absolute -top-20 -left-16 h-52 w-52 rounded-full bg-[#2f6cb9]/20 blur-[60px] pointer-events-none" />
+            <div className="absolute -bottom-12 right-0 h-44 w-44 rounded-full bg-[#1b8a8a]/20 blur-[60px] pointer-events-none" />
 
-          <div
-            className="
-        relative overflow-hidden
-        bg-gradient-to-br from-[#07192f] via-[#082540] to-[#0f3a5f]
-        text-white
-        rounded-none
-        border border-[#20476c]/60
-      "
-          >
-            <div className="absolute -top-20 -left-16 w-52 h-52 bg-[#2f6cb9]/20 blur-[60px] rounded-full pointer-events-none" />
-            <div className="absolute -bottom-12 right-0 w-44 h-44 bg-[#1b8a8a]/20 blur-[60px] rounded-full pointer-events-none" />
+            <div className="relative z-10 container mx-auto px-4 py-5 md:px-6 md:py-5">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-[690px]">
+                  <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-white/70 md:pt-3 md:text-sm md:text-white/60">
+                    <Link to="/" className="transition-colors hover:text-white">
+                      Home
+                    </Link>
+                    <span className="text-white/30">&gt;</span>
+                    <span className="font-semibold text-[#f4a71d]">College Directory</span>
+                  </div>
 
-            <div className="relative z-10 px-4 py-5 md:px-6 md:py-5">
-              <div className="md:hidden">
-                <div className="text-[13px] text-white/65">
-                  Home <span className="mx-1">&rsaquo;</span>{" "}
-                  <span className="font-semibold text-[#f4a71d]">College Directory</span>
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-[10px] border border-[#f4a71d]/35 bg-[#f4a71d]/10 px-4 py-2 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#ffc365]">
+                    <span className="h-1 w-1 rounded-full bg-[#f4a71d]" />
+                    500+ Partner Colleges - Updated 2026
+                  </div>
+
+                  <h2
+                    className="mt-5 max-w-[640px] text-[30px] leading-[1.12] tracking-[-0.04em] text-white md:text-[48px] md:leading-[0.96]"
+                    style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                  >
+                    Find Your{" "}
+                    <span className="font-medium italic text-[#f4a71d]">Perfect College</span>
+                    <br />
+                    {shouldAnimateHeroCity ? (
+                      <>
+                        Across{" "}
+                        <span
+                          className={`inline-block text-[#4ecdc4] transition-all duration-300 ${
+                            isHeroCityVisible ? "translate-y-0 opacity-100" : "-translate-y-1.5 opacity-0"
+                          }`}
+                        >
+                          {SEO_DATA.cities[heroCityIndex]}
+                        </span>
+                      </>
+                    ) : (
+                      heroHeadingContext
+                    )}
+                  </h2>
+
+                  <p className="mt-4 max-w-[720px] text-[15px] leading-[1.72] text-white/82 md:text-[0.90rem] md:leading-7">
+                    {mobileHeroDescription}
+                  </p>
+
+                  <div className="mt-7 flex flex-wrap items-end gap-x-10 gap-y-4">
+                    {[
+                      { value: `${heroStats.colleges}+`, label: SEO_DATA.stats[0].label },
+                      { value: `${heroStats.states}`, label: SEO_DATA.stats[1].label },
+                      { value: `${heroStats.disciplines}`, label: SEO_DATA.stats[2].label },
+                      { value: SEO_DATA.stats[3].value, label: SEO_DATA.stats[3].label },
+                    ].map((item, index, stats) => (
+                      <div
+                        key={item.label}
+                        className={
+                          index === stats.length - 1 && !isHeroExpanded
+                            ? "flex items-end gap-6"
+                            : undefined
+                        }
+                      >
+                        <div>
+                          <p
+                            className="text-[28px] font-semibold leading-none text-[#f4a71d] md:text-[34px]"
+                            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+                          >
+                            {item.value}
+                          </p>
+                          <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.14em] text-white/70">
+                            {item.label}
+                          </p>
+                        </div>
+
+                        {index === stats.length - 1 && !isHeroExpanded && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setIsHeroExpanded(true)}
+                              aria-label="View more hero details"
+                              className="animate-listingPulse inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#f4a71d] text-2xl font-semibold leading-none text-[#0b1629] shadow-[0_14px_34px_rgba(244,167,29,0.28)] transition hover:bg-[#ffc04f] md:hidden"
+                            >
+                              <span aria-hidden="true">↓</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIsHeroExpanded(true)}
+                              className="animate-listingPulse hidden rounded-full bg-[#f4a71d] px-7 py-3 text-sm font-semibold text-[#0b1629] shadow-[0_14px_34px_rgba(244,167,29,0.28)] transition hover:bg-[#ffc04f] md:inline-flex"
+                            >
+                              View More
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-           
-                <h1
-                  className="mt-8 pt-4 max-w-[320px] text-[25px] leading-7 tracking-[-0.04em] text-white"
-                  style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                >
-                  Find Your{" "}
-                  <span className="font-semibold italic text-[#f4a71d]">Perfect</span>
-                  <br />
-                  <span className="font-semibold italic text-[#f4a71d]">College</span>
-                  <br />
-                  <span className="text-slate-50">{heroHeadingContext}</span>
-                </h1>
-
-                <p className="mt-2 pt-1 max-w-[320px] text-[12px] leading-5 text-slate-200/88">
-                  {mobileHeroDescription}
-                </p>
-
-                <div className="mt-9 grid grid-cols-2 gap-x-8 gap-y-4">
-                  <div>
-                    <p
-                      className="text-[1.5rem] leading-none font-semibold text-[#f4a71d]"
-                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                    >
-                      {heroStats.colleges}+
-                    </p>
-                    <p className="mt-1 text-[0.9rem] leading-5 text-white/70">Partner Colleges</p>
-                  </div>
-
-                  <div>
-                    <p
-                      className="text-[1.5rem] leading-none font-semibold text-[#f4a71d]"
-                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                    >
-                      {heroStats.states}
-                    </p>
-                    <p className="mt-1 text-[0.9rem] leading-5 text-white/70">States Covered</p>
-                  </div>
-
-                  <div>
-                    <p
-                      className="text-[1.5rem] leading-none font-semibold text-[#f4a71d]"
-                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                    >
-                      {heroStats.disciplines}
-                    </p>
-                    <p className="mt-1 text-[0.9rem] leading-5 text-white/70">Disciplines</p>
-                  </div>
-
-                  <div>
-                    <p
-                      className="text-[1.5rem] leading-none font-semibold text-[#f4a71d]"
-                      style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                    >
-                      Free
-                    </p>
-                    <p className="mt-1 text-[0.9rem] leading-5 text-white/70">Counselling</p>
+                <div className="hidden w-full max-w-[320px] shrink-0 lg:block">
+                  <div className="space-y-3">
+                    {SEO_DATA.categories.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => handleHeroCategoryAction(item.label)}
+                        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.08] px-4 py-4 text-left transition hover:border-white/20 hover:bg-white/[0.11]"
+                      >
+                        <span className="min-w-0 truncate text-[13px] font-semibold text-white/88">
+                          {item.label}
+                        </span>
+                        <span className="shrink-0 text-[15px] font-semibold" style={{ color: item.color }}>
+                          {item.count}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              <div className="hidden grid-cols-1 items-start gap-4 md:grid md:grid-cols-12 md:gap-5">
-                <div className="md:col-span-9 pl-2 md:pl-5">
-                  <div className="text-[11px] md:text-xs text-white/60 mb-2">
-                    Home <span className="mx-1">&rsaquo;</span>{" "}
-                    <span className="text-[#f4a71d] font-semibold">College Directory</span>
-                  </div>
-
-                  <div className="inline-flex items-center rounded-full border border-[#f4a71d]/35 bg-[#f4a71d]/10 px-2.5 py-1 text-[10px] md:text-[11px] font-semibold tracking-wide text-[#ffc365]">
-                    500+ PARTNER COLLEGES - UPDATED 2026
-                  </div>
-
-                  <h1 className="mt-3 text-[18px] md:text-[36px] leading-[1.08] font-bold tracking-tight">
-                    Find Your{" "}
-                    <span className="text-[#f4a71d] font-serif italic font-semibold">
-                      Perfect College
-                    </span>
-                    <br className="hidden md:block" />
-                    <span className="text-slate-100">{heroHeadingContext}</span>
-                  </h1>
-
-                  <p className="mt-2 text-xs md:text-sm text-slate-200/90 max-w-xl">
-                    Browse our curated network of colleges. Compare fees, cutoffs,
-                    placements and admission details with one clean view.
-                  </p>
-
-                  <div className="mt-3 grid grid-cols-4 gap-2.5 max-w-xl">
-                    <div>
-                      <p className="text-[#f4a71d] text-[15px] md:text-[24px] leading-none font-semibold font-serif">
-                        {heroStats.colleges}+
-                      </p>
-                      <p className="text-[8px] md:text-[11px] text-white/75 mt-1">Partner Colleges</p>
-                    </div>
-                    <div>
-                      <p className="text-[#f4a71d] text-[15px] md:text-[24px] leading-none font-semibold font-serif">
-                        {heroStats.states}
-                      </p>
-                      <p className="text-[8px] md:text-[11px] text-white/75 mt-1">States Covered</p>
-                    </div>
-                    <div>
-                      <p className="text-[#f4a71d] text-[15px] md:text-[24px] leading-none font-semibold font-serif">
-                        {heroStats.disciplines}
-                      </p>
-                      <p className="text-[8px] md:text-[11px] text-white/75 mt-1">Disciplines</p>
-                    </div>
-                    <div>
-                      <p className="text-[#f4a71d] text-[15px] md:text-[24px] leading-none font-semibold font-serif">
-                        Free
-                      </p>
-                      <p className="text-[8px] md:text-[11px] text-white/75 mt-1">Counselling</p>
-                    </div>
-                  </div>
-
-
+              <div
+                className={`transition-all duration-500 ${
+                  isHeroExpanded
+                    ? "mt-8 max-h-[1200px] overflow-visible opacity-100"
+                    : "max-h-0 overflow-hidden opacity-0 pointer-events-none"
+                }`}
+              >
+                <div className="flex flex-wrap gap-2.5" aria-label="Popular searches">
+                  {["MBA 2026", "CAT Colleges", "Top Placements", "NIRF Ranked", "Free Counselling"].map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => {
+                        if (item === "Top Placements") setSortBy("highest-placement");
+                        else if (item === "NIRF Ranked") setSortBy("highest-rated");
+                        else if (item === "Free Counselling") onOpenApplyNow();
+                        else handleHeroKeywordAction(item);
+                      }}
+                      className="rounded-full border border-white/15 px-4 py-1.5 text-xs text-white/75 transition hover:border-[#f4a71d]/45 hover:bg-white/5 hover:text-white"
+                    >
+                      {item}
+                    </button>
+                  ))}
                 </div>
 
-                <div className="md:col-span-3">
-                  <div className="grid grid-cols-2 md:grid-cols-1 gap-2.5">
-                    {[
-                      ["Top MBA Colleges", "200+"],
-                      ["Medical Colleges", "100+"],
-                      ["Engineering Colleges", "150+"],
-                      ["Avg Placement Package", "7.2Lpa"],
-                      ["Law Colleges", "80+"],
-                    ].map(([label, value]) => (
-                      <div
-                        key={label}
-                        className={`rounded-xl border border-white/12 bg-white/8 backdrop-blur px-2.5 py-2 ${label === "Top MBA Colleges" || label === "Avg Placement Package"
-                            ? ""
-                            : "hidden md:block"
-                          }`}
+                <form
+                  role="search"
+                  onSubmit={handleHeroSearchSubmit}
+                  className="mt-7 flex max-w-[560px] flex-col gap-3 sm:flex-row"
+                  aria-label="Search colleges"
+                >
+                  <label htmlFor="listing-hero-search" className="sr-only">
+                    Search for best colleges in India
+                  </label>
+                  <input
+                    id="listing-hero-search"
+                    name="q"
+                    type="search"
+                    value={filters.college}
+                    onChange={(event) =>
+                      setFilters((previousFilters) => ({
+                        ...previousFilters,
+                        college: event.target.value,
+                      }))
+                    }
+                    placeholder="Search colleges, cities, courses..."
+                    autoComplete="off"
+                    className="h-11 min-w-0 flex-1 rounded-[10px] border border-white/15 bg-white/8 px-4 text-sm text-white outline-none placeholder:text-white/40 focus:border-[#f4a71d]/50"
+                  />
+                  <button
+                    type="submit"
+                    className="h-11 rounded-[10px] bg-[#f4a71d] px-6 text-sm font-semibold text-[#0b1629] transition hover:bg-[#ffc04f]"
+                  >
+                    Search
+                  </button>
+                </form>
+
+                <div className="mt-8 border-t border-white/10 pt-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/38">
+                    Browse by City
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {SEO_DATA.cities.map((city) => (
+                      <button
+                        key={city}
+                        type="button"
+                        onClick={() => handleHeroCityAction(city)}
+                        className="rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/58 transition hover:border-white/20 hover:text-white"
+                        title={`Best colleges in ${city}`}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-[11px] md:text-[12px] text-white/80">{label}</span>
-                          <span className="text-[#f4a71d] font-semibold text-xs md:text-sm">{value}</span>
-                        </div>
-                      </div>
+                        {city}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/38">
+                    Popular Searches
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {SEO_DATA.keywords.map((keyword) => (
+                      <button
+                        key={keyword}
+                        type="button"
+                        onClick={() => handleHeroKeywordAction(keyword)}
+                        className="rounded-md border border-[#f4a71d]/15 bg-[#f4a71d]/5 px-3 py-1.5 text-xs text-[#f2bc65] transition hover:border-[#f4a71d]/30 hover:text-[#ffd086]"
+                        title={keyword}
+                      >
+                        {keyword}
+                      </button>
                     ))}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
         </div>
       </section>
 
@@ -1871,8 +2107,16 @@ const ListingPage: React.FC<ListingPageProps> = ({
           from { transform: translateY(100%); }
           to { transform: translateY(0); }
         }
+        @keyframes listingPulse {
+          0% { transform: scale(1); box-shadow: 0 14px 34px rgba(244,167,29,0.22); }
+          50% { transform: scale(1.04); box-shadow: 0 18px 42px rgba(244,167,29,0.34); }
+          100% { transform: scale(1); box-shadow: 0 14px 34px rgba(244,167,29,0.22); }
+        }
         .animate-slideUp {
           animation: slideUp 0.25s ease-out;
+        }
+        .animate-listingPulse {
+          animation: listingPulse 1.7s ease-in-out infinite;
         }
       `}</style>
     </div>
