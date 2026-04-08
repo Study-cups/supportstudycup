@@ -3,7 +3,7 @@ import type { College } from "../types";
 import CollegeCard from "../components/CollegeCard";
 import { lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import { buildCourseDetailPath, toCourseSlug } from "./Seo";
+import { buildCourseDetailPath, toCourseSlug } from "./Seo"
 import { Helmet } from "react-helmet-async";
 import { useOnScreen } from "../hooks/useOnScreen";
 import { useLocation } from "react-router-dom";
@@ -88,7 +88,7 @@ const formatHomeNewsDate = (value = "") => {
 };
 
 const PRIORITY_CITIES = [
-  "Delhi NCR",
+ "Delhi NCR",
   "Bangalore",
   "Mumbai",
   "Chennai",
@@ -109,20 +109,25 @@ const ADMISSION_TICKER_ITEMS = [
   { icon: "📍", label: "Offices in Kanpur, Lucknow, Delhi NCR" }
 ];
 
+
 const HERO_TYPED_WORDS = ["Colleges", "Courses", "Placements"];
 const HERO_TYPING_SPEED = 110;
 const HERO_DELETING_SPEED = 70;
 const HERO_WORD_PAUSE_MS = 1300;
 const HERO_WORD_SWITCH_DELAY_MS = 250;
 
+
 interface HomePageProps {
+
   colleges: HomeCollege[];
+
   exams: any[];
-  loading?: boolean;
-  onOpenBrochure: () => void;
-  onCompareToggle: (id: string) => void;
+   loading?: boolean;
+   onOpenBrochure: () => void;
+   onCompareToggle: (id: string) => void;
   compareList: string[]; // 🔥 ADD THIS 
-  onOpenApplyNow: () => void;
+   onOpenApplyNow: () => void;
+
 }
 
 const AnimatedContainer: React.FC<{
@@ -263,6 +268,9 @@ const EMPTY_HOME_COLLEGE_META = {
   stateList: [],
   dynamicStreams: [],
 } as const;
+
+
+
 
 const StreamTag: React.FC<{ stream: string }> = ({ stream }) => {
   const colors: { [key: string]: string } = {
@@ -540,7 +548,10 @@ const REGION_MAP = {
   }
 };
 
+
+
 const HomePage: React.FC<HomePageProps> = ({
+
   colleges,
   exams,
   loading: _loading,
@@ -548,6 +559,7 @@ const HomePage: React.FC<HomePageProps> = ({
   onCompareToggle,
   compareList , 
   onOpenApplyNow
+
 }) => {
   const navigate = useNavigate();
   const [selectedStream, setSelectedStream] = useState<string | null>(null);
@@ -567,10 +579,10 @@ const HomePage: React.FC<HomePageProps> = ({
   const [shouldRenderTopExams, setShouldRenderTopExams] = useState(false);
   const [shouldLoadStudentNews, setShouldLoadStudentNews] = useState(false);
 
-  const location = useLocation() as ReturnType<typeof useLocation> & {
-    state?: { region?: string | null } | null;
-  };
-  const selectedRegion = location.state?.region || null;
+const location = useLocation() as ReturnType<typeof useLocation> & {
+  state?: { region?: string | null } | null;
+};
+const selectedRegion = location.state?.region || null;
 
   const collegeMatchesStream = (college: HomeCollege, selectedStream: string) => {
     if (!selectedStream || selectedStream === "All Streams") return true;
@@ -594,6 +606,8 @@ const HomePage: React.FC<HomePageProps> = ({
     );
   };
 
+  
+
   const extractCityState = (location?: string) => {
     if (!location || typeof location !== "string") return null;
 
@@ -606,7 +620,6 @@ const HomePage: React.FC<HomePageProps> = ({
   }; 
   const normalize = (s = "") =>
   s.toLowerCase().replace(/\s+/g, "").replace(/\./g, "");
-  
   const resolveRegion = (city?: string) => {
   if (!city) return null;
 
@@ -836,6 +849,7 @@ const collegeMeta = useMemo(() => {
 
   const courses = exploreCourses.length > 0 ? exploreCourses : fallbackCourses;
 
+   
   const normalizeName = (s = "") =>
   s.toLowerCase().replace(/\s+/g, "").replace(/\./g, "");;
 
@@ -921,6 +935,11 @@ const CITY_ICON_MAP: Record<string, string> = {
   setFilteredStates(finalStates);
   setError("");
 };
+
+
+
+
+
 
 const filteredColleges = useMemo(() => {
   if (!shouldRenderCollegeSections || !Array.isArray(colleges)) return [];
@@ -1260,6 +1279,7 @@ const filteredColleges = useMemo(() => {
       ? rankingColleges
       : rankingColleges.filter((c) => c.stream === selectedtopcollge);
 
+
 const toExamSlug = (exam: any) =>
   exam.name
     .toLowerCase()
@@ -1268,7 +1288,6 @@ const toExamSlug = (exam: any) =>
     .trim()
     .replace(/\s+/g, "-") +
   (exam.year ? `-${exam.year}` : "");
-
   // FILTERED COURSES
   const exploreLevels = useMemo(() => {
     const availableLevels = HOME_EXPLORE_LEVEL_ORDER.filter((level) =>
@@ -1300,7 +1319,6 @@ const HOME_CITIES = [
 
 const visibleRegions = HOME_CITIES;
 const visibleHomeExams = useMemo(() => exams.slice(0, 10), [exams]);
-
  const FireIcon = () => (
   <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
     <path strokeLinecap="round" strokeLinejoin="round"
@@ -1351,10 +1369,12 @@ const HERO_COLLEGES = [
 
 const HERO_HUMAN_IMAGE =
   "/icons/Student_img.png"; 
-
  const deriveStream = (courseName: string) => {
   const name = courseName.toLowerCase();
-  
+ 
+
+
+
   /* ---------- DOCTORAL ---------- */
   if (
     name.includes("ph.d") ||
@@ -1500,7 +1520,7 @@ const HERO_TAGS = [
     <div
       className="absolute right-[12%] overflow-hidden"
       style={{
-        minWidth: "400px", 
+        miwidth: "400px", 
         width: "450px",
         height: "500px",
         top: "24%",
@@ -2031,25 +2051,27 @@ const HERO_TAGS = [
 </div>
 
 
-{/* -------------------------------------------------- */}
+      {/* -------------------------------------------------- */}
       {/* FIND YOUR IDEAL COLLEGE (Top Universities cards)  */}
       {/* -------------------------------------------------- */}
 
+    
       <DeferredMount
         placeholderHeight={1500}
         rootMargin="350px 0px"
         onVisible={() => setShouldRenderCollegeSections(true)}
       >
         <section
-          className="pb-8 md:pb-10 bg-white mt-5 pt-8 shadow-[0_12px_28px_rgba(0,0,0,0.06)] rounded-2xl flex flex-col"
+          className="pb-0 md:pb-6 bg-white mt-5 pt-8 shadow-[0_12px_28px_rgba(0,0,0,0.06)] rounded-2xl"
           style={deferredLargeSectionStyle}
         >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+ 
             {/* Heading */}
             <div className="mb-8">
+
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                
+
                 {/* LEFT SIDE: Heading */}
                 <div className="flex-shrink-0">
                   <h2
@@ -2068,37 +2090,44 @@ const HERO_TAGS = [
                 </div>
 
                 {/* RIGHT SIDE: Stream Filters */}
-                <div className="flex overflow-x-auto scrollbar-hide snap-x snap-mandatory md:flex-wrap gap-1 lg:justify-end lg:max-w-[60%] mb-[3px] md:mb-0">
+                <div className="flex overflow-x-auto
+           
+            scrollbar-hide
+            snap-x snap-mandatory md:flex-wrap gap-1 lg:justify-end lg:max-w-[60%] mb-[3px] md:mb-0 ">
                   {dynamicStreams.map((stream) => (
                     <button
-                      key={stream}
-                      onClick={() => setSelectedStream(stream)}
-                      className={`
-                        inline-flex items-center
-                        whitespace-nowrap
-                        px-3 py-1.5 md:px-5 md:py-2
-                        rounded-full
-                        text-[11px] md:text-sm
-                        font-medium
-                        border
-                        transition-all
-                        ${selectedStream === stream
-                          ? "bg-[#1f4fa8] text-white border-[#1f4fa8] shadow-md"
-                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
-                        }
-                      `}
-                      style={{ fontFamily: "Roboto, sans-serif" }}
-                    >
-                      {stream}
-                    </button>
+  key={stream}
+  onClick={() => setSelectedStream(stream)}
+  className={`
+    inline-flex items-center
+    whitespace-nowrap
+    px-3 py-1.5 md:px-5 md:py-2
+    rounded-full
+    text-[11px] md:text-sm
+    font-medium
+    border
+    transition-all
+    ${selectedStream === stream
+      ? "bg-[#1f4fa8] text-white border-[#1f4fa8] shadow-md"
+      : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50 shadow-sm"
+    }
+  `}
+  style={{ fontFamily: "Roboto, sans-serif" }}
+>
+  {stream}
+</button>
+
                   ))}
                 </div>
+
               </div>
+
             </div>
+
 
             {/* Horizontal Carousel */}
             {filteredColleges.length > 0 ? (
-              <div className="relative mt-2 mb-8">
+              <div className="relative">
 
                 {/* Left Arrow */}
                 <button
@@ -2121,25 +2150,29 @@ const HERO_TAGS = [
                 >
                   {filteredColleges.map((college, index) => (
                     <div
-                      key={college.id}
-                      className="
-                        flex-shrink-0
-                        min-w-[240px]
-                        max-w-[260px]
-                        sm:min-w-[280px]
-                        sm:max-w-[300px]
-                        lg:min-w-[300px]
-                        lg:max-w-[330px]
-                      "
-                    >
+  key={college.id}
+ 
+    className="
+    flex-shrink-0
+
+    min-w-[240px]
+    max-w-[260px]
+
+    sm:min-w-[280px]
+    sm:max-w-[300px]
+
+    lg:min-w-[300px]
+    lg:max-w-[330px]
+  "
+>
+
                       <AnimatedContainer delay={index * 90} className="h-full">
                         <CollegeCard
                           college={college}
-                          onOpenBrochure={onOpenBrochure}
+                            onOpenBrochure={onOpenBrochure}
                           onCompareToggle={onCompareToggle}
-                          isCompared={compareList.includes(String(college.id))}
-                          className="mb-0 h-full"
-                        />
+  isCompared={compareList.includes(String(college.id))}
+                          className="mb-0 h-full" />
                       </AnimatedContainer>
                     </div>
                   ))}
@@ -2160,7 +2193,7 @@ const HERO_TAGS = [
                 </button>
               </div>
             ) : (
-              <div className="text-center py-12 mb-8 bg-white rounded-2xl shadow-md border">
+              <div className="text-center py-12 bg-white rounded-2xl shadow-md border">
                 <h3
                   className="text-lg font-semibold text-slate-700"
                   style={{ fontFamily: "Roboto, sans-serif" }}
@@ -2173,36 +2206,35 @@ const HERO_TAGS = [
               </div>
             )}
 
-            {/* View All Button - 🟢 FIXED SPACING */}
-            <div className="text-center pb-2">
-              <button
-                onClick={() => navigate("/colleges")}
-                className="
-                  rounded-full
-                  bg-[#1f4fa8]
-                  text-white
-                  font-semibold
-                  shadow-lg
-                  hover:bg-[#163a7a]
-                  transition-all
-                  mb-0
+            {/* View All Button */}
+           <div className="text-center mt-4 md:mt-0">
+  <button
+    onClick={() => navigate("/colleges")}
+    className="
+      rounded-full
+      bg-[#1f4fa8]
+      text-white
+      font-semibold
+      shadow-lg
+      hover:bg-[#163a7a]
+      transition-all
+      mb-8
 
-                  /* MOBILE */
-                  px-6 py-2.5 text-sm
+      /* MOBILE */
+      px-5 py-2 text-xs
 
-                  /* DESKTOP (unchanged) */
-                  md:px-8 md:py-3 md:text-base
-                "
-                style={{ fontFamily: "Roboto, sans-serif" }}
-              >
-                View All Colleges
-              </button>
-            </div>
+      /* DESKTOP (unchanged) */
+      md:px-8 md:py-3 md:text-base
+    "
+    style={{ fontFamily: "Roboto, sans-serif" }}
+  >
+    View All Colleges
+  </button>
+</div>
+
 
           </div>
-        </section>
-      </DeferredMount>
-      
+        </section> 
 
     <section className=" md:mt-4 mt-2 ">
   <div className="max-w-7xl mx-auto">
@@ -2913,6 +2945,132 @@ const HERO_TAGS = [
 </section>
 </DeferredMount>
 
+
+     {/*   <section className="py-16 bg-[#f4f6fb]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          <h2 className="text-xl md:text-2xl text-slate-900 mb-8">
+            Latest from our Blog
+          </h2>
+
+         
+          <div
+            className="
+        flex md:hidden 
+        gap-4 overflow-x-auto scroll-smooth 
+        snap-x snap-mandatory pb-4 scrollbar-hide
+      "
+          >
+            {BLOG_POSTS_DATA.slice(0, 3).map((post, index) => (
+              <div
+                key={post.id}
+                onClick={() => navigate(`/blog/${post.id}`)}
+
+                className="
+            min-w-[85%] snap-start
+            bg-white rounded-2xl shadow-md border border-slate-100 
+            overflow-hidden cursor-pointer flex flex-col
+          "
+              >
+                <div className="h-36 overflow-hidden">
+                  <img
+                    src={post.imageUrl}
+                    alt={post.title}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+
+                <div className="px-5 py-4 flex flex-col">
+                  <span
+                    className={`
+                text-[10px] font-semibold px-2 py-1 rounded-full 
+                ${blogCategoryColors[post.category] || "bg-slate-100 text-slate-700"}
+              `}
+                  >
+                    {post.category}
+                  </span>
+
+                  <h3 className="text-sm font-semibold text-slate-900 mt-2">
+                    {post.title}
+                  </h3>
+
+                  <p className="text-[11px] text-slate-600 line-clamp-3 mt-1">
+                    {post.excerpt}
+                  </p>
+
+                  <span className="mt-3 text-[11px] font-semibold text-[#1f4fa8]">
+                    Read More →
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+      
+          <div className="hidden md:grid grid-cols-3 gap-6">
+            {BLOG_POSTS_DATA.slice(0, 3).map((post, index) => (
+              <AnimatedContainer key={post.id} delay={index * 80}>
+                <div
+                  onClick={() => navigate(`/blog/${post.id}`)}
+
+                  className="
+              bg-white rounded-2xl shadow-md border border-slate-100 
+              overflow-hidden cursor-pointer flex flex-col h-full
+            "
+                >
+                  <div className="h-40 overflow-hidden">
+                    <img
+                      src={post.imageUrl}
+                      alt={post.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+
+                  <div className="px-5 py-4 flex flex-col flex-grow">
+                    <span
+                      className={`
+                  text-[10px] font-semibold px-2 py-1 rounded-full 
+                  ${blogCategoryColors[post.category] || "bg-slate-100 text-slate-700"}
+                `}
+                    >
+                      {post.category}
+                    </span>
+
+                    <h3 className="text-sm font-semibold text-slate-900 mt-2 flex-grow">
+                      {post.title}
+                    </h3>
+
+                    <p className="text-[11px] text-slate-600 line-clamp-3">
+                      {post.excerpt}
+                    </p>
+
+                    <span className="mt-3 text-[11px] font-semibold text-[#1f4fa8]">
+                      Read More →
+                    </span>
+                  </div>
+                </div>
+              </AnimatedContainer>
+            ))}
+          </div>
+
+     
+          <div className="text-center mt-10">
+            <button
+              onClick={() => navigate("/blog")}
+
+              className="
+          inline-flex items-center justify-center px-6 py-2.5 rounded-full 
+          border border-[#1f4fa8] text-[#1f4fa8] text-sm font-semibold 
+          hover:bg-[#1f4fa8]/
+        "
+            >
+              View all articles
+            </button>
+          </div>
+
+        </div>
+      </section> /*}
+
       {/* -------------------------------------------------- */}
       {/* COLLEGE RANKING TABLE (Image 2 middle)            */}
       {/* -------------------------------------------------- */}
@@ -3018,6 +3176,8 @@ const HERO_TAGS = [
  
       {/* -------------------------------------------------- */}
       {/* OPTIONAL: FAQ + BLOG + CONTACT (keep functionality) */}
+      {/* (You can remove these if you strictly want home to  */}
+      {/* end at the gradient footer below.)                 */}
       {/* -------------------------------------------------- */} 
 
    
@@ -3219,6 +3379,8 @@ const HERO_TAGS = [
         </div>
       </section>
       </DeferredMount>
+
+
 
     </div>
   );
