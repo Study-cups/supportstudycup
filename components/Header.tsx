@@ -101,39 +101,28 @@ const MobileMenuSection: React.FC<{
   title: string;
   items: MobileMenuItem[];
   onItemClick: (path: string) => void;
-  viewAllPath: string;
-  viewAllLabel?: string;
 }> = ({
   title,
   items,
   onItemClick,
-  viewAllPath,
-  viewAllLabel,
 }) => {
   if (!items.length) return null;
 
   return (
-    <div className="px-1 py-1 text-white">
-      <p className="text-base font-bold text-white">{title}</p>
+    <div className="px-1 py-1 text-[#0F2D52]">
+      <p className="text-base font-bold text-[#0F2D52]">{title}</p>
 
-      <div className="mt-3 border-l border-white/15 pl-4">
+      <div className="mt-3 border-l border-slate-200 pl-4">
         {items.map((item) => (
           <button
             key={`${title}-${item.label}`}
             onClick={() => onItemClick(item.path)}
-            className="block w-full py-2 text-left text-sm text-slate-200 transition hover:text-white"
+            className="block w-full py-2 text-left text-sm text-slate-700 transition hover:text-white"
           >
             {item.label}
           </button>
         ))}
       </div>
-
-      <button
-        onClick={() => onItemClick(viewAllPath)}
-        className="mt-3 text-sm font-semibold text-white"
-      >
-        {viewAllLabel || `View All ${title}`}
-      </button>
     </div>
   );
 };
@@ -878,7 +867,7 @@ const navigateAndCloseMenu = (path: string) => {
 
 const mobileCollegeItems = useMemo<MobileMenuItem[]>(
   () => [
-   
+    {label: "All Colleges", path: "/colleges"},
     { label: "Engineering Colleges", path: buildCollegeStreamPath("engineering") },
     { label: "MBA Colleges", path: buildCollegeStreamPath("management") },
     { label: "Medical Colleges", path: buildCollegeStreamPath("medical") },
@@ -1313,7 +1302,7 @@ const CollegesMegaMenu = () => {
 
         {/* MOBILE MENU */}
         {isMenuOpen && (
-          <div className="lg:hidden bg-[#0F2D52] text-white mt-3 rounded-2xl px-5 py-5 space-y-4 shadow-xl max-h-[calc(100vh-96px)] overflow-y-auto overscroll-y-contain [webkit-overflow-scrolling:touch]">
+          <div className="lg:hidden bg-[white] text-black mt-3 rounded-2xl px-5 py-5 space-y-4 shadow-xl max-h-[calc(100vh-96px)] overflow-y-auto overscroll-y-contain [webkit-overflow-scrolling:touch]">
             <button
               onClick={() => navigateAndCloseMenu("/")}
               className="block w-full text-left py-2 text-base font-semibold"
@@ -1325,24 +1314,18 @@ const CollegesMegaMenu = () => {
               title="Colleges"
               items={mobileCollegeItems}
               onItemClick={navigateAndCloseMenu}
-              viewAllPath="/colleges"
-              viewAllLabel="View All Colleges"
             />
 
             <MobileMenuSection
               title="Courses"
               items={mobileCourseItems}
               onItemClick={navigateAndCloseMenu}
-              viewAllPath="/courses"
-              viewAllLabel="View All Courses"
             />
 
             <MobileMenuSection
               title="Exams"
               items={mobileExamItems}
               onItemClick={navigateAndCloseMenu}
-              viewAllPath="/exams"
-              viewAllLabel="View All Exams"
             />
 
             {[
@@ -1363,7 +1346,7 @@ const CollegesMegaMenu = () => {
                 setIsMenuOpen(false);
                 onOpenApplyNow();
               }}
-              className="w-full mt-3 py-3 bg-[#1E4A7A] rounded-full font-semibold"
+              className="w-full mt-3 py-3 bg-[#1E4A7A] rounded-full font-semibold text-white"
             >
               Free Counselling
             </button>
