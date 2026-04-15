@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+
+# Block internal/utility routes from crawling
+Disallow: /compare
+Disallow: /registration
+Disallow: /api/
+Disallow: /*.json$
+
+# Allow key Googlebot-specific paths
+User-agent: Googlebot
+Allow: /
+Allow: /mba/
+Allow: /btech/
+Allow: /mbbs/
+Allow: /bca/
+Allow: /bba/
+Allow: /colleges
+Allow: /courses
+Allow: /exams
+Allow: /blog
+Allow: /university/
+
+# Crawl-delay for other bots
+User-agent: Bingbot
+Crawl-delay: 5
+
+User-agent: YandexBot
+Crawl-delay: 10
+
+Sitemap: https://studycups.in/sitemap.xml

@@ -6,87 +6,28 @@ interface ApplyNowModalProps {
   mode: "apply" | "brochure";
 }
 
-/* const API_BASE = "https://studycupsbackend-wb8p.onrender.com"; */
-const API_BASE = "https://studycupsbackend-wb8p.onrender.com"; // LOCAL DEV
-const APPLY_MODAL_IMAGE_SRC = "/images/Registeredimg-optimized.png";
+const API_BASE = "https://studycupsbackend-wb8p.onrender.com";
 
-let applyModalImagePromise: Promise<void> | null = null;
+const STREAMS = ["MBA / Management", "B.Tech / Engineering", "MBBS / Medical", "Law (LLB)", "Design", "Commerce / BBA", "Other"];
+const BUDGETS = ["Under ₹2 Lakh/yr", "₹2L – ₹5L/yr", "₹5L – ₹15L/yr", "Above ₹15L/yr"];
+const TIMINGS = ["Morning (9AM–12PM)", "Afternoon (12PM–4PM)", "Evening (4PM–8PM)", "Any Time"];
 
-const preloadImage = (src: string) =>
-  new Promise<void>((resolve) => {
-    const image = new Image();
-    let settled = false;
-
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    };
-
-    const decodeIfPossible = () => {
-      if (typeof image.decode === "function") {
-        image.decode().catch(() => undefined).finally(finish);
-        return;
-      }
-      finish();
-    };
-
-    image.onload = decodeIfPossible;
-    image.onerror = finish;
-    image.src = src;
-
-    if (image.complete) {
-      decodeIfPossible();
-    }
-  });
-
-const preloadApplyNowModalImage = () => {
-  if (typeof window === "undefined") {
-    return Promise.resolve();
-  }
-
-  if (!applyModalImagePromise) {
-    applyModalImagePromise = preloadImage(APPLY_MODAL_IMAGE_SRC);
-  }
-
-  return applyModalImagePromise;
-};
-
-const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
-  isOpen,
-  onClose,
-  mode,
-}) => {
+const ApplyNowModal: React.FC<ApplyNowModalProps> = ({ isOpen, onClose, mode }) => {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    course: "",
-    city: "",
+    name: "", phone: "", email: "", stream: "", budget: "", timing: "", message: "",
   });
-
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    void preloadApplyNowModalImage();
-  }, []);
-
-  /* 🔒 Prevent background scroll */
-  useEffect(() => {
     if (!isOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,18 +39,9 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
       const response = await fetch(`${API_BASE}/api/registration`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          intent: mode,
-        }),
+        body: JSON.stringify({ ...formData, intent: mode }),
       });
-
-      if (!response.ok) {
-        alert("Something went wrong. Please try again.");
-        setLoading(false);
-        return;
-      }
-
+      if (!response.ok) { alert("Something went wrong. Please try again."); setLoading(false); return; }
       setIsSubmitted(true);
     } catch {
       alert("Server error. Please try later.");
@@ -121,7 +53,7 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
   const handleClose = () => {
     setIsSubmitted(false);
     setLoading(false);
-    setFormData({ name: "", email: "", phone: "", course: "", city: "" });
+    setFormData({ name: "", phone: "", email: "", stream: "", budget: "", timing: "", message: "" });
     onClose();
   };
 
@@ -129,170 +61,110 @@ const ApplyNowModal: React.FC<ApplyNowModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md px-4 sm:px-6 transition-all"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm px-4"
       onClick={handleClose}
     >
       <div
-        className="relative w-full max-w-5xl rounded-[2rem] bg-white text-slate-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col md:flex-row"
-        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg bg-white rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.3)] overflow-hidden"
+        onClick={e => e.stopPropagation()}
       >
-        {/* CLOSE BUTTON */}
-        <button
-          onClick={handleClose}
-          className="absolute top-5 right-5 z-20 h-10 w-10 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 hover:text-slate-800 transition-colors shadow-sm"
-          aria-label="Close modal"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+        {/* Close */}
+        <button onClick={handleClose}
+          className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full border border-white/20 text-white/80 flex items-center justify-center hover:bg-white/20 transition text-lg">
+          ✕
         </button>
 
         {!isSubmitted ? (
           <>
-            {/* LEFT SIDE: Brand Branding & Illustration */}
-            <div className="hidden md:flex flex-col items-center justify-center w-5/12 bg-[#0B2B5E] relative overflow-hidden p-10">
-              {/* Background Geometric Shapes inspired by screenshot */}
-              <div className="absolute top-0 right-0 w-[150%] h-[150%] bg-[#123b7a] rounded-bl-[100px] transform rotate-12 translate-x-1/4 -translate-y-1/4 opacity-50"></div>
-              <div className="absolute bottom-[-10%] left-[-20%] w-64 h-64 bg-[#F5A623] rounded-full blur-3xl opacity-20"></div>
-              
-              {/* Content */}
-              <div className="relative z-10 flex flex-col items-center text-center text-white">
-                <img
-                  src={APPLY_MODAL_IMAGE_SRC}
-                  alt="Student Illustration"
-                  loading="eager"
-                  decoding="async"
-                  fetchPriority="high"
-                  className="w-64 h-auto drop-shadow-2xl mb-8"
-                />
-                <h2 className="text-3xl font-bold leading-tight mb-3">
-                  Find Your <span className="text-[#F5A623]">Dream</span> College
-                </h2>
-                <p className="text-[#93A5C9] text-base px-4">
-                  Compare colleges, courses, fees, and real placement outcomes — all in one place.
-                </p>
-              </div>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#0a214a] to-[#1f4fa8] px-6 py-5">
+              <h2 className="text-[18px] font-bold text-white">
+                {mode === "brochure" ? "Register to Download Brochure" : "Book Free Counselling Session"}
+              </h2>
+              <p className="text-[12px] text-white/60 mt-1">
+                Fill in your details — our expert will call you within 24 hours
+              </p>
             </div>
 
-            {/* RIGHT SIDE: Form */}
-            <div className="w-full md:w-7/12 p-8 sm:p-12 bg-white relative">
-              <div className="max-w-md mx-auto">
-                <div className="mb-8 text-center md:text-left">
-                  <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                    {mode === "brochure"
-                      ? "Register to Download Brochure"
-                      : "Get Free Counselling"}
-                  </h2>
-                  <p className="text-slate-500 text-sm">
-                    Fill out the form below and our experts will guide you to the right path.
-                  </p>
+            {/* Form */}
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Full Name *</label>
+                  <input name="name" value={formData.name} onChange={handleChange} required
+                    placeholder="Your name"
+                    className="w-full h-10 rounded-xl border border-slate-200 px-3 text-[13px] focus:outline-none focus:border-[#1f4fa8] focus:ring-2 focus:ring-[#1f4fa8]/10" />
                 </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <input
-                      name="name"
-                      placeholder="Full Name"
-                      required
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all placeholder-slate-400"
-                    />
-                    <input
-                      name="phone"
-                      type="tel"
-                      placeholder="Mobile Number"
-                      required
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all placeholder-slate-400"
-                    />
-                  </div>
-
-                  <input
-                    name="email"
-                    type="email"
-                    placeholder="Email Address"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all placeholder-slate-400"
-                  />
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <input
-                      name="city"
-                      type="text"
-                      placeholder="City"
-                      required
-                      value={formData.city}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all placeholder-slate-400"
-                    />
-                    <select
-                      name="course"
-                      required
-                      value={formData.course}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#F5A623]/40 focus:border-[#F5A623] transition-all"
-                    >
-                      <option value="" disabled className="text-slate-400">Select Course Level</option>
-                      <option value="Undergraduate">Undergraduate</option>
-                      <option value="Postgraduate">Postgraduate</option>
-                      <option value="Diploma">Diploma</option>
-                    </select>
-                  </div>
-
-                  <label className="flex items-start gap-3 mt-4 mb-6 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      required 
-                      className="mt-1 w-4 h-4 rounded border-slate-300 text-[#F5A623] focus:ring-[#F5A623]"
-                    />
-                    <span className="text-xs text-slate-500 leading-relaxed">
-                      I agree to the{" "}
-                      <a
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        href="https://www.termsfeed.com/live/417bdd06-e677-4181-b70f-efa4edb0e654"
-                        className="text-[#0B2B5E] font-medium hover:underline"
-                      >
-                        Terms & Privacy Policy
-                      </a>
-                    </span>
-                  </label>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 rounded-xl font-bold text-white bg-[#F5A623] hover:bg-[#E09612] shadow-[0_8px_20px_rgba(245,166,35,0.25)] transition-all transform hover:-translate-y-[1px] active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none text-base"
-                  >
-                    {loading
-                      ? "Submitting..."
-                      : mode === "brochure"
-                      ? "REGISTER & DOWNLOAD"
-                      : "Start My Journey"}
-                  </button>
-                </form>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Phone Number *</label>
+                  <input name="phone" value={formData.phone} onChange={handleChange} required type="tel"
+                    placeholder="+91 98765..."
+                    className="w-full h-10 rounded-xl border border-slate-200 px-3 text-[13px] focus:outline-none focus:border-[#1f4fa8] focus:ring-2 focus:ring-[#1f4fa8]/10" />
+                </div>
               </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Email Address</label>
+                <input name="email" value={formData.email} onChange={handleChange} type="email"
+                  placeholder="you@email.com"
+                  className="w-full h-10 rounded-xl border border-slate-200 px-3 text-[13px] focus:outline-none focus:border-[#1f4fa8]" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Stream Interested In *</label>
+                  <select name="stream" value={formData.stream} onChange={handleChange} required
+                    className="w-full h-10 rounded-xl border border-slate-200 px-3 text-[13px] bg-white focus:outline-none focus:border-[#1f4fa8]">
+                    <option value="">Select stream</option>
+                    {STREAMS.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Annual Fee Budget</label>
+                  <select name="budget" value={formData.budget} onChange={handleChange}
+                    className="w-full h-10 rounded-xl border border-slate-200 px-3 text-[13px] bg-white focus:outline-none focus:border-[#1f4fa8]">
+                    <option value="">Select budget</option>
+                    {BUDGETS.map(b => <option key={b}>{b}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Preferred Call Timing</label>
+                <select name="timing" value={formData.timing} onChange={handleChange}
+                  className="w-full h-10 rounded-xl border border-slate-200 px-3 text-[13px] bg-white focus:outline-none focus:border-[#1f4fa8]">
+                  <option value="">Select timing</option>
+                  {TIMINGS.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">Specific Questions / Requirements</label>
+                <textarea name="message" value={formData.message} onChange={handleChange} rows={3}
+                  placeholder="e.g. Looking for MBA colleges under 10 LPA in Delhi NCR with good placements..."
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-[13px] focus:outline-none focus:border-[#1f4fa8] resize-none" />
+              </div>
+
+              <button type="submit" onClick={handleSubmit} disabled={loading}
+                className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-[#0a1628] font-bold rounded-xl text-[14px] shadow hover:opacity-90 transition disabled:opacity-50">
+                {loading ? "Submitting..." : "📞 Book Free Counselling →"}
+              </button>
+
+              <p className="text-center text-[10px] text-slate-400">
+                By submitting, you agree to be contacted by StudyCups advisors. 100% free, no spam.
+              </p>
             </div>
           </>
         ) : (
-          <div className="w-full p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-            <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6">
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Thank You!</h2>
-            <p className="text-slate-500 max-w-sm mb-8">
-              Your details have been successfully submitted. Our academic counselor will contact you shortly.
+          <div className="text-center py-14 px-8">
+            <div className="text-5xl mb-4">✅</div>
+            <h2 className="text-[22px] font-bold text-slate-900 mb-2">Request Submitted!</h2>
+            <p className="text-slate-500 text-[14px] mb-6">
+              Our counsellor will call you within <strong>24 hours</strong> at <strong>{formData.phone}</strong>.
             </p>
-            <button
-              onClick={handleClose}
-              className="px-10 py-3 rounded-xl font-bold text-white bg-[#0B2B5E] hover:bg-[#123b7a] transition-colors shadow-md"
-            >
-              Close Window
+            <button onClick={handleClose}
+              className="px-8 py-3 bg-gradient-to-r from-[#1f4fa8] to-[#0a214a] text-white font-bold rounded-xl text-sm">
+              Close
             </button>
           </div>
         )}

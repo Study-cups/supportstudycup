@@ -1,0 +1,71 @@
+{
+  "overview": "Narayana Business School (NBS) Ahmedabad is an AICTE-approved management institute known for its PGDM and MBA programs, industry-driven pedagogy, and strong placement support. NBS emphasizes practical learning, corporate exposure, and skill development.",
+  "location": {
+    "address": "Narayana Business School, Near Iskcon Temple, S.G. Highway, Ahmedabad, Gujarat, India",
+    "city": "Ahmedabad",
+    "state": "Gujarat",
+    "country": "India",
+    "coordinates": {
+      "latitude": 23.0731,
+      "longitude": 72.5164
+    }
+  },
+  "courses": [
+    {
+      "name": "PGDM (Dual Specialization)",
+      "duration": "2 years",
+      "level": "Postgraduate",
+      "fees": "₹9.85–10.85 Lakhs (program range)",
+      "eligibility": "Graduation with entrance score (CAT/MAT/CMAT/XAT/GMAT/NBSAT)",
+      "highlights": ["Dual specialization", "Industry projects"]
+    },
+    {
+      "name": "PGDM (Quantitative Finance)",
+      "duration": "2 years",
+      "level": "Postgraduate",
+      "fees": "Program-specific",
+      "eligibility": "Graduation with entrance score",
+      "highlights": ["Finance analytics", "Advanced quantitative methods"]
+    },
+    {
+      "name": "MBA + PGPCE",
+      "duration": "2 years",
+      "level": "Postgraduate",
+      "fees": "Program-specific",
+      "eligibility": "Graduation with entrance score",
+      "highlights": ["Corporate excellence", "Soft-skills emphasis"]
+    }
+  ],
+  "fees": {
+    "tuition": "Varies by program; refer to official fee schedule",
+    "notes": "Scholarships and financial support options available."
+  },
+  "placements": {
+    "highest": "₹19.5 LPA (2024)",
+    "average": "₹8.4 LPA (2024)",
+    "rate": "Robust placement outcomes across programs",
+    "recruiters": [
+      "PwC",
+      "TCS",
+      "EY",
+      "S&P Global",
+      "Airtel",
+      "Sony",
+      "Adani Group",
+      "HDFC Bank"
+    ],
+    "highlights": [
+      "378 recruiters; 584 offers (2024)",
+      "Training and career services throughout the program"
+    ]
+  },
+  "reviews": [
+    {
+      "author": "Student",
+      "rating": 4,
+      "content": "Good placement support and practical exposure; vibrant campus life.",
+      "source": "Aggregate"
+    }
+  ],
+  "gallery": []
+}

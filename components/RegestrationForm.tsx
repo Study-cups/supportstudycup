@@ -219,6 +219,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSubmit }) => {
       );
 
       const data = await res.json();
+      console.log("Server Response:", data);
 
      
       if (!res.ok) {
@@ -250,6 +251,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSubmit }) => {
       setLoading(false);
 
     } catch (err) {
+      
+      console.error("Submit Error:", err);
       alert("A network error occurred. Please try again.");
       setLoading(false);
     }

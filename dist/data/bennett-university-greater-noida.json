@@ -1,0 +1,53 @@
+{
+  "overview": "Bennett University (Times Group) in Noida/Greater Noida offers industry-led management programs with strong corporate partnerships, modern infrastructure, and an emphasis on experiential learning. The School of Management runs MBA and BBA programs with specialization options and a practice-driven curriculum aligned to current business needs.
+  ",
+  "courses": [
+    {
+      "name": "MBA",
+      "duration": "2 years",
+      "level": "Postgraduate",
+      "fees": "₹7–10 LPA average package; tuition varies by intake",
+      "eligibility": "Graduation with entrance score (CAT/MAT/CMAT/XAT/NMAT/GMAT)"
+    },
+    {
+      "name": "BBA",
+      "duration": "3 years",
+      "level": "Undergraduate",
+      "fees": "As per university schedule",
+      "eligibility": "Class 12 with required minimum marks"
+    }
+  ],
+  "fees": {
+    "tuition": "Program-specific; refer to official prospectus",
+    "notes": "Scholarships and financial aid available based on merit and criteria."
+  },
+  "placements": {
+    "highest": "₹33 LPA (MBA)",
+    "average": "₹7.41 LPA (MBA)",
+    "rate": "High placement conversion with extensive recruiter network",
+    "recruiters": [
+      "Adobe",
+      "Amazon",
+      "Capgemini",
+      "BNY Mellon",
+      "CISCO",
+      "HCL",
+      "HDFC Bank",
+      "Deloitte",
+      "KPMG"
+    ],
+    "highlights": [
+      "850+ companies participated in recent drives",
+      "Dedicated career services and industry mentorship"
+    ]
+  },
+  "reviews": [
+    {
+      "author": "Student",
+      "rating": 4,
+      "content": "Strong industry exposure, modern campus, and good placement support.",
+      "source": "Aggregate"
+    }
+  ],
+  "gallery": []
+}

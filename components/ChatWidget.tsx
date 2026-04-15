@@ -253,79 +253,48 @@ const ChatbotWidget: React.FC = () => {
   return (
     <>
       {/* FLOATING BUTTON */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-4">
-        <a
-          href="https://wa.me/917753831118"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Chat with StudyCups on WhatsApp"
-          className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] shadow-[0_14px_32px_rgba(37,211,102,0.34)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(37,211,102,0.4)]"
+      <div className="fixed bottom-6 right-6 z-[9999]">
+        <div className="pointer-events-none absolute inset-[-18px] rounded-[34px] bg-[radial-gradient(circle_at_50%_55%,rgba(243,161,28,0.34)_0%,rgba(243,161,28,0.18)_34%,rgba(243,161,28,0)_72%)] blur-2xl" />
+        <div className="pointer-events-none absolute inset-[-7px] rounded-[29px] bg-[conic-gradient(from_220deg_at_50%_50%,rgba(243,161,28,0.92),rgba(243,161,28,0.18),rgba(243,161,28,0.86),rgba(20,67,110,0.12),rgba(243,161,28,0.95))] opacity-80 blur-[2px]" />
+        <div className="pointer-events-none absolute inset-[-2px] rounded-[26px] border border-[#f3a11c]/45 shadow-[0_0_18px_rgba(243,161,28,0.42)]" />
+
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open StudyCups AI chat"
+          className="group relative flex h-[68px] w-[68px] items-center justify-center rounded-[24px] border border-white/40 bg-[linear-gradient(145deg,#0c2444_0%,#174a7e_58%,#f3a11c_180%)] shadow-[0_20px_42px_rgba(7,29,53,0.34)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_52px_rgba(7,29,53,0.42)]"
         >
-          <span className="pointer-events-none absolute inset-0 rounded-full bg-[#25D366]/35 animate-ping" />
-          <span className="pointer-events-none absolute inset-[-8px] rounded-full bg-[#25D366]/22 blur-md" />
-          <span className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-[#25D366]">
+          <span className="absolute inset-[3px] rounded-[20px] bg-[linear-gradient(160deg,rgba(7,29,53,0.96)_0%,rgba(20,67,110,0.95)_62%,rgba(243,161,28,0.18)_100%)]" />
+          <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#f3a11c] shadow-[0_0_12px_rgba(243,161,28,0.85)]" />
+          <span className="absolute bottom-2.5 left-1/2 h-7 w-7 -translate-x-1/2 rounded-full bg-[#f3a11c]/28 blur-md" />
+          <span className="absolute bottom-3.5 left-1/2 h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-[#f3a11c] shadow-[0_0_18px_rgba(243,161,28,0.9)]" />
+
+          <span className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm">
             <svg
               viewBox="0 0 32 32"
-              className="h-7 w-7"
+              className="h-6 w-6"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M16.008 5.333C10.115 5.333 5.333 10.05 5.333 15.87C5.333 17.97 5.954 19.922 7.022 21.562L5.333 26.667L10.614 25.04C12.194 25.99 14.046 26.407 16.008 26.407C21.9 26.407 26.667 21.69 26.667 15.87C26.667 10.05 21.9 5.333 16.008 5.333Z"
-                fill="white"
+                d="M8.5 13.25C8.5 10.3505 10.8505 8 13.75 8H21C23.8995 8 26.25 10.3505 26.25 13.25V16C26.25 18.8995 23.8995 21.25 21 21.25H18L13.5376 24.8593C12.8848 25.3874 11.9062 24.9227 11.9062 24.083V21.25H13.75C10.8505 21.25 8.5 18.8995 8.5 16V13.25Z"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinejoin="round"
               />
               <path
-                d="M21.137 18.4C20.86 18.264 19.503 17.6 19.249 17.51C18.994 17.42 18.813 17.374 18.632 17.646C18.451 17.918 17.934 18.537 17.775 18.717C17.617 18.898 17.459 18.921 17.182 18.785C16.905 18.649 16.012 18.358 14.954 17.418C14.131 16.688 13.575 15.787 13.416 15.515C13.258 15.243 13.399 15.096 13.535 14.961C13.657 14.84 13.812 14.643 13.948 14.485C14.084 14.327 14.129 14.214 14.22 14.033C14.31 13.851 14.265 13.693 14.197 13.557C14.129 13.421 13.59 12.09 13.358 11.547C13.132 11.017 12.903 11.088 12.733 11.08L12.224 11.071C12.043 11.071 11.748 11.139 11.498 11.411C11.249 11.683 10.546 12.347 10.546 13.693C10.546 15.04 11.521 16.339 11.657 16.52C11.793 16.701 13.575 19.406 16.298 20.57C18.012 21.302 18.682 21.359 19.203 21.28C19.522 21.233 20.18 20.616 20.316 20.231C20.452 19.847 20.452 19.518 20.407 19.442C20.362 19.366 20.225 19.321 19.948 19.185L19.53 18.979C19.391 18.911 19.235 18.719 19.081 18.497C18.927 18.276 18.713 18.248 18.471 18.34C18.229 18.431 17.97 18.64 17.822 18.8"
-                fill="#25D366"
+                d="M12.75 14.625H12.7625M17.375 14.625H17.3875M22 14.625H22.0125"
+                stroke="white"
+                strokeWidth="2.50"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M22.75 7.25L23.35 8.7L24.8 9.3L23.35 9.9L22.75 11.35L22.15 9.9L20.7 9.3L22.15 8.7L22.75 7.25Z"
+                fill="#f3a11c"
               />
             </svg>
           </span>
-        </a>
-
-        <div className="relative">
-          <div className="pointer-events-none absolute inset-[-8px] rounded-[30px] bg-[#f3a11c]/20 animate-ping" />
-          <div className="pointer-events-none absolute inset-[-18px] rounded-[34px] bg-[radial-gradient(circle_at_50%_55%,rgba(243,161,28,0.34)_0%,rgba(243,161,28,0.18)_34%,rgba(243,161,28,0)_72%)] blur-2xl" />
-          <div className="pointer-events-none absolute inset-[-7px] rounded-[29px] bg-[conic-gradient(from_220deg_at_50%_50%,rgba(243,161,28,0.92),rgba(243,161,28,0.18),rgba(243,161,28,0.86),rgba(20,67,110,0.12),rgba(243,161,28,0.95))] opacity-80 blur-[2px]" />
-          <div className="pointer-events-none absolute inset-[-2px] rounded-[26px] border border-[#f3a11c]/45 shadow-[0_0_18px_rgba(243,161,28,0.42)]" />
-
-          <button
-            onClick={() => setOpen(true)}
-            aria-label="Open StudyCups AI chat"
-            className="group relative flex h-[68px] w-[68px] items-center justify-center rounded-[24px] border border-white/40 bg-[linear-gradient(145deg,#0c2444_0%,#174a7e_58%,#f3a11c_180%)] shadow-[0_20px_42px_rgba(7,29,53,0.34)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_52px_rgba(7,29,53,0.42)]"
-          >
-            <span className="absolute inset-[3px] rounded-[20px] bg-[linear-gradient(160deg,rgba(7,29,53,0.96)_0%,rgba(20,67,110,0.95)_62%,rgba(243,161,28,0.18)_100%)]" />
-            <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#f3a11c] shadow-[0_0_12px_rgba(243,161,28,0.85)]" />
-            <span className="absolute bottom-2.5 left-1/2 h-7 w-7 -translate-x-1/2 rounded-full bg-[#f3a11c]/28 blur-md" />
-            <span className="absolute bottom-3.5 left-1/2 h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-[#f3a11c] shadow-[0_0_18px_rgba(243,161,28,0.9)]" />
-
-            <span className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm">
-              <svg
-                viewBox="0 0 32 32"
-                className="h-6 w-6"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M8.5 13.25C8.5 10.3505 10.8505 8 13.75 8H21C23.8995 8 26.25 10.3505 26.25 13.25V16C26.25 18.8995 23.8995 21.25 21 21.25H18L13.5376 24.8593C12.8848 25.3874 11.9062 24.9227 11.9062 24.083V21.25H13.75C10.8505 21.25 8.5 18.8995 8.5 16V13.25Z"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M12.75 14.625H12.7625M17.375 14.625H17.3875M22 14.625H22.0125"
-                  stroke="white"
-                  strokeWidth="2.50"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M22.75 7.25L23.35 8.7L24.8 9.3L23.35 9.9L22.75 11.35L22.15 9.9L20.7 9.3L22.15 8.7L22.75 7.25Z"
-                  fill="#f3a11c"
-                />
-              </svg>
-            </span>
-          </button>
-        </div>
+        </button>
       </div>
 
       {false && <button
@@ -337,7 +306,7 @@ const ChatbotWidget: React.FC = () => {
 
       {/* CHAT WINDOW */}
       {open && (
-        <div className="fixed bottom-3 right-3 z-[9999] flex h-[520px] max-h-[80vh] w-[calc(100vw-1.5rem)] max-w-[360px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:bottom-6 sm:right-6 sm:w-[360px]">
+        <div className="fixed bottom-6 right-6 w-[360px] h-[520px] max-h-[80vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[9999]">
           {/* HEADER */}
           <div className="bg-[#1E4A7A] text-white px-4 py-3 flex justify-between items-center">
             <div>
@@ -372,9 +341,9 @@ const ChatbotWidget: React.FC = () => {
 
           {/* INPUT */}
           {step !== "done" && (
-            <div className="flex items-center gap-2 border-t bg-white p-2.5 sm:p-3">
+            <div className="border-t p-3 flex gap-2 bg-white">
               <input
-                className="h-11 w-0 min-w-0 flex-1 rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 border rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Type your message..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -382,7 +351,7 @@ const ChatbotWidget: React.FC = () => {
               />
               <button
                 onClick={handleSend}
-                className="h-11 shrink-0 whitespace-nowrap rounded-xl bg-[#f4a71d] px-3 text-sm font-semibold text-white sm:px-4"
+                className="bg-[#f4a71d] text-white px-4 rounded-xl text-sm font-semibold"
               >
                 Send
               </button>
@@ -393,7 +362,7 @@ const ChatbotWidget: React.FC = () => {
           {step === "done" && (
             <div className="p-3 border-t text-center">
               <a
-                href="https://wa.me/7753831118"
+                href="https://wa.me/91XXXXXXXXXX"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-block bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-semibold"

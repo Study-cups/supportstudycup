@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import EditorRenderer from "./EditorRenderer";
+import { Helmet } from "react-helmet-async";
 const toBlogSlug = (blog: any) =>
   blog.title
     .toLowerCase()
@@ -74,8 +75,58 @@ const BlogDetailPage: React.FC<{ blogs: any[] }> = ({ blogs }) => {
     );
   }
 
+  const blogTitle = blog.title || "Blog Article";
+  const blogDesc = (typeof blog.excerpt === "string" && blog.excerpt.trim())
+    || (typeof blog.description === "string" && blog.description.substring(0, 160).trim())
+    || `Read ${blogTitle} on StudyCups - India's trusted college admission guidance portal.`;
+  const blogImage = blog.imageUrl || blog.coverImage || "https://studycups.in/logos/StudyCups.png";
+  const blogCanonical = `https://studycups.in/blog/${blogSlug}`;
+  const blogDate = blog.date || blog.createdAt || new Date().toISOString();
+
   return (
-    <div className="bg-[#f5f7fb] min-h-screen pt-28 pb-20">
+    <div className="bg-[#f5f7fb] min-h-screen pt-14 md:pt-[100px] pb-20">
+      <Helmet>
+        <title>{`${blogTitle} | StudyCups`}</title>
+        <meta name="description" content={blogDesc} />
+        <meta name="keywords" content={`${blogTitle}, college admission 2026, StudyCups blog, education news India`} />
+        <link rel="canonical" href={blogCanonical} />
+
+        <meta property="og:type" content="article" />
+        <meta property="og:site_name" content="StudyCups" />
+        <meta property="og:title" content={`${blogTitle} | StudyCups`} />
+        <meta property="og:description" content={blogDesc} />
+        <meta property="og:url" content={blogCanonical} />
+        <meta property="og:image" content={blogImage} />
+        <meta property="og:locale" content="en_IN" />
+        {blog.date && <meta property="article:published_time" content={blogDate} />}
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${blogTitle} | StudyCups`} />
+        <meta name="twitter:description" content={blogDesc} />
+        <meta name="twitter:image" content={blogImage} />
+
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": blogTitle,
+          "description": blogDesc,
+          "image": blogImage,
+          "url": blogCanonical,
+          "datePublished": blogDate,
+          "author": {
+            "@type": "Organization",
+            "name": blog.author || "StudyCups Editorial Team"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "StudyCups",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://studycups.in/logos/StudyCups.png"
+            }
+          }
+        })}</script>
+      </Helmet>
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
 
         {/* ================= LEFT: BLOG CONTENT ================= */}
@@ -122,7 +173,7 @@ const BlogDetailPage: React.FC<{ blogs: any[] }> = ({ blogs }) => {
             {relatedBlogs.map((rb) => (
               <div
                 key={rb._id}
-                onClick={() => navigate(`/blog/${rb._id}`)}
+                onClick={() => navigate(`/blog/${toBlogSlug(rb)}`)}
                 className="flex gap-3 mb-4 cursor-pointer hover:bg-gray-50 p-2 rounded"
               >
                 <img
