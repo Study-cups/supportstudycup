@@ -1,94 +1,82 @@
-import React, { useState, useMemo, useEffect } from "react";
-import type { College } from "../types";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import type { View, College } from "../types";
+import { PARTNER_LOGOS } from "../logos";
 import CollegeCard from "../components/CollegeCard";
 import { lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { buildCourseDetailPath, toCourseSlug } from "./Seo"
 import { Helmet } from "react-helmet-async";
+import SuccessCarousel from "@/LandingPage/components/SuccessCarousel";
+
+import {
+
+  BLOG_POSTS_DATA,
+  TESTIMONIALS_DATA,
+  COURSE_STREAMS,
+} from "../constants";
 import { useOnScreen } from "../hooks/useOnScreen";
 import { useLocation } from "react-router-dom";
 import { TESTIMONIALS } from "@/LandingPage/constants";
 
-const SuccessCarousel = lazy(() => import("@/LandingPage/components/SuccessCarousel"));
-const ContactForm = lazy(() => import("../components/ContactForm"));
 
-type HomeNewsArticle = {
-  title: string;
-  description: string;
-  link: string;
-  pubDate: string;
-  image: string;
-};
 
-type HomeCollege = College & {
-  stream?: string | string[];
-   rawScraped?: {
-    courses?: any[];
-  };
-};
 
-type IdleDeadlineLike = {
-  didTimeout: boolean;
-  timeRemaining: () => number;
-};
+const toExamSlug = (exam: any) =>
+  exam.name
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^\w\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-") +
+  (exam.year ? `-${exam.year}` : "");
 
-type IdleScheduler = {
-  requestIdleCallback?: (
-    callback: (deadline: IdleDeadlineLike) => void,
-    options?: { timeout?: number }
-  ) => number;
-  cancelIdleCallback?: (id: number) => void;
-};
+const DUMMY_NEWS = [
+  {
+    id: 1,
+    title: "RSB Chennai PGDM Admission 2026 Begins",
+    excerpt:
+      "RSB Chennai has opened applications for its flagship PGDM programme for the 2026 intake.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1588072432836-e10032774350",
+    date: "Dec 15, 2025",
+    author: "StudyCups Editorial Team",
+    category: "Admission News",
+  },
+  {
+    id: 3,
+    title: "IIM Visakhapatnam Admission 2026 Open",
+    imageUrl: "https://images.unsplash.com/photo-1562774053-701939374585",
+    date: "Dec 13, 2025",
+  },
+  {
+    id: 4,
+    title: "Top MBA Colleges Accepting CAT 2025 Scores",
+    excerpt:
+      "List of top MBA colleges in India accepting CAT 2025 scores.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1523050854058-8df90110c9f1",
+    date: "Dec 12, 2025",
+    author: "StudyCups Experts",
+    category: "Articles",
+  },
+  {
+    id: 5,
+    title: "How to Prepare for Board Exams Effectively",
+    excerpt:
+      "Proven strategies and study plans to score high in board exams.",
+    imageUrl:
+      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b",
+    date: "Dec 11, 2025",
+    author: "StudyCups Editorial Team",
+    category: "Articles",
+  },
+ 
 
-const getIdleScheduler = (): IdleScheduler => {
-  if (typeof window === "undefined") {
-    return {};
-  }
-
-  return window as Window & typeof globalThis & IdleScheduler;
-};
+]; 
 
 const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
 
-const HOME_NEWS_API_URL =
-  typeof window !== "undefined" && window.location.hostname === "localhost"
-    ? "https://studycupsbackend-wb8p.onrender.com/api/news"
-    : `${API_BASE}/news`;
-
-const normalizeHomeNewsText = (value = "") =>
-  value.replace(/\s+/g, " ").trim();
-
-const normalizeHomeNewsArticle = (article: any): HomeNewsArticle | null => {
-  const title = normalizeHomeNewsText(article?.title || "");
-  const link = normalizeHomeNewsText(article?.link || "");
-
-  if (!title || !link) {
-    return null;
-  }
-
-  return {
-    title,
-    description: normalizeHomeNewsText(article?.description || ""),
-    link,
-    pubDate: normalizeHomeNewsText(article?.pubDate || ""),
-    image: normalizeHomeNewsText(article?.image || article?.imageUrl || ""),
-  };
-};
-
-const formatHomeNewsDate = (value = "") => {
-  if (!value) return "";
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) {
-    return "";
-  }
-
-  return parsedDate.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
+const loopingNews = [...DUMMY_NEWS, ...DUMMY_NEWS];
 
 const PRIORITY_CITIES = [
  "Delhi NCR",
@@ -113,24 +101,56 @@ const ADMISSION_TICKER_ITEMS = [
 ];
 
 
-const HERO_TYPED_WORDS = ["Colleges", "Courses", "Placements"];
-const HERO_TYPING_SPEED = 110;
-const HERO_DELETING_SPEED = 70;
-const HERO_WORD_PAUSE_MS = 1300;
-const HERO_WORD_SWITCH_DELAY_MS = 250;
+const useScroll = () => {
+  const [scrollY, setScrollY] = useState(0);
+  const ticking = useRef(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (!ticking.current) {
+        window.requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking.current = false;
+        });
+        ticking.current = true;
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return scrollY;
+};
+
+
+
+
+
+const FadeSection = ({ children, delay = 0 }) => {
+  const [ref, visible] = useOnScreen<HTMLDivElement>({ threshold: 0.25 });
+  return (
+    <div
+      ref={ref}
+      style={{ animationDelay: `${delay}ms` }}
+      className={`opacity-0 translate-y-10 transition-all duration-[1200ms]
+                ${visible ? "opacity-100 translate-y-0" : ""}
+            `}
+    >
+      {children}
+    </div>
+  );
+};
 
 
 interface HomePageProps {
-
-  colleges: HomeCollege[];
-
+  colleges: College[];
   exams: any[];
-   loading?: boolean;
-   onOpenBrochure: () => void;
-   onCompareToggle: (id: string) => void;
-  compareList: string[]; // 🔥 ADD THIS 
-   onOpenApplyNow: () => void;
-
+  blogs: any[];
+  onOpenBrochure: () => void;
+  onCompareToggle: (id: string) => void;
+  compareList: string[];
+  loading?: boolean;
 }
 
 const AnimatedContainer: React.FC<{
@@ -148,128 +168,6 @@ const AnimatedContainer: React.FC<{
       {children}
     </div>
   );
-};
-
-const DeferredMount: React.FC<{
-  children: React.ReactNode;
-  placeholderHeight: number | string;
-  rootMargin?: string;
-  onVisible?: () => void;
-}> = ({ children, placeholderHeight, rootMargin = "500px 0px", onVisible }) => {
-  const [ref, isVisible] = useOnScreen<HTMLDivElement>({
-    threshold: 0,
-    rootMargin,
-  });
-
-  useEffect(() => {
-    if (isVisible) {
-      onVisible?.();
-    }
-  }, [isVisible, onVisible]);
-
-  return (
-    <div ref={ref}>
-      {isVisible ? children : <div aria-hidden="true" style={{ minHeight: placeholderHeight }} />}
-    </div>
-  );
-};
-
-const shouldSkipHomeAnimations = () => {
-  if (typeof window === "undefined") {
-    return true;
-  }
-
-  return (
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches 
-   
- 
-  );
-};
-
-const HeroTypedWord: React.FC = () => {
-  const [typedWord, setTypedWord] = useState(HERO_TYPED_WORDS[0]);
-  const [typedWordIndex, setTypedWordIndex] = useState(0);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [shouldAnimate, setShouldAnimate] = useState(false);
-
-  useEffect(() => {
-    if (shouldSkipHomeAnimations()) {
-      return;
-    }
-
-    const idleScheduler = getIdleScheduler();
-
-    if (idleScheduler.requestIdleCallback) {
-      const idleId = idleScheduler.requestIdleCallback(() => {
-        setShouldAnimate(true);
-      }, { timeout: 3000 });
-
-      return () => {
-        idleScheduler.cancelIdleCallback?.(idleId);
-      };
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setShouldAnimate(true);
-    }, 2500);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!shouldAnimate) return;
-
-    const currentWord = HERO_TYPED_WORDS[typedWordIndex];
-    let timeoutId: number;
-
-    if (!isDeleting && typedWord === currentWord) {
-      timeoutId = window.setTimeout(() => {
-        setIsDeleting(true);
-      }, HERO_WORD_PAUSE_MS);
-    } else if (isDeleting && typedWord.length === 0) {
-      timeoutId = window.setTimeout(() => {
-        setIsDeleting(false);
-        setTypedWordIndex((prev) => (prev + 1) % HERO_TYPED_WORDS.length);
-      }, HERO_WORD_SWITCH_DELAY_MS);
-    } else {
-      timeoutId = window.setTimeout(() => {
-        setTypedWord(
-          isDeleting
-            ? currentWord.slice(0, typedWord.length - 1)
-            : currentWord.slice(0, typedWord.length + 1)
-        );
-      }, isDeleting ? HERO_DELETING_SPEED : HERO_TYPING_SPEED);
-    }
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [isDeleting, shouldAnimate, typedWord, typedWordIndex]);
-
-  return (
-    <span className="inline-block min-w-[10.5ch] text-[#f4a71d]">
-      {typedWord}
-    </span>
-  );
-};
-
-const deferredSectionStyle = {
-  contentVisibility: "auto",
-  containIntrinsicSize: "1px 900px",
-} as React.CSSProperties;
-
-const deferredLargeSectionStyle = {
-  contentVisibility: "auto",
-  containIntrinsicSize: "1px 1200px",
-} as React.CSSProperties;
-
-const EMPTY_HOME_COLLEGE_META = {
-  regionList: [] as string[],
-  cityStateList: [] as any[],
-  stateList: [] as string[],
-  dynamicStreams: [] as string[],
 };
 
 
@@ -450,7 +348,7 @@ const preferValue = (currentValue: string, nextValue: string, fallback = "N/A") 
   return currentValue;
 };
 
-const extractCourses = (colleges: HomeCollege[] = []) => {
+const extractCourses = (colleges = []) => {
   const map = new Map<string, any>();
 
   (Array.isArray(colleges) ? colleges : []).forEach(col => {
@@ -532,7 +430,7 @@ const normalizeExploreCourse = (course: any) => {
 };
 
 // src/constants/regionMap.ts
-const REGION_MAP: Record<string, { cities: string[] }> = {
+const REGION_MAP = {
   "Delhi NCR": {
     cities: [
       "Delhi",
@@ -553,41 +451,89 @@ const REGION_MAP: Record<string, { cities: string[] }> = {
 
 
 
-const HomePage: React.FC<HomePageProps> = ({
+const toBlogSlug = (blog: any) =>
+  blog.title
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^\w\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
 
+const HomePage: React.FC<HomePageProps> = ({
   colleges,
   exams,
-  loading: _loading,
+  blogs,
   onOpenBrochure,
   onCompareToggle,
-  compareList , 
-  onOpenApplyNow
-
+  compareList,
 }) => {
+  useEffect(() => {
+
+  }, [colleges, exams]);
+
   const navigate = useNavigate();
+  const logoScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let rafId: number;
+    const checkCenter = () => {
+      const container = logoScrollRef.current;
+      if (container) {
+        const parent = container.parentElement;
+        if (parent) {
+          const parentRect = parent.getBoundingClientRect();
+          const centerX = parentRect.left + parentRect.width / 2;
+          const imgs = Array.from(container.querySelectorAll("img")) as HTMLImageElement[];
+          let closest: HTMLImageElement | null = null;
+          let minDist = Infinity;
+          imgs.forEach((img) => {
+            const rect = img.getBoundingClientRect();
+            const dist = Math.abs(rect.left + rect.width / 2 - centerX);
+            if (dist < minDist) { minDist = dist; closest = img; }
+          });
+          imgs.forEach((img) => {
+            img.style.transform = img === closest ? "scale(1.5)" : "scale(1)";
+            img.style.transition = "transform 0.3s ease";
+            img.style.filter = img === closest ? "drop-shadow(0 4px 12px rgba(0,0,0,0.18))" : "none";
+          });
+        }
+      }
+      rafId = requestAnimationFrame(checkCenter);
+    };
+    rafId = requestAnimationFrame(checkCenter);
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
   const [selectedStream, setSelectedStream] = useState<string | null>(null);
   const [heroCollege, setHeroCollege] = useState("");
-  const [heroCity, setHeroCity] = useState("");
+const [heroCity, setHeroCity] = useState("");
+
+
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [heroFilters, setHeroFilters] = useState({
+    college: "",
+    city: "",
+    course: "",
+  });
+
+  useEffect(() => {}, []);
+
+
   const [query, setQuery] = useState("");
+  const [activeCity, setActiveCity] = useState<string | null>(null);
+
   const [error, setError] = useState("");
+  // STREAM FILTER FOR EXPLORE COURSES
   const [exploreLevel, setExploreLevel] = useState("All");
   const [exploreCourses, setExploreCourses] = useState<any[]>([]);
-  const [selectedtopcollge, setSelectedtopcollge] = useState("");
-  const [studentUpdateNews, setStudentUpdateNews] = useState<HomeNewsArticle[]>([]);
-  const [studentUpdateNewsLoading, setStudentUpdateNewsLoading] = useState(true);
-  const [filteredStates, setFilteredStates] = useState<string[]>([]);
-  const [shouldRenderCollegeSections, setShouldRenderCollegeSections] = useState(false);
-  const [shouldRenderExploreCourses, setShouldRenderExploreCourses] = useState(false);
-  const [shouldRenderTopExams, setShouldRenderTopExams] = useState(false);
-  const [shouldLoadStudentNews, setShouldLoadStudentNews] = useState(false);
+  // UNIQUE STREAMS FROM COURSES
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"apply" | "brochure">("apply");
 
-const location = useLocation() as ReturnType<typeof useLocation> & {
-  state?: { region?: string | null } | null;
-};
+const location = useLocation();
 const selectedRegion = location.state?.region || null;
 
-  const collegeMatchesStream = (college: HomeCollege, selectedStream: string) => {
+  const collegeMatchesStream = (college: any, selectedStream: string) => {
     if (!selectedStream || selectedStream === "All Streams") return true;
 
     const stream = college?.stream; // ✅ TOP LEVEL
@@ -638,7 +584,7 @@ const selectedRegion = location.state?.region || null;
   return null;
 }; 
 
-const filterByRegion = (college: HomeCollege, region: string | null) => {
+const filterByRegion = (college, region) => {
   if (!region) return true;
 
   const config = REGION_MAP[region];
@@ -651,58 +597,21 @@ const filterByRegion = (college: HomeCollege, region: string | null) => {
   );
 };
 
-const isFeaturedCollege = (college: any) =>
-  typeof college?.featured_college === "string" &&
-  college.featured_college.trim().toLowerCase() === "featured";
+const regionList = useMemo(() => {
+  const set = new Set<string>();
 
-const collegeMeta = useMemo(() => {
-  if (!shouldRenderCollegeSections) {
-    return EMPTY_HOME_COLLEGE_META;
-  }
-
-  const regionSet = new Set<string>();
-  const stateSet = new Set<string>();
-  const streamSet = new Set<string>();
-  const cityMap = new Map<string, { city: string; state: string | null }>();
-
-  (Array.isArray(colleges) ? colleges : []).forEach((college) => {
+  (Array.isArray(colleges) ? colleges : []).forEach(college => {
     const parsed = extractCityState(college?.location);
+    if (!parsed?.city) return;
 
-    if (parsed?.city) {
-      const region = resolveRegion(parsed.city);
-      if (region) {
-        regionSet.add(region);
-      }
-
-      const cityKey = parsed.city.toLowerCase();
-      if (!cityMap.has(cityKey)) {
-        cityMap.set(cityKey, parsed);
-      }
-
-      if (parsed.state) {
-        stateSet.add(parsed.state.trim());
-      }
-    }
-
-    const stream = college?.stream;
-    if (Array.isArray(stream)) {
-      stream.forEach((value) => {
-        if (typeof value === "string" && value.trim()) {
-          streamSet.add(value.trim());
-        }
-      });
-    } else if (typeof stream === "string" && stream.trim()) {
-      streamSet.add(stream.trim());
-    }
+    const region = resolveRegion(parsed.city);
+    if (region) set.add(region);
   });
 
-  return {
-    regionList: Array.from(regionSet),
-    cityStateList: Array.from(cityMap.values()),
-    stateList: Array.from(stateSet),
-    dynamicStreams: Array.from(streamSet).sort(),
-  };
-}, [colleges, shouldRenderCollegeSections]);
+  return Array.from(set);
+}, [colleges]);
+
+
 
   const streamFilters = [
     "BE/B.Tech",
@@ -718,137 +627,89 @@ const collegeMeta = useMemo(() => {
   ];
 
 
-  const cityStateList = collegeMeta.cityStateList;
-  const stateList = collegeMeta.stateList;
-  const dynamicStreams = collegeMeta.dynamicStreams;
+  const cityStateList = useMemo(() => {
+    const map = new Map<string, { city: string; state: string | null }>();
 
-  useEffect(() => {
-    setFilteredStates([...stateList]);
-  }, [stateList]);
+    (Array.isArray(colleges) ? colleges : []).forEach(college => {
+      const parsed = extractCityState(college?.location);
+      if (!parsed) return;
+
+      const key = parsed.city.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, parsed);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [colleges]);
+   
+  const stateList = useMemo(() => {
+  const set = new Set<string>();
+
+  cityStateList.forEach(item => {
+    if (item.state) {
+      set.add(item.state.trim());
+    }
+  });
+
+  return Array.from(set);
+}, [cityStateList]);
+useEffect(() => {
+  setFilteredStates(stateList);
+}, [stateList]);
+
+
+  const [selectedtopcollge, setSelectedtopcollge] = useState("");
+  const [selectedExamFilter, setSelectedExamFilter] = useState("All");
+ const [filteredStates, setFilteredStates] = useState<string[]>([]);
+
+
+
+  const cityRefs = useMemo(() => {
+    const refs: Record<string, React.RefObject<HTMLDivElement>> = {};
+    cityStateList.forEach(c => {
+      refs[c.city] = React.createRef();
+    });
+    return refs;
+  }, [cityStateList]);
 
   const fallbackCourses = useMemo(() => {
-    if (!shouldRenderExploreCourses || !Array.isArray(colleges) || colleges.length === 0) {
-      return [];
-    }
-
+    if (!Array.isArray(colleges) || colleges.length === 0) return [];
     return extractCourses(colleges);
-  }, [colleges, shouldRenderExploreCourses]);
+  }, [colleges]);
 
   useEffect(() => {
-    if (!shouldRenderExploreCourses) {
-      return;
-    }
-
     let cancelled = false;
-    const idleScheduler = getIdleScheduler();
 
-    const loadExploreCourses = () => {
-      fetch(`${API_BASE}/main-course-card?page=1&limit=60`)
-        .then((res) => {
-          if (!res.ok) throw new Error("Failed to load main course cards");
-          return res.json();
-        })
-        .then((json) => {
-          if (cancelled) return;
+    fetch(`${API_BASE}/main-course-card?page=1&limit=60`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load main course cards");
+        return res.json();
+      })
+      .then((json) => {
+        if (cancelled) return;
 
-          const normalized = Array.isArray(json?.data)
-            ? json.data.map((course: any) => normalizeExploreCourse(course))
-            : [];
+        const normalized = Array.isArray(json?.data)
+          ? json.data.map((course: any) => normalizeExploreCourse(course))
+          : [];
 
-          if (normalized.length > 0) {
-            setExploreCourses(normalized);
-          } else {
-            setExploreCourses(fallbackCourses);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setExploreCourses(fallbackCourses);
-          }
-        });
-    };
-
-    if (idleScheduler.requestIdleCallback) {
-      const idleId = idleScheduler.requestIdleCallback(() => loadExploreCourses(), {
-        timeout: 3500,
+        if (normalized.length > 0) {
+          setExploreCourses(normalized);
+        } else {
+          setExploreCourses(fallbackCourses);
+        }
+      })
+      .catch((err) => {
+        console.error("Home explore courses API error", err);
+        if (!cancelled) {
+          setExploreCourses(fallbackCourses);
+        }
       });
-
-      return () => {
-        cancelled = true;
-        idleScheduler.cancelIdleCallback?.(idleId);
-      };
-    }
-
-    const timeoutId = window.setTimeout(loadExploreCourses, 1800);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timeoutId);
     };
-  }, [fallbackCourses, shouldRenderExploreCourses]);
-
-  useEffect(() => {
-    if (!shouldLoadStudentNews) {
-      return;
-    }
-
-    let cancelled = false;
-    const idleScheduler = getIdleScheduler();
-
-    const loadStudentUpdateNews = async () => {
-      setStudentUpdateNewsLoading(true);
-
-      try {
-        const response = await fetch(HOME_NEWS_API_URL);
-        if (!response.ok) {
-          throw new Error("Failed to load homepage news");
-        }
-
-        const payload = await response.json();
-        const articles = Array.isArray(payload?.articles)
-          ? payload.articles
-          : Array.isArray(payload?.data)
-            ? payload.data
-            : Array.isArray(payload)
-              ? payload
-              : [];
-
-        const normalizedArticles = articles
-          .map((article: any) => normalizeHomeNewsArticle(article))
-          .filter(Boolean) as HomeNewsArticle[];
-
-        if (!cancelled) {
-          setStudentUpdateNews(normalizedArticles);
-        }
-      } catch {
-        if (!cancelled) {
-          setStudentUpdateNews([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setStudentUpdateNewsLoading(false);
-        }
-      }
-    };
-
-    if (idleScheduler.requestIdleCallback) {
-      const idleId = idleScheduler.requestIdleCallback(() => loadStudentUpdateNews(), {
-        timeout: 4000,
-      });
-
-      return () => {
-        cancelled = true;
-        idleScheduler.cancelIdleCallback?.(idleId);
-      };
-    }
-
-    const timeoutId = window.setTimeout(loadStudentUpdateNews, 2200);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [shouldLoadStudentNews]);
+  }, [fallbackCourses]);
 
   const courses = exploreCourses.length > 0 ? exploreCourses : fallbackCourses;
 
@@ -904,7 +765,42 @@ const CITY_ICON_MAP: Record<string, string> = {
   "Lucknow": "/icons/red-fort_3806647.png",
 };
 
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setHeroFilters((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    navigate("/colleges", {
+      state: heroFilters,
+    });
+  };
+  
+  function orderCities(cities) {
+  const priority = [];
+  const others = [];
+
+  cities.forEach(city => {
+    if (PRIORITY_CITIES.includes(city.name)) {
+      priority.push(city);
+    } else {
+      others.push(city);
+    }
+  });
+
   // Optional: baaki cities A–Z
+  others.sort((a, b) => a.name.localeCompare(b.name));
+
+  return [...priority, ...others];
+}
+
+ const orderedStates = useMemo(
+  () => orderStatesLikeCollegeApply(filteredStates),
+  [filteredStates]
+);
+
   const handleCitySearch = () => {
   const value = normalize(query.trim());
 
@@ -942,10 +838,28 @@ const CITY_ICON_MAP: Record<string, string> = {
 
 
 
+  const dynamicStreams = useMemo(() => {
+    const set = new Set<string>();
+
+    (Array.isArray(colleges) ? colleges : []).forEach(college => {
+      const stream = college?.stream; // ✅ FIX
+
+      if (Array.isArray(stream)) {
+        stream.forEach(s => {
+          if (typeof s === "string" && s.trim()) set.add(s.trim());
+        });
+      } else if (typeof stream === "string" && stream.trim()) {
+        set.add(stream.trim());
+      }
+    });
+
+    return Array.from(set).sort();
+  }, [colleges]);
+
 
 
 const filteredColleges = useMemo(() => {
-  if (!shouldRenderCollegeSections || !Array.isArray(colleges)) return [];
+  if (!Array.isArray(colleges)) return [];
 
   const filtered = colleges.filter(college => {
     const streamOk = collegeMatchesStream(
@@ -958,12 +872,8 @@ const filteredColleges = useMemo(() => {
     return streamOk && regionOk;
   });
 
-  const sorted = [...filtered].sort(
-    (a, b) => Number(isFeaturedCollege(b)) - Number(isFeaturedCollege(a))
-  );
-
-  return sorted.slice(0, 8);
-}, [colleges, selectedStream, selectedRegion, shouldRenderCollegeSections]);
+  return filtered.slice(0, 8);
+}, [colleges, selectedStream, selectedRegion]);
 
 
   const whyChooseUsFeatures = [
@@ -1064,7 +974,7 @@ const filteredColleges = useMemo(() => {
       name: "Engineering",
       description: "Innovate the future with cutting-edge technology.",
       color: "bg-[#1f5fd6]",
-      courseCount: 500,
+      courseCount: COURSE_STREAMS["Engineering"].length,
       iconPath: "/icons/technology.png",
 
     },
@@ -1072,7 +982,7 @@ const filteredColleges = useMemo(() => {
       name: "Management",
       description: "Lead organizations and shape the business world.",
       color: "bg-[#1ea35a]",
-      courseCount: 1000,
+      courseCount: COURSE_STREAMS["Management"].length,
       iconPath: "/icons/project-management.png",
 
     },
@@ -1080,14 +990,14 @@ const filteredColleges = useMemo(() => {
       name: "Medical",
       description: "Embark on a journey to heal and care for others.",
       color: "bg-[#f59e0b]",
-      courseCount: 800,
+      courseCount: COURSE_STREAMS["Medical"].length,
       iconPath: "/icons/medical-symbol (1).png",
     },
     {
       name: "Commerce",
       description: "Build strong foundations in finance and trade.",
       color: "bg-[#8b5cf6]",
-      courseCount: 200,
+      courseCount: COURSE_STREAMS["Commerce"]?.length || 90,
       iconPath: "/icons/smart-shopping.png"
       ,
     },
@@ -1095,7 +1005,7 @@ const filteredColleges = useMemo(() => {
       name: "Arts",
       description: "Explore creativity and the humanities.",
       color: "bg-[#f97316]",
-      courseCount: 300,
+      courseCount: COURSE_STREAMS["Arts & Science"]?.length || 95,
       iconPath:
         "/icons/inspiration.png",
     },
@@ -1283,14 +1193,30 @@ const filteredColleges = useMemo(() => {
       : rankingColleges.filter((c) => c.stream === selectedtopcollge);
 
 
-const toExamSlug = (exam: any) =>
-  exam.name
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, "")
-    .replace(/[^\w\s]/g, "")
-    .trim()
-    .replace(/\s+/g, "-") +
-  (exam.year ? `-${exam.year}` : "");
+
+
+  const bgImages = [
+    "https://res.cloudinary.com/alishakhan987/image/upload/v1765219557/Gemini_Generated_Image_3xjtay3xjtay3xjt-Photoroom_nx9j6s.png",
+    "https://res.cloudinary.com/alishakhan987/image/upload/v1765219972/Gemini_Generated_Image_mnbzv6mnbzv6mnbz_1_-Photoroom_f5zilz.png"
+  ];
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % bgImages.length);
+    }, 4000); // every 4 seconds switch
+
+    return () => clearInterval(interval);
+  }, []);
+
+
+  const filteredExams =
+    selectedExamFilter === "All"
+      ? exams
+      : exams.filter((exam) => exam.stream === selectedExamFilter);
+
+
+
   // FILTERED COURSES
   const exploreLevels = useMemo(() => {
     const availableLevels = HOME_EXPLORE_LEVEL_ORDER.filter((level) =>
@@ -1305,6 +1231,16 @@ const toExamSlug = (exam: any) =>
       setExploreLevel("All");
     }
   }, [exploreLevel, exploreLevels]);
+
+const HOME_REGIONS = [
+  "Delhi NCR",
+  "Uttar Pradesh",
+  "Rajasthan",
+  "Punjab",
+  "Uttarakhand",
+  "Himachal Pradesh",
+  "Odisha"
+]; 
 
 const HOME_CITIES = [
   "Delhi NCR",
@@ -1321,7 +1257,6 @@ const HOME_CITIES = [
 ]; 
 
 const visibleRegions = HOME_CITIES;
-const visibleHomeExams = useMemo(() => exams.slice(0, 10), [exams]);
  const FireIcon = () => (
   <svg className="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
     <path strokeLinecap="round" strokeLinejoin="round"
@@ -1353,6 +1288,57 @@ const AbroadIcon = () => (
     />
   </svg>
 ); 
+
+/* ── Typewriter component ── */
+const TypewriterWord: React.FC<{ words: string[] }> = ({ words }) => {
+  const [display, setDisplay] = React.useState("");
+  const [wordIdx, setWordIdx] = React.useState(0);
+  const [charIdx, setCharIdx] = React.useState(0);
+  const [deleting, setDeleting] = React.useState(false);
+  const [paused, setPaused] = React.useState(false);
+
+  React.useEffect(() => {
+    if (paused) {
+      const t = setTimeout(() => { setPaused(false); setDeleting(true); }, 1600);
+      return () => clearTimeout(t);
+    }
+    const current = words[wordIdx];
+    if (!deleting) {
+      if (charIdx < current.length) {
+        const t = setTimeout(() => {
+          setDisplay(current.slice(0, charIdx + 1));
+          setCharIdx(c => c + 1);
+        }, 80);
+        return () => clearTimeout(t);
+      } else {
+        setPaused(true);
+      }
+    } else {
+      if (charIdx > 0) {
+        const t = setTimeout(() => {
+          setDisplay(current.slice(0, charIdx - 1));
+          setCharIdx(c => c - 1);
+        }, 45);
+        return () => clearTimeout(t);
+      } else {
+        setDeleting(false);
+        setWordIdx(i => (i + 1) % words.length);
+      }
+    }
+  }, [charIdx, deleting, paused, wordIdx, words]);
+
+  /* colour per word */
+  const colours = ["#fbbf24", "#34d399", "#f97316"];
+  const colour = colours[wordIdx % colours.length];
+
+  return (
+    <span className="inline-flex items-baseline gap-[2px]" style={{ color: colour, textShadow: `0 0 30px ${colour}55` }}>
+      {display}
+      <span className="tw-cursor inline-block w-[3px] h-[1em] rounded-sm ml-0.5 align-middle"
+        style={{ background: colour, marginBottom: "2px" }} />
+    </span>
+  );
+};
 
 const HERO_COLLEGES = [
   {
@@ -1479,407 +1465,305 @@ const HERO_TAGS = [
 
     <div > 
       <Helmet>
-        <title>
-          StudyCups – Compare Colleges, Courses & Exams in India
-        </title>
-        <meta
-          name="description"
-          content="StudyCups helps students compare colleges, courses, fees, placements and exams across India. Find your dream college today."
-        />
+        <title>StudyCups – Best Colleges in India 2026 | Fees, Rankings, Admissions</title>
+        <meta name="description" content="Find the best colleges in India 2026. Compare top MBA, B.Tech, MBBS, BCA, BBA colleges by fees, rankings, placements and admissions across Delhi, Mumbai, Bangalore, Chennai, Hyderabad and more." />
+        <meta name="keywords" content="best colleges in India, top colleges 2026, MBA colleges, BTech colleges, MBBS colleges, best college in Delhi, best college in Mumbai, best college in Bangalore, top engineering colleges, top management colleges, college admission 2026, StudyCups" />
         <link rel="canonical" href="https://studycups.in/" />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="StudyCups" />
+        <meta property="og:title" content="StudyCups – Best Colleges in India 2026 | Fees, Rankings, Admissions" />
+        <meta property="og:description" content="Find and compare the best colleges in India 2026. MBA, B.Tech, MBBS and more. Expert guidance, real rankings, latest fees." />
+        <meta property="og:url" content="https://studycups.in/" />
+        <meta property="og:image" content="https://studycups.in/logos/StudyCups.png" />
+        <meta property="og:locale" content="en_IN" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="StudyCups – Best Colleges in India 2026 | Fees, Rankings, Admissions" />
+        <meta name="twitter:description" content="Find and compare the best colleges in India 2026. MBA, B.Tech, MBBS and more." />
+        <meta name="twitter:image" content="https://studycups.in/logos/StudyCups.png" />
+
+        {/* JSON-LD: WebSite + Organization */}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "WebSite",
+              "@id": "https://studycups.in/#website",
+              "url": "https://studycups.in/",
+              "name": "StudyCups",
+              "description": "India's trusted college comparison and admission guidance portal",
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://studycups.in/colleges?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+              }
+            },
+            {
+              "@type": "Organization",
+              "@id": "https://studycups.in/#organization",
+              "name": "StudyCups",
+              "url": "https://studycups.in/",
+              "logo": "https://studycups.in/logos/StudyCups.png",
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "+91-8081269969",
+                "contactType": "customer service",
+                "areaServed": "IN",
+                "availableLanguage": ["English", "Hindi"]
+              },
+              "sameAs": [
+                "https://www.instagram.com/studycups/",
+                "https://www.facebook.com/studycups/"
+              ]
+            }
+          ]
+        })}</script>
       </Helmet>
-<section className="relative w-full h-[600px] max-md:h-auto max-md:pt-20 max-md:pb-4 overflow-hidden bg-white">
-  {/* ================= BACKGROUND GLOWS ================= */}
-  <div className="absolute top-[-10%] left-[10%] hidden h-[45%] w-[35%] rounded-full bg-[#E6F0FF] opacity-80 blur-[120px] pointer-events-none md:block" />
-  <div className="absolute bottom-[-5%] left-[-5%] hidden h-[40%] w-[30%] rounded-full bg-[#EDF4FF] opacity-70 blur-[100px] pointer-events-none md:block" />
-  <div className="absolute bottom-[5%] right-[-5%] hidden h-[35%] w-[25%] rounded-full bg-[#EBF3FF] opacity-60 blur-[90px] pointer-events-none md:block" />
+<style>{`
+  @keyframes typewriter-cursor {
+    0%,100% { opacity:1; } 50% { opacity:0; }
+  }
+  .tw-cursor { animation: typewriter-cursor 0.75s step-end infinite; }
 
-  {/* ================= ABSTRACT SHAPES (DESKTOP ONLY) ================= */}
- <div
-  className="
-    absolute
-    top-[56px] md:top-0
-    right-[-20%] md:right-[-2%] 
-    hidden md:block
-    w-[220px] md:w-[60%]
-    h-[180px] md:h-auto
-    pointer-events-none
-    z-[2]
-  "
->
+  @keyframes hero-float {
+    0%,100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  .hero-float { animation: hero-float 4s ease-in-out infinite; }
 
-    <div
-      className="absolute right-[10%]"
-      style={{
-        width: "450px",
-        height: "520px",
-        top: "20%",
-        background: "#D9A83E",
-        borderRadius: "120px",
-        transform: "rotate(32deg)",
-      }}
-    />
+  @keyframes badge-pop {
+    0% { transform: scale(0.85); opacity:0; }
+    100% { transform: scale(1); opacity:1; }
+  }
+  .badge-pop { animation: badge-pop 0.5s cubic-bezier(.34,1.56,.64,1) forwards; }
 
-    <div
-      className="absolute right-[12%] overflow-hidden"
-      style={{
-        minWidth: "400px", 
-        width: "450px",
-        height: "500px",
-        top: "24%",
-        background: "#164585",
-        borderRadius: "100px",
-        transform: "rotate(-28deg)",
-        boxShadow: "40px 60px 120px rgba(0,0,0,0.25)",
-      }}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-[#1e4b8f] to-[#163d7a]" />
-      <div
-        className="absolute inset-0"
-        style={{
-          clipPath: "polygon(40% 0%, 100% 0%, 100% 65%, 45% 45%)",
-          background: "linear-gradient(135deg, #2b63b3, #1c4a8f)",
-        }}
+  @keyframes shimmer-bg {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  .shimmer-text {
+    background: linear-gradient(90deg, #fff 0%, #fde68a 40%, #f97316 60%, #fff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer-bg 3s linear infinite;
+  }
+
+  @keyframes ping-slow {
+    0%,100% { transform:scale(1); opacity:.7; }
+    50% { transform:scale(1.15); opacity:1; }
+  }
+  .ping-slow { animation: ping-slow 2s ease-in-out infinite; }
+
+  .hero-saffron-btn:hover { box-shadow: 0 8px 30px rgba(249,115,22,0.55); transform: translateY(-1px); }
+  .hero-saffron-btn { transition: all 0.2s ease; }
+`}</style>
+
+<section className="relative w-full overflow-hidden" style={{
+  background: "linear-gradient(135deg, #03081a 0%, #071230 35%, #0d1f4a 65%, #0a1628 100%)",
+  minHeight: "620px"
+}}>
+  {/* ─── decorative dot grid ─── */}
+  <div className="absolute inset-0 opacity-[0.035]" style={{
+    backgroundImage: "radial-gradient(circle, #fff 1px, transparent 1px)",
+    backgroundSize: "28px 28px"
+  }} />
+
+  {/* ─── saffron glow top-left ─── */}
+  <div className="absolute top-[-80px] left-[-60px] w-[420px] h-[420px] rounded-full pointer-events-none"
+    style={{ background: "radial-gradient(circle, rgba(251,146,60,0.18) 0%, transparent 70%)" }} />
+
+  {/* ─── blue glow bottom-right ─── */}
+  <div className="absolute bottom-[-60px] right-[5%] w-[380px] h-[380px] rounded-full pointer-events-none"
+    style={{ background: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)" }} />
+
+  {/* ─── green accent dot ─── */}
+  <div className="absolute top-[18%] right-[38%] w-2 h-2 rounded-full bg-emerald-400 ping-slow hidden md:block" />
+  <div className="absolute top-[55%] left-[42%] w-1.5 h-1.5 rounded-full bg-amber-300 ping-slow hidden md:block" style={{animationDelay:"1s"}} />
+
+  {/* ─── right side: student image + floating cards ─── */}
+  <div className="absolute right-0 top-0 h-full w-[50%] hidden md:block pointer-events-none z-[2]">
+    {/* image frame */}
+    <div className="absolute right-8 bottom-0 w-[380px] h-[520px]">
+      {/* soft glow behind image */}
+      <div className="absolute inset-0 rounded-[40px]"
+        style={{ background: "radial-gradient(ellipse at center, rgba(59,130,246,0.22) 0%, transparent 70%)" }} />
+      <img
+        src={HERO_HUMAN_IMAGE}
+        alt="Indian students celebrating admission"
+        className="relative z-10 w-full h-full object-contain object-bottom hero-float"
+        style={{ filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.5))" }}
       />
-      <div
-        className="absolute inset-0"
-        style={{
-          clipPath: "polygon(0% 65%, 45% 45%, 100% 65%, 100% 100%, 0% 100%)",
-          background: "linear-gradient(180deg, #103163, #0c254d)",
-        }}
-      />
     </div>
 
-    <img
-      src={HERO_HUMAN_IMAGE}
-      alt="Students"
-      width="420"
-      height="340"
-      fetchPriority="high"
-      decoding="async"
-      className="absolute top-[200px] left-[200px] w-[420px] h-[340px] object-contain"
-    />
-  </div> 
-{ /* ================= ABSTRACT SHAPES (MOBILE ONLY) ================= */}
-  <div
-  className="
-    absolute
-    top-0
-    right-[-72px]
-    w-[250px]
-    h-[150px]
-    pointer-events-none
-    z-[2]
-    block md:hidden
-  "
->
-  {/* YELLOW SHAPE (BEHIND) */}
-  <div
-    className="absolute top-[8px] right-[58px] w-[182px] h-[112px] rounded-[36px] bg-[#D9A83E]"
-    style={{ transform: "rotate(26deg)" }}
-  />
-
-  {/* BLUE SHAPE (FRONT) */}
-  <div
-    className="absolute top-[12px] right-[4px] w-[160px] h-[98px] rounded-[38px] overflow-hidden shadow-[0_18px_42px_rgba(0,0,0,0.22)]"
-    style={{ transform: "rotate(-20deg)" }}
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-[#1e4b8f] to-[#163d7a]" />
-    <div
-      className="absolute inset-0 opacity-85"
-      style={{
-        clipPath: "polygon(38% 0%, 100% 0%, 100% 64%, 44% 44%)",
-        background: "linear-gradient(135deg, #2b63b3, #1c4a8f)"
-      }}
-    />
-    <div
-      className="absolute inset-0 opacity-95"
-      style={{
-        clipPath: "polygon(0% 66%, 44% 44%, 100% 64%, 100% 100%, 0% 100%)",
-        background: "linear-gradient(180deg, #103163, #0c254d)"
-      }}
-    />
-  </div>
-
-  {/* CORNER GLOW */}
-  <div
-    className="absolute -top-1 right-[70px] w-[130px] h-[64px] bg-[#4f7ec8]/35 blur-[20px] rounded-full"
-  />
-</div>
-
-
-  {/* ================= CONTENT ================= */}
-  <div className="relative z-10 md:mt-30 mt-0">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-      <div className="max-w-xl">
-        {/* HEADING */}
-        <h1 className="text-slate-900 font-extrabold tracking-tight
-          text-[25px] md:text-[36px] md:leading-[44px] leading-[30px]
-          sm:text-[42px] sm:leading-[52px]
-          md:text-[52px] md:leading-[64px]">
-          Find Your <br />
-          <span className="inline-flex items-baseline whitespace-nowrap">
-            <span>Dream&nbsp; {""} </span>
-            <HeroTypedWord />
-            <span
-              aria-hidden="true"
-              className=""
-            />
-          </span>
-        </h1>
-
-        {/* SUBTEXT */}
-        <p className="text-slate-600 mt-4 text-base sm:text-lg font-medium max-w-md hidden md:block">
-          Compare colleges, courses, fees, and
-          <span className="font-semibold text-slate-900">
-            {" "}real placement outcomes
-          </span>{" "}
-          — all in one place.
-        </p> 
-           <p className="text-slate-600 mt-3 text-[13px] font-medium max-w-md block md:hidden">
-        Discover Colleges, courses, and
-          <span className="font-semibold text-slate-900">
-            {" "}placement 
-          </span>{" "}
-          for your future.
-        </p>
-
-
-        {/* TAGS */}
-    <div
-  className="
-    mt-3
-    flex
-    flex-nowrap
-   
-    gap-1
-    md:flex-wrap
-    md:gap-3
-  "
->
-  {HERO_TAGS.map(({ label, stream, Icon }) => (
-    <button
-      key={label}
-      type="button"
-      onClick={() =>
-        navigate("/courses", {
-          state: { initialStream: stream },
-        })
-      }
-      className="
-        flex items-center gap-1
-        px-2 py-1
-        bg-white
-        border border-slate-200
-        rounded-full
-        text-[9.5px] md:text-[11px]
-        font-semibold text-slate-700
-        whitespace-nowrap
-        leading-none
-        shadow-[0_2px_4px_rgba(0,0,0,0.05)]
-        hover:bg-slate-50
-        hover:border-slate-300
-        transition
-        cursor-pointer 
-        
-      "
-    >
-      <Icon />
-      <span>{label}</span>
-    </button>
-  ))}
-</div>
-
-
-
-
-        {/* SEARCH (STACKS ON MOBILE) */}
-     <form 
-      onSubmit={(e) => {
-    e.preventDefault();
-
-    navigate("/colleges", {
-      state: {
-        college: heroCollege.trim(),
-        city: heroCity.trim(),
-      },
-    });
-  }}
-  className="
-    mt-6
-    hidden md:flex
-    w-full max-w-2xl
-    items-center
-    bg-white
-    border border-slate-100
-    rounded-2xl
-    shadow-[0_25px_50px_-12px_rgba(0,0,0,0.1)]
-    p-2
-    gap-2
-  "
->
-  {/* College Name */}
-  <div className="flex items-center px-4 flex-1">
-    <span className="mr-2 text-slate-400">🔍</span>
-    <input
-  type="text"
-  placeholder="College Name"
-  value={heroCollege}
-  onChange={(e) => setHeroCollege(e.target.value)}
-  className="w-full py-3 text-sm outline-none placeholder-slate-400"
-/>
-  </div>
-
-  {/* Divider */}
-  <div className="w-px h-8 bg-slate-200" />
-
-  {/* City */}
-  <div className="flex items-center px-4 flex-1">
-    <span className="mr-2 text-slate-400">📍</span>
-  <input
-  type="text"
-  placeholder="City or Region"
-  value={heroCity}
-  onChange={(e) => setHeroCity(e.target.value)}
-  className="w-full py-3 text-sm outline-none placeholder-slate-400"
-/>
-  </div>
-
-  {/* Button */}
-  <button
-    type="submit"
-    className="
-      px-8 py-3
-      bg-[#f4a71d]
-      text-white
-      font-semibold
-      rounded-xl
-      hover:opacity-90
-      transition
-      whitespace-nowrap
-    "
-  >
-    Search
-  </button>
-</form>
-
-{/* MOBILE SEARCH FORM */}
-<form
- onSubmit={(e) => {
-    e.preventDefault();
-
-    navigate("/colleges", {
-      state: {
-        college: heroCollege.trim(),
-        city: heroCity.trim(),
-      },
-    });
-  }}
-  className="
-    mt-6
-    w-full
-    max-w-md
-    bg-white
-    rounded-2xl
-    shadow-[0_20px_40px_rgba(0,0,0,0.12)]
-    p-3
-    flex
-    flex-col
-    gap-3 
-    block md:hidden
-  "
->
-  {/* INPUT ROW */}
-  <div
-    className="
-      flex
-      items-center
-      gap-2
-      bg-white
-      border
-      border-slate-200
-      rounded-xl
-      px-2
-    "
-  >
-    {/* College Name */}
-    <div className="flex items-center gap-2 flex-1 px-2">
-      <span className="text-slate-400 text-sm">🔍</span>
-    <input
-  type="text"
-  placeholder="College Name"
-  value={heroCollege}
-  onChange={(e) => setHeroCollege(e.target.value)}
-  className="w-full py-3 text-sm outline-none placeholder-slate-400"
-/>
+    {/* Floating card 1 — placement */}
+    <div className="badge-pop absolute top-[18%] right-[42%] bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-4 py-3 shadow-xl"
+      style={{ animationDelay: "0.3s" }}>
+      <p className="text-[10px] text-white/60 font-medium uppercase tracking-wide">Avg. Package</p>
+      <p className="text-white font-bold text-[18px] leading-none mt-0.5">₹8.4 <span className="text-[13px] font-semibold text-amber-300">LPA</span></p>
+      <p className="text-[10px] text-emerald-400 mt-0.5 font-semibold">↑ 22% this year</p>
     </div>
 
-    {/* Divider */}
-    <div className="w-px h-6 bg-slate-200" />
-
-    {/* City */}
-    <div className="flex items-center gap-2 flex-1 px-2">
-      <span className="text-slate-400 text-sm">📍</span>
-     <input
-  type="text"
-  placeholder="City or Region"
-  value={heroCity}
-  onChange={(e) => setHeroCity(e.target.value)}
-  className="w-full py-3 text-sm outline-none placeholder-slate-400"
-/>
+    {/* Floating card 2 — colleges */}
+    <div className="badge-pop absolute top-[52%] right-[40%] bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl px-4 py-3 shadow-xl"
+      style={{ animationDelay: "0.6s" }}>
+      <p className="text-[10px] text-white/80 font-medium uppercase tracking-wide">Colleges Listed</p>
+      <p className="text-white font-bold text-[20px] leading-none mt-0.5">500+</p>
+      <p className="text-[10px] text-white/80 mt-0.5">Across 20+ states</p>
     </div>
-  </div>
 
-  {/* SEARCH BUTTON */}
-  <button
-    type="submit"
-    className="
-      w-full
-      py-3
-      rounded-xl
-      bg-[#f4a71d]
-      text-white
-      font-semibold
-      text-sm
-      shadow-[0_10px_25px_rgba(255,120,60,0.45)]
-      active:scale-[0.98]
-      transition
-    "
-  >
-    Search
-  </button>
-</form>
-
-
-
-        {/* TRUST */}
-        <div className="mt-6">
-          <p className="text-xs sm:text-sm text-slate-600 font-semibold mb-3">
-            Trusted by 10,000+ Students
-          </p>
-
-          <div className="flex items-center gap-4 flex-wrap">
-            {HERO_COLLEGES.map((college) => (
-              <div key={college.name} className="flex items-center gap-2 opacity-60">
-                <img
-                  src={college.logo}
-                  alt={college.name}
-                  width="96"
-                  height="32"
-                  loading="lazy"
-                  decoding="async"
-                  fetchPriority="low"
-                  className="h-6 sm:h-8 w-auto"
-                />
-                <span className=" text-[11px] font-semibold text-slate-700">
-                  {college.name}
-                </span>
-              </div>
-            ))}
-          </div>
+    {/* Floating card 3 — students */}
+    <div className="badge-pop absolute bottom-[28%] right-[10%] bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-4 py-3 shadow-xl"
+      style={{ animationDelay: "0.9s" }}>
+      <div className="flex items-center gap-2">
+        <div className="flex -space-x-2">
+          {["🧑‍🎓","👩‍🎓","🧑‍💼"].map((e,i) => (
+            <span key={i} className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm border border-white/30">{e}</span>
+          ))}
+        </div>
+        <div>
+          <p className="text-white font-bold text-[13px] leading-none">10,000+</p>
+          <p className="text-[10px] text-white/60">Students placed</p>
         </div>
       </div>
     </div>
+  </div>
+
+  {/* ================= MAIN CONTENT ================= */}
+  <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-8 md:pt-16 pb-10 md:pb-0" style={{ minHeight: "inherit" }}>
+    <div className="max-w-[580px]">
+
+      {/* trust badge */}
+      <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 mb-5">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ping-slow" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-amber-300">
+          🎓 India's #1 College Admission Portal
+        </span>
+      </div>
+
+      {/* ── HEADING with TYPEWRITER ── */}
+      <h1 className="font-extrabold tracking-tight leading-[1.15] text-white"
+        style={{ fontSize: "clamp(2rem, 5vw, 3.25rem)" }}>
+        Find Your Dream<br />
+        <span className="inline-flex items-baseline gap-2 flex-wrap">
+          <TypewriterWord words={["College", "University", "Course"]} />
+          <span className="text-white">.</span>
+        </span>
+      </h1>
+
+      {/* subheading */}
+      <p className="mt-4 text-white/65 text-[14px] md:text-[16px] leading-relaxed max-w-md">
+        Compare <span className="text-amber-300 font-semibold">MBA, B.Tech, MBBS &amp; Law</span> colleges by fees, NIRF rankings &amp; real placement outcomes — all in one place.
+      </p>
+
+      {/* quick-stream pills */}
+      <div className="mt-5 flex flex-wrap gap-2">
+        {[
+          { label: "🔥 Top MBA", stream: "Management" },
+          { label: "⚙️ Engineering", stream: "Engineering" },
+          { label: "🩺 Medical", stream: "Medical" },
+          { label: "⚖️ Law", stream: "Law" },
+          { label: "✈️ Study Abroad", stream: "Study Abroad" },
+        ].map(({ label, stream }) => (
+          <button key={label} type="button"
+            onClick={() => navigate("/courses", { state: { initialStream: stream } })}
+            className="px-3 py-1.5 rounded-full text-[11px] font-semibold border border-white/15 text-white/80 hover:text-white transition whitespace-nowrap"
+            style={{ background: "rgba(255,255,255,0.08)" }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.15)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
+          >{label}</button>
+        ))}
+      </div>
+
+      {/* ── SEARCH BOX ── */}
+      <form
+        onSubmit={(e) => { e.preventDefault(); navigate("/colleges", { state: { college: heroCollege.trim(), city: heroCity.trim() } }); }}
+        className="mt-6 w-full max-w-[520px]"
+      >
+        {/* desktop inline */}
+        <div className="hidden md:flex items-center bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.35)] overflow-hidden p-1.5 gap-1">
+          <div className="flex items-center flex-1 px-3 gap-2">
+            <span className="text-slate-400 text-sm">🔍</span>
+            <input type="text" placeholder="College or Course name"
+              value={heroCollege} onChange={(e) => setHeroCollege(e.target.value)}
+              className="w-full py-2.5 text-sm text-slate-800 outline-none placeholder-slate-400 bg-transparent" />
+          </div>
+          <div className="w-px h-7 bg-slate-200" />
+          <div className="flex items-center flex-1 px-3 gap-2">
+            <span className="text-slate-400 text-sm">📍</span>
+            <input type="text" placeholder="City or State"
+              value={heroCity} onChange={(e) => setHeroCity(e.target.value)}
+              className="w-full py-2.5 text-sm text-slate-800 outline-none placeholder-slate-400 bg-transparent" />
+          </div>
+          <button type="submit"
+            className="hero-saffron-btn px-6 py-2.5 rounded-xl font-bold text-sm text-white whitespace-nowrap"
+            style={{ background: "linear-gradient(135deg, #f97316, #f59e0b)" }}>
+            Search →
+          </button>
+        </div>
+
+        {/* mobile stacked */}
+        <div className="flex md:hidden flex-col gap-2 bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3">
+          <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2.5">
+            <span className="text-slate-400">🔍</span>
+            <input type="text" placeholder="College or Course"
+              value={heroCollege} onChange={(e) => setHeroCollege(e.target.value)}
+              className="flex-1 text-sm text-slate-800 outline-none placeholder-slate-400 bg-transparent" />
+          </div>
+          <div className="flex items-center gap-2 bg-white rounded-xl px-3 py-2.5">
+            <span className="text-slate-400">📍</span>
+            <input type="text" placeholder="City or State"
+              value={heroCity} onChange={(e) => setHeroCity(e.target.value)}
+              className="flex-1 text-sm text-slate-800 outline-none placeholder-slate-400 bg-transparent" />
+          </div>
+          <button type="submit"
+            className="hero-saffron-btn w-full py-3 rounded-xl font-bold text-sm text-white"
+            style={{ background: "linear-gradient(135deg, #f97316, #f59e0b)" }}>
+            🔍 Search Colleges
+          </button>
+        </div>
+      </form>
+
+      {/* ── popular searches ── */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] text-white/40 font-medium">Popular:</span>
+        {["IIM Ahmedabad", "IIT Delhi", "AIIMS Delhi", "NLU Delhi"].map(q => (
+          <button key={q} type="button"
+            onClick={() => { setHeroCollege(q); navigate("/colleges", { state: { college: q } }); }}
+            className="text-[11px] text-white/60 hover:text-amber-300 transition underline underline-offset-2 decoration-white/20">
+            {q}
+          </button>
+        ))}
+      </div>
+
+      {/* ── trust row ── */}
+      <div className="mt-6 pt-5 border-t border-white/10 flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-1.5">
+          <span className="text-amber-400 text-base">★★★★★</span>
+          <span className="text-[12px] text-white/70 font-medium">Trusted by <strong className="text-white">10,000+</strong> students</span>
+        </div>
+        <div className="flex -space-x-2">
+          {HERO_COLLEGES.slice(0, 3).map((c) => (
+            <img key={c.name} src={c.logo} alt={c.name}
+              className="w-8 h-8 rounded-full border-2 border-white/20 object-contain bg-white p-0.5" />
+          ))}
+          <div className="w-8 h-8 rounded-full border-2 border-white/20 bg-white/10 flex items-center justify-center text-[9px] text-white font-bold">+97</div>
+        </div>
+        <span className="text-[11px] text-white/50">100+ partner colleges</span>
+      </div>
+
+    </div>
+  </div>
+
+  {/* bottom wave */}
+  <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
+    <svg viewBox="0 0 1440 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
+      <path d="M0 48 C360 0 1080 0 1440 48 L1440 48 L0 48 Z" fill="white" opacity="0.06"/>
+      <path d="M0 48 C360 16 1080 16 1440 48 L1440 48 L0 48 Z" fill="white" opacity="0.04"/>
+    </svg>
   </div>
 </section>
 
@@ -1926,32 +1810,83 @@ const HERO_TAGS = [
 
 
 
+      {/* ================================================== */}
+      {/* STATS BAND — Social proof numbers                 */}
+      {/* ================================================== */}
+      <section className="bg-white py-6 md:py-8 border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap gap-3 md:gap-4 justify-center md:justify-between">
+            {[
+              { icon: "🎓", number: "50,000+", label: "Students Guided", bg: "bg-blue-50" },
+              { icon: "🏛️", number: "1,000+",  label: "Colleges Listed",  bg: "bg-indigo-50" },
+              { icon: "📚", number: "500+",    label: "Courses Available", bg: "bg-amber-50" },
+              { icon: "🆓", number: "100%",    label: "Free Counselling",  bg: "bg-green-50" },
+              { icon: "⭐", number: "4.8/5",   label: "Student Rating",    bg: "bg-rose-50" },
+            ].map((stat) => (
+              <div key={stat.label} className="sc-stat-card">
+                <div className={`sc-stat-icon ${stat.bg}`}>{stat.icon}</div>
+                <div>
+                  <div className="sc-stat-number">{stat.number}</div>
+                  <div className="sc-stat-label">{stat.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------- */}
+      {/* STUDENT TOOLS GRID                                */}
+      {/* -------------------------------------------------- */}
+      <section className="py-8 bg-[#f2f4f7]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mb-5">
+            <span className="sc-section-badge">🛠️ Free Student Tools</span>
+            <h2 className="sc-section-title">Smart Tools for Your College Journey</h2>
+            <p className="sc-section-desc">Use our free tools to predict colleges, compare ROI, explore NIRF rankings and get expert counselling.</p>
+            <div className="sc-section-divider" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { icon: "🎯", label: "College Predictor", desc: "Predict by rank & score", href: "/college-predictor", color: "bg-blue-50 border-blue-100" },
+              { icon: "⚖️", label: "Compare Colleges", desc: "Side-by-side comparison", href: "/compare", color: "bg-indigo-50 border-indigo-100" },
+              { icon: "📈", label: "ROI Calculator", desc: "Education loan & returns", href: "/roi-calculator", color: "bg-amber-50 border-amber-100" },
+              { icon: "📊", label: "NIRF Insights", desc: "Rankings & placement data", href: "/nirf-insights", color: "bg-green-50 border-green-100" },
+              { icon: "🤖", label: "AI College Finder", desc: "AI-powered recommendations", href: "/ai-college-finder", color: "bg-purple-50 border-purple-100" },
+              { icon: "🆓", label: "Free Counselling", desc: "Talk to an expert today", href: "/free-counselling", color: "bg-rose-50 border-rose-100" },
+            ].map(tool => (
+              <a
+                key={tool.label}
+                href={tool.href}
+                className={`flex flex-col items-center text-center gap-2 rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all ${tool.color}`}
+              >
+                <span className="text-3xl">{tool.icon}</span>
+                <p className="text-[13px] font-bold text-slate-800">{tool.label}</p>
+                <p className="text-[10px] text-slate-500">{tool.desc}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* -------------------------------------------------- */}
       {/* TOP COURSES / STUDY GOAL (Image 1 middle row)     */}
       {/* -------------------------------------------------- */}
 
       <div className="bg-white">
-  <section
-    className="pb-10 pt-2 md:pt-5 bg-white shadow-[0_20px_40px_rgba(0,0,0,0.06)]"
-    style={deferredSectionStyle}
-  >
+  <section className="pb-10 pt-2 md:pt-5 bg-white shadow-[0_20px_40px_rgba(0,0,0,0.06)]">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
       {/* HEADER */}
       <div className="mb-6 md:mb-8">
-        <h2
-          className="
-            text-[18px] md:text-[32px]
-             text-[#0A214A]
-            leading-tight tracking-tight
-          "
-        >
-          Top Courses · Select Your Study Goal
+        <span className="sc-section-badge">📖 500+ Courses Available</span>
+        <h2 className="sc-section-title">
+          Top Courses in India 2026 — <span>Choose Your Study Goal</span>
         </h2>
-
-        <p className="text-sm md:text-base text-slate-600 mt-1">
-          Explore curated course categories tailored to your academic interests.
+        <p className="sc-section-desc">
+          Explore MBA, B.Tech, MBBS, Law, Commerce &amp; more. Find courses with fees, duration and college count.
         </p>
+        <div className="sc-section-divider" />
       </div>
 
       {/* HORIZONTAL SCROLL GRID */}
@@ -2013,8 +1948,6 @@ const HERO_TAGS = [
                   <img
                     src={category.iconPath}
                     alt={category.name}
-                    loading="lazy"
-                    decoding="async"
                     className="
                       md:h-6 md:w-6
                       max-md:h-5 max-md:w-5
@@ -2059,15 +1992,9 @@ const HERO_TAGS = [
       {/* -------------------------------------------------- */}
 
     
-      <DeferredMount
-        placeholderHeight={1500}
-        rootMargin="350px 0px"
-        onVisible={() => setShouldRenderCollegeSections(true)}
-      >
         <section
-          className="pb-0 md:pb-6 bg-white mt-5 pt-8 shadow-[0_12px_28px_rgba(0,0,0,0.06)] rounded-2xl"
-          style={deferredLargeSectionStyle}
-        >
+
+          className="pb-0 md:pb-6 bg-white mt-5 pt-8 shadow-[0_12px_28px_rgba(0,0,0,0.06)] rounded-2xl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
  
             {/* Heading */}
@@ -2077,19 +2004,14 @@ const HERO_TAGS = [
 
                 {/* LEFT SIDE: Heading */}
                 <div className="flex-shrink-0">
-                  <h2
-                    className="text-[20px] md:text-[32px]  tracking-tight text-slate-900"
-                    style={{ fontFamily: "Roboto, sans-serif" }}
-                  >
-                    Top Universities / Colleges
+                  <span className="sc-section-badge">🏆 Ranked &amp; Verified</span>
+                  <h2 className="sc-section-title">
+                    Top Colleges in India 2026
                   </h2>
-
-                  <p
-                    className="text-sm md:text-base text-slate-500 mt-1"
-                    style={{ fontFamily: "Roboto, sans-serif" }}
-                  >
-                    Find Your Ideal College
+                  <p className="sc-section-desc">
+                    Compare fees, placements &amp; rankings for MBA, B.Tech, MBBS, Law &amp; more.
                   </p>
+                  <div className="sc-section-divider" />
                 </div>
 
                 {/* RIGHT SIDE: Stream Filters */}
@@ -2154,18 +2076,23 @@ const HERO_TAGS = [
                   {filteredColleges.map((college, index) => (
                     <div
   key={college.id}
- 
-    className="
+  className="
     flex-shrink-0
 
+    /* MOBILE */
     min-w-[240px]
     max-w-[260px]
+    h-[360px]
 
+    /* TABLET */
     sm:min-w-[280px]
     sm:max-w-[300px]
+    sm:h-[400px]
 
+    /* DESKTOP (unchanged) */
     lg:min-w-[300px]
     lg:max-w-[330px]
+    lg:h-[430px]
   "
 >
 
@@ -2175,7 +2102,7 @@ const HERO_TAGS = [
                             onOpenBrochure={onOpenBrochure}
                           onCompareToggle={onCompareToggle}
   isCompared={compareList.includes(String(college.id))}
-                          className="mb-0 h-full" />
+                          className="mb-0" />
                       </AnimatedContainer>
                     </div>
                   ))}
@@ -2221,8 +2148,7 @@ const HERO_TAGS = [
       shadow-lg
       hover:bg-[#163a7a]
       transition-all
-      mb-8 
-      mt-5
+      mb-8
 
       /* MOBILE */
       px-5 py-2 text-xs
@@ -2238,26 +2164,8 @@ const HERO_TAGS = [
 
 
           </div>
-        </section> 
-
-    <section className=" md:mt-4 mt-2 ">
-  <div className="max-w-7xl mx-auto">
-    <div className="rounded-3xl  overflow-hidden">
-   
-
-      <div className="md:p-10 p-0">
-        <img
-         onClick={onOpenApplyNow}
-          src="./icons/Poster_1.webp"
-          alt="Poster"
-          loading="lazy"
-          className="w-full h-auto rounded-2xl object-contain cursor-pointer shadow-md hover:shadow-lg transition"
-        />
-      </div>
-    </div>
-  </div>
-</section>
-
+        </section>
+    
 
       {/* Top Study Places Section */}
       <section className="py-3 bg-[#F8F9FA] relative overflow-hidden">
@@ -2272,17 +2180,16 @@ const HERO_TAGS = [
         <div className="max-w-7xl mx-auto px-6">
 
           {/* HEADING */}
-          <h2 className="text-center text-[18px] md:text-[28px] md:text-[32px] font-bold text-[#0A225A] leading-[38px] md:leading-[42px] mt-4">
-            Find Colleges Near You!
-          </h2>
-
-          <p className="text-[14px] md:text-[16px] leading-[20px] md:leading-[24px] text-black text-center mt-1">
-            Search by city to{" "}
-            <span className="text-[#f4a71d] font-semibold">
-              Explore Top Colleges
-            </span>{" "}
-            in your area.
-          </p>
+          <div className="text-center mt-4">
+            <span className="sc-section-badge mx-auto">📍 11 Major Cities Covered</span>
+            <h2 className="sc-section-title mx-auto">
+              Find Best Colleges by City — <span>Delhi, Mumbai, Bangalore &amp; More</span>
+            </h2>
+            <p className="sc-section-desc mx-auto text-center" style={{ maxWidth: "600px" }}>
+              Search top colleges in your city. Compare admissions in Delhi NCR, Mumbai, Bangalore, Chennai, Pune, Hyderabad &amp; more.
+            </p>
+            <div className="sc-section-divider mx-auto" />
+          </div>
 
           {/* SEARCH BAR */}
           <div className="mt-6 md:mt-8 flex justify-center">
@@ -2364,8 +2271,8 @@ const HERO_TAGS = [
   }
   className="
     group
-    min-w-[100px] md:min-w-[150px]
-    h-[100px] md:h-[150px]
+    min-w-[130px] md:min-w-[150px]
+    h-[135px] md:h-[150px]
     rounded-2xl
     border border-slate-200
     bg-white
@@ -2378,12 +2285,10 @@ const HERO_TAGS = [
   "
 >
 
-    <div className="h-8 w-8 md:h-14 md:w-14">
-<img
+    <div className="h-12 w-12 md:h-14 md:w-14">
+   <img
   src={CITY_ICON_MAP[region] || "/icons/university.png"}
   alt={region}
-  loading="lazy"
-  decoding="async"
   className="
     h-full w-full object-contain
     opacity-70
@@ -2434,52 +2339,38 @@ const HERO_TAGS = [
 
         </div>
       </section>
-      </DeferredMount>
 
 
 
       {/* EXPLORE COURSES SECTION */}
-      <DeferredMount
-        placeholderHeight={560}
-        rootMargin="320px 0px"
-        onVisible={() => setShouldRenderExploreCourses(true)}
-      >
       <Suspense fallback={<div className="py-20 text-center">Loading...</div>}>
-        <section className="py-8 bg-white" style={deferredLargeSectionStyle}>
+        <section className="py-8 bg-white">
           <div className="max-w-7xl mx-auto px-6">
 
 
             {/* Heading */}
-            <div className="flex items-center gap-3 mb-2 md:mb-6">
-             <svg
-  viewBox="0 0 24 24"
-  stroke="#0A225A"
-  fill="none"
-  className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8"
->
-  <path
-    strokeWidth="1.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    d="M4 4h16v12H4z M4 16l8 4 8-4"
-  />
-</svg>
-              <h2 className="text-1xl md:text-[3xl] text-[#0A225A]">
-                Explore Courses
+            <div className="mb-2 md:mb-6">
+              <span className="sc-section-badge">🔭 Postgraduate · Undergraduate · Doctoral</span>
+              <h2 className="sc-section-title">
+                Explore All Courses in India 2026 — <span>MBA, B.Tech, MBBS &amp; More</span>
               </h2>
+              <p className="sc-section-desc">
+                Browse courses by level, duration &amp; average fees. Find the right programme for your career.
+              </p>
+              <div className="sc-section-divider" />
             </div>
 
             {/* FILTER BY LEVEL ONLY */}
             <div className="mb-8">
               <h3 className="text-sm md:text-lg text-[#0A225A] mb-3">Filter by Level</h3>
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+              <div className="flex gap-3 flex-wrap">
 
                 {exploreLevels.map((level) => (
                   <button
                     key={level}
                     onClick={() => setExploreLevel(level)}
                     className={`
-              px-2 py-1 md:px-4 md:py-2 rounded-full border font-medium text-[10px] md:text-sm transition
+              px-4 py-2 rounded-full border font-medium text-sm transition
               ${exploreLevel === level
                         ? "bg-[#0A225A] text-white border-[#0A225A]"
                         : "bg-white text-[#0A225A] border-gray-300 hover:bg-gray-100"
@@ -2555,21 +2446,21 @@ const HERO_TAGS = [
                     </div>
 
                     {/* Title */}
-     <h3
+                 <h3
   className="
-    text-[13px]
-    font-semibold
-    text-gray-700
-    w-full
+    text-[14px]
+    mb-3
+    leading-snug
     overflow-hidden
-    whitespace-nowrap
     text-ellipsis
-    min-h-[18px]
+    whitespace-nowrap
+    max-w-full
   "
   title={course.name}
 >
   {course.name}
 </h3>
+
 
                     {/* Info Boxes */}
                   <div className="grid grid-cols-2 gap-2 text-[10px] md:text-xs mb-3 mt-3">
@@ -2646,27 +2537,49 @@ const HERO_TAGS = [
 
           </div>
         </section>
-      </Suspense>
-      </DeferredMount>  
+      </Suspense>  
 
          {/* -------------------------------------------------- */}
       {/* EXPLORE EXAMS SECTION (Updated with unique stream filters) */}
       {/* -------------------------------------------------- */}
 
-      <DeferredMount
-        placeholderHeight={440}
-        rootMargin="320px 0px"
-        onVisible={() => setShouldRenderTopExams(true)}
-      >
+
       <section className="py-10 bg-white">
+
+        {/* Build unique streams from backend exam.stream */}
+        {(() => {
+          const uniqueStreams = new Set<string>();
+          exams.forEach((exam) => {
+            if (exam.stream) uniqueStreams.add(exam.stream.trim());
+          });
+          var examFilters = ["All", ...Array.from(uniqueStreams)];
+          return null;
+        })()}
+
+        {/* Exam Filters */}
+
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Heading */}
-          <div className="mb-6">
-            <h2 className="text-[24px] md:text-[28px] text-slate-900">
-              Top Exams
-            </h2>
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <span className="sc-section-badge">📝 CAT · JEE · NEET · CLAT &amp; More</span>
+              <h2 className="sc-section-title">
+                Top Entrance Exams 2026 — <span>Dates, Eligibility &amp; Results</span>
+              </h2>
+              <p className="sc-section-desc">
+                Stay updated on exam schedules, cut-offs and application deadlines for India's top competitive exams.
+              </p>
+              <div className="sc-section-divider" />
+            </div>
+            <button
+              onClick={() => navigate ? (window.location.href = "/exams") : undefined}
+              className="sc-cta-btn shrink-0 self-start sm:self-end"
+              style={{ fontSize: "0.82rem", padding: "9px 22px" }}
+            >
+              View All Exams →
+            </button>
           </div>
 
           {/* Filtered Exams */}
@@ -2675,11 +2588,16 @@ const HERO_TAGS = [
               id="examCarousel"
               className="flex gap-5 overflow-x-auto scroll-smooth pb-3 px-1 scrollbar-hide"
             >
-              {(shouldRenderTopExams ? visibleHomeExams : [])
+              {exams
+                .filter((exam) =>
+                  selectedExamFilter === "All"
+                    ? true
+                    : exam.stream?.trim() === selectedExamFilter
+                )
                 .map((exam) => (
                   <div
                     key={exam.id}
-                     onClick={() => navigate(`/exams/${toExamSlug(exam)}`)}
+                    onClick={() => navigate(`/exams/${toExamSlug(exam)}`)}
 
                     className="
                 min-w-[290px] max-w-[290px]
@@ -2694,8 +2612,6 @@ const HERO_TAGS = [
                           src={exam.logoUrl}
                           className="h-10 w-10 rounded-full border object-contain"
                           alt={exam.name}
-                          loading="lazy"
-                          decoding="async"
                         />
                         <div>
                           <p className="font-semibold text-sm text-slate-900">
@@ -2756,219 +2672,175 @@ const HERO_TAGS = [
 
         </div>
       </section>
-      </DeferredMount>
    
-{/* ================= STUDENT UPDATE STRIP ================= */}
-<DeferredMount
-  placeholderHeight={420}
-  onVisible={() => setShouldLoadStudentNews(true)}
->
-<section className="bg-slate-50 py-6 sm:py-16" style={deferredSectionStyle}>
+{/* ================= LATEST NEWS SECTION ================= */}
+<section className="bg-gradient-to-b from-slate-50 to-white py-5 sm:py-8">
   <div className="max-w-7xl mx-auto px-4 sm:px-6">
-    <div className="relative rounded-3xl bg-white shadow-xl shadow-blue-900/5 overflow-hidden border border-slate-100">
-      
-      {/* Container: Always Row */}
-      <div className="flex flex-row min-h-[300px] sm:min-h-[450px]">
 
-        {/* ================= LEFT : NEWS (60% on Mobile) ================= */}
-        <div className="w-[62%] sm:w-[55%] p-4 sm:p-10 flex flex-col">
-          
-          {/* Header */}
-          <div className="mb-4 sm:mb-6">
-            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-[9px] sm:text-xs font-bold uppercase tracking-wider mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-              Live Updates
-            </div>
-            <h2 className="text-[15px] sm:text-2xl font-bold text-slate-900 leading-tight">
-              Latest Education <span className="text-blue-600">News</span>
-            </h2>
-          </div>
+    {/* Section Header */}
+    <div className="flex items-center justify-between mb-3 sm:mb-4">
+      <div>
+        <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-50 border border-red-100 text-red-600 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+          Live Updates
+        </div>
+        <h2 className="text-base sm:text-xl font-extrabold text-slate-900 leading-tight">
+          Latest Education <span className="gradient-text-blue">News &amp; Updates 2026</span>
+        </h2>
+      </div>
+      <a
+        href="/blog"
+        className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-[#1E4A7A] hover:text-blue-700 transition-colors border border-[#1E4A7A]/20 rounded-full px-3 py-1.5 hover:bg-blue-50"
+      >
+        View All →
+      </a>
+    </div>
 
-          {/* News List */}
+    {/* Main Card */}
+    <div className="rounded-2xl overflow-hidden shadow-lg shadow-blue-900/5 border border-slate-100 bg-white">
+      <div className="flex flex-row min-h-[180px] sm:min-h-[240px]">
+
+        {/* ===== LEFT: News Feed ===== */}
+        <div className="flex-1 flex flex-col p-3 sm:p-5 bg-white">
           <div className="relative flex-1 overflow-hidden">
-            <div className="h-[220px] sm:h-[320px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
-              {studentUpdateNewsLoading ? (
-                <div className="flex items-center justify-center h-full text-xs sm:text-sm text-slate-500">
-                  Loading latest news...
-                </div>
-              ) : studentUpdateNews.length > 0 ? (
-                studentUpdateNews.map((news, index) => (
-                  <a
-                    key={`${news.link}-${index}`}
-                    href={news.link}
-                    className="flex gap-2 sm:gap-4 items-center p-1.5 sm:p-2 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 cursor-pointer"
-                  >
+            <div className="h-[160px] sm:h-[200px] overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
+              {loopingNews.map((news, i) => (
+                <div
+                  key={i}
+                  className="group flex gap-2 sm:gap-3 items-center p-1.5 sm:p-2 rounded-xl border border-transparent hover:border-blue-100 hover:bg-blue-50/30 transition-all cursor-pointer"
+                >
+                  {/* Thumbnail */}
+                  <div className="flex-shrink-0 w-9 h-9 sm:w-12 sm:h-12 rounded-lg overflow-hidden shadow-sm ring-1 ring-slate-100">
                     <img
-                      src={news.image || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbmKDMrnfbPcR2TwpnuRFu7CDi_A_mu-mnkw&s"}
-                      alt={news.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-10 h-10 sm:w-16 sm:h-16 rounded-lg object-cover flex-shrink-0 shadow-sm"
+                      src={news.imageUrl}
+                      alt=""
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
+                  </div>
 
-                    <div className="min-w-0">
-                      <p className="text-[10px] sm:text-[15px] font-semibold text-slate-800 leading-[1.3] line-clamp-1">
-                        {news.title}
-                      </p>
-                      <p className="text-[8px] sm:text-xs text-slate-500 mt-0.5 line-clamp-1">
-                        {news.description}
-                      </p>
-                      <p className="text-[8px] sm:text-xs text-slate-500 mt-0.5">
-                        {formatHomeNewsDate(news.pubDate)}
-                      </p>
-                    </div>
-                  </a>
-                ))
-              ) : (
-                <div className="flex items-center justify-center h-full text-xs sm:text-sm text-slate-500">
-                  No latest news available right now.
+                  <div className="min-w-0 flex-1">
+                    {news.category && (
+                      <span className="inline-block px-1.5 py-0 rounded-full bg-blue-50 text-blue-600 text-[8px] font-semibold uppercase tracking-wider mb-0.5">
+                        {news.category}
+                      </span>
+                    )}
+                    <p className="text-[10px] sm:text-xs font-semibold text-slate-800 leading-snug line-clamp-2 group-hover:text-[#1E4A7A] transition-colors">
+                      {news.title}
+                    </p>
+                    <span className="text-[8px] sm:text-[10px] text-slate-400">
+                      {news.date}
+                    </span>
+                  </div>
+
+                  <span className="flex-shrink-0 text-slate-200 group-hover:text-[#1E4A7A] text-base font-light transition-colors">›</span>
                 </div>
-              )}
+              ))}
             </div>
-            
-            {/* Bottom Gradient Fade */}
-            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+            {/* Bottom fade */}
+            <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none" />
           </div>
+
         </div>
 
-        {/* ================= RIGHT : IMAGE (38% on Mobile) ================= */}
-        <div className="w-full sm:w-[45%] relative">
+        {/* ===== RIGHT: Girl Image ===== */}
+        <div className="relative w-[38%] sm:w-[32%] flex-shrink-0 overflow-hidden">
           <img
             src="./icons/latestnews.png"
-            alt="Student"
-            loading="lazy"
-            decoding="async"
-            className="w-[180px] xs:w-[200px]
-      h-auto
-      object-contain
-      sm:absolute sm:inset-0 sm:w-full sm:h-full
-      sm:object-cover sm:object-center"
-          /> 
-          <img
-    src="https://media.gettyimages.com/id/1920428247/vector/online-examinations-illustrations-concept-trendy-vector-style-confirmation.jpg?s=612x612&w=0&k=20&c=yOGQmJD3DcSh4A1Tb4pqqW6aHc8DS4ONLH2MH7temtY="
-    alt="Education Illustration"
-    loading="lazy"
-    decoding="async"
-    className=" 
-      
-      block sm:hidden
-      w-full
-      max-w-[260px]
-      h-auto
-      opacity-90
-    "
-  />
-          {/* Subtle overlay for depth */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+            alt="Indian Student"
+            className="absolute inset-0 w-full h-full object-cover object-top"
+          />
+          <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-white/10" />
+          <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3">
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400 text-amber-900 text-[7px] sm:text-[9px] font-bold uppercase tracking-wider">
+              🇮🇳 India Education Hub
+            </div>
+          </div>
         </div>
 
       </div>
     </div>
   </div>
+</section>
 
-  <style>{`
-    .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-    .line-clamp-2 {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-  `}</style>
-</section> 
-</DeferredMount>
+        {/* Partner Logos Infinite Scroll */}
+<section className="py-14 bg-white">
+  <div className="max-w-7xl mx-auto px-6 text-center">
+    <span className="sc-section-badge mx-auto mb-2">🤝 Official Admission Partners</span>
+    <h2 className="sc-section-title mb-2">
+      Top Universities &amp; Colleges <span>We Work With</span>
+    </h2>
+    <p className="sc-section-desc mx-auto text-center mb-8" style={{ maxWidth: "520px" }}>
+      StudyCups is an authorised admission partner for 100+ accredited universities across India.
+    </p>
 
-<section className=" pb-8 sm:pb-16">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6">
-    <div className="rounded-3xl  overflow-hidden">
-   
+    <div className="overflow-hidden relative">
+      {/* fade edges */}
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-16 bg-gradient-to-r from-white to-transparent z-10" />
+      <div className="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-white to-transparent z-10" />
 
-      <div className="md:p-10 p-0">
-        <img
-          src="./icons/Poster_2.webp"
-          alt="Poster"
-          loading="lazy"
-          className="w-full h-auto rounded-2xl object-contain"
-        />
+      <div
+        ref={logoScrollRef}
+        className="flex items-center gap-14 animate-logoScroll"
+        style={{ width: "max-content" }}
+      >
+        {/* first set */}
+        {colleges
+          .filter((c: any) => c.logoUrl || c.logo)
+          .slice(0, 40)
+          .map((c: any, i: number) => (
+            <img
+              key={`a-${c.id ?? i}`}
+              src={c.logoUrl || c.logo}
+              alt={c.name}
+              className="h-10 md:h-12 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          ))}
+        {/* duplicate for seamless loop */}
+        {colleges
+          .filter((c: any) => c.logoUrl || c.logo)
+          .slice(0, 40)
+          .map((c: any, i: number) => (
+            <img
+              key={`b-${c.id ?? i}`}
+              src={c.logoUrl || c.logo}
+              alt={c.name}
+              className="h-10 md:h-12 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          ))}
       </div>
     </div>
   </div>
 </section>
 
-        {/* Trusted by Students Section */}
-<DeferredMount placeholderHeight={260}>
- <section className="py-16 bg-white" style={deferredSectionStyle}>
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
 
-   <div className="flex items-center gap-4 mb-10">
-  <h2 className="text-lg md:text-xl font-semibold text-[#0A225A] whitespace-nowrap">
-    Top Universities We Work With
-  </h2>
-  <div className="flex-1 h-[2px] bg-gray-300"></div>
-</div>
-
-    <div className="relative overflow-hidden">
-      <div className="flex min-w-max items-center gap-3 whitespace-nowrap animate-logoScroll sm:gap-6">
-        {[
-          { src: "/logos/doon.png", alt: "Doon Business School" },
-          { src: "/logos/download.jpg", alt: "Asian Business School" },
-          { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
-          { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
-          { src: "/logos/doon.png", alt: "Doon Business School" },
-          { src: "/logos/download.jpg", alt: "Asian Business School" },
-          { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
-          { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
-           { src: "/logos/doon.png", alt: "Doon Business School" },
-          { src: "/logos/download.jpg", alt: "Asian Business School" },
-          { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
-          { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
-          { src: "/logos/doon.png", alt: "Doon Business School" },
-          { src: "/logos/download.jpg", alt: "Asian Business School" },
-          { src: "/logos/ITM.png", alt: "ITM Navi Mumbai" },
-          { src: "/logos/NBS.jpg", alt: "Narayana Business School" },
-        ].map((logo, index) => (
-          <div
-            key={`${logo.src}-${index}`}
-            className="flex h-16 w-[118px] shrink-0 items-center justify-center rounded-lg border bg-white px-3 py-3 shadow-sm sm:h-[72px] sm:w-[156px] sm:px-6"
-          >
-            <img
-              src={logo.src}
-              alt={logo.alt}
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-contain"
-            />
-          </div>
-        ))}
-      </div> 
-      
-    </div>
-  </div>
-</section>
-</DeferredMount>
-
-
-     {/*   <section className="py-16 bg-[#f4f6fb]">
+        <section className="py-16 bg-[#f4f6fb]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-          <h2 className="text-xl md:text-2xl text-slate-900 mb-8">
-            Latest from our Blog
-          </h2>
+          <div className="mb-8">
+            <span className="sc-section-badge">✍️ Expert Articles &amp; Guides</span>
+            <h2 className="sc-section-title mt-1">
+              College Admission Guides &amp; <span>Exam Tips 2026</span>
+            </h2>
+            <p className="sc-section-desc">
+              Read expert articles on MBA rankings, JEE preparation, NEET counselling, college fees and career advice.
+            </p>
+            <div className="sc-section-divider mt-2" />
+          </div>
 
-         
+          {/* MOBILE: horizontal scroll */}
           <div
             className="
-        flex md:hidden 
-        gap-4 overflow-x-auto scroll-smooth 
+        flex md:hidden
+        gap-4 overflow-x-auto scroll-smooth
         snap-x snap-mandatory pb-4 scrollbar-hide
       "
           >
-            {BLOG_POSTS_DATA.slice(0, 3).map((post, index) => (
+            {blogs.slice(0, 3).map((post, index) => (
               <div
                 key={post.id}
-                onClick={() => navigate(`/blog/${post.id}`)}
+                onClick={() => navigate(`/blog/${toBlogSlug(post)}`)}
 
                 className="
             min-w-[85%] snap-start
@@ -3010,12 +2882,12 @@ const HERO_TAGS = [
             ))}
           </div>
 
-      
+          {/* DESKTOP: 3 column grid */}
           <div className="hidden md:grid grid-cols-3 gap-6">
-            {BLOG_POSTS_DATA.slice(0, 3).map((post, index) => (
+            {blogs.slice(0, 3).map((post, index) => (
               <AnimatedContainer key={post.id} delay={index * 80}>
                 <div
-                  onClick={() => navigate(`/blog/${post.id}`)}
+                  onClick={() => navigate(`/blog/${toBlogSlug(post)}`)}
 
                   className="
               bg-white rounded-2xl shadow-md border border-slate-100 
@@ -3057,7 +2929,7 @@ const HERO_TAGS = [
             ))}
           </div>
 
-     
+          {/* VIEW ALL BUTTON */}
           <div className="text-center mt-10">
             <button
               onClick={() => navigate("/blog")}
@@ -3073,22 +2945,25 @@ const HERO_TAGS = [
           </div>
 
         </div>
-      </section> /*}
+      </section>
 
       {/* -------------------------------------------------- */}
       {/* COLLEGE RANKING TABLE (Image 2 middle)            */}
       {/* -------------------------------------------------- */}
 
       {/* Ranking Table Container */}
-      <DeferredMount placeholderHeight={760}>
-      <div
-        className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-md mt-8 max-w-7xl mx-auto"
-        style={deferredLargeSectionStyle}
-      >
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-md mt-8 max-w-7xl mx-auto">
 
         {/* TABLE HEAD SECTION */}
-        <div className="px-5 pt-6 pb-3 ">
-          <h2 className="text-2xl text-slate-900">Top 10 Colleges</h2>
+        <div className="px-5 pt-6 pb-3">
+          <span className="sc-section-badge">📊 NIRF &amp; Placement Data</span>
+          <h2 className="sc-section-title mt-1">
+            Top 10 Colleges in India 2026 — <span>Rankings, Fees &amp; Cut-offs</span>
+          </h2>
+          <p className="sc-section-desc">
+            Compare admission cut-offs, annual fees and NIRF rankings for MBA, B.Tech, MBBS, Law &amp; more.
+          </p>
+          <div className="sc-section-divider mt-2 mb-1" />
         </div>
 
         {/* STREAM FILTERS */}
@@ -3145,8 +3020,6 @@ const HERO_TAGS = [
                     <div className="flex items-start gap-3">
                       <img
                         src={college.logoUrl}
-                        loading="lazy"
-                        decoding="async"
                         className="h-10 w-10 rounded-full object-cover border"
                       />
                       <div>
@@ -3176,7 +3049,6 @@ const HERO_TAGS = [
           </table>
         </div>
       </div>
-      </DeferredMount>
  
       {/* -------------------------------------------------- */}
       {/* OPTIONAL: FAQ + BLOG + CONTACT (keep functionality) */}
@@ -3185,37 +3057,33 @@ const HERO_TAGS = [
       {/* -------------------------------------------------- */} 
 
    
-      <DeferredMount placeholderHeight={680}>
-          <section
-            className="py-24 sm:py-32 px-4 bg-white overflow-hidden"
-            style={deferredSectionStyle}
-          >
+          <section className="py-24 sm:py-32 px-4 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight">Our <span className="text-[#f4a71d]">Alumni</span> Success</h2>
-            <p className="text-slate-500 mt-5 text-base sm:text-xl">Students from our partner schools now at top global firms.</p>
+            <span className="sc-section-badge mx-auto">🏅 Real Students · Real Results</span>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight mt-2">
+              Our <span className="gradient-text-gold">Alumni</span> Success Stories
+            </h2>
+            <p className="text-slate-500 mt-4 text-sm sm:text-lg max-w-2xl mx-auto">
+              StudyCups-guided students now placed at top firms in India &amp; abroad. From admission guidance to career success.
+            </p>
+            <div className="sc-section-divider mx-auto mt-4" />
           </div>
-          <Suspense fallback={<div className="min-h-[420px]" />}>
-            <SuccessCarousel testimonials={TESTIMONIALS} />
-          </Suspense>
+          <SuccessCarousel testimonials={TESTIMONIALS} />
         </div>
       </section>
-      </DeferredMount>
    
-      <DeferredMount placeholderHeight={520}>
-      <section
-        className="py-16 md:py-2 bg-white"
-        style={deferredSectionStyle}
-      >
+      <section className="py-16 md:py-2 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
-            <h2 className="text-xl md:text-2xl font-bold text-slate-900">
-              Frequently Asked Questions
+            <span className="sc-section-badge mx-auto">❓ Quick Answers</span>
+            <h2 className="sc-section-title mt-2">
+              College Admission <span>FAQs 2026</span>
             </h2>
-            <p className="text-sm text-slate-500 mt-2 max-w-xl mx-auto">
-              Have questions? We’ve got answers. You can also reach out to us
-              directly from the contact section.
+            <p className="sc-section-desc mx-auto text-center mt-2" style={{ maxWidth: "560px" }}>
+              Common questions about MBA, MBBS, B.Tech &amp; Law admissions in India answered by our expert counsellors.
             </p>
+            <div className="sc-section-divider mx-auto mt-3" />
           </div>
           <div className="max-w-3xl mx-auto space-y-4">
             {faqs.map((faq, index) => (
@@ -3260,130 +3128,12 @@ const HERO_TAGS = [
           </div>
         </div>
       </section>
-      </DeferredMount>
 
       {/* Blog preview */}
    
-<section className=" pb-8 sm:pb-16" style={deferredSectionStyle}>
-  <div className="max-w-7xl mx-auto px-4 sm:px-6">
-    <div className="rounded-3xl  overflow-hidden">
-   
 
-      <div className="md:p-10 p-0">
-        <img 
-      onClick={onOpenApplyNow}
-          src="./icons/Poster_3.webp"
-          alt="Poster"
-          loading="lazy"
-         className="w-full h-[200px] sm:h-[300px] md:h-[400px] 
-             object-contain sm:object-cover 
-             rounded-2xl cursor-pointer"
-        />
-      </div>
-    </div>
-  </div>
-</section>
 
       {/* Contact section */}
-      <DeferredMount placeholderHeight={760}>
-      <section className="py-8 bg-white" style={deferredLargeSectionStyle}>
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          {/* Heading */}
-          <div className="text-center mb-10">
-            <h2 className="text-xl md:text-2xl font-bold text-slate-900">
-              Get In Touch
-            </h2>
-            <p className="text-lg text-slate-500 mt-2 max-w3xl mx-auto">
-              Have questions about admissions, courses, or anything else? We're here to help.
-            </p>
-          </div>
-
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pb-4 md:pb-0">
-
-            {/* LEFT SIDE IMAGE + CONTACT INFO CARD */}
-            <div className="flex flex-col gap-4 h-auto md:h-[520px]">
-
-              {/* IMAGE BLOCK */}
-              <div className="w-full h-[200px] md:h-[260px] rounded-3xl overflow-hidden shadow-md flex-shrink-0">
-                <img
-                  src="/icons/studycups_contact.png"
-                  alt="StudyCups Support"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* CONTACT INFO CARD */}
-              <div className="bg-white rounded-3xl shadow-[0_20px_40px_rgba(0,0,0,0.06)] 
-                                border border-slate-100 p-4 space-y-3 md:flex-1">
-
-                <h3 className="text-lg font-semibold text-slate-900">Contact Information</h3>
-
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  Fill out the form and our team will get back to you within 24 hours.
-                  You can also reach us through the contact details below.
-                </p>
-
-                <div className="space-y-4">
-
-                  {/* PHONE */}
-                  <div className="flex items-center gap-4 bg-white shadow-md px-5 py-4 
-                                        rounded-2xl border border-slate-100">
-                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-[#0F2D52]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M3 5a2 2 0 012-2h3l2 5-2 1a11 11 0 005 5l1-2 5 2v3a2 2 0 01-2 2h-1C10.82 19 5 13.18 5 6V5z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900 text-sm">Phone</p>
-                      <a href="tel:+918081269969"
-                        className="text-slate-600 hover:text-[#0F2D52] text-sm">
-                        +91 8081269969
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* EMAIL */}
-                  <div className="flex items-center gap-4 bg-white shadow-md px-5 py-4 
-                                        rounded-2xl border border-slate-100">
-                    <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                      <svg xmlns="http://www.w3.org/2000/svg"
-                        className="h-6 w-6 text-[#0F2D52]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900 text-sm">Email</p>
-                      <a href="mailto:Support@studycups.in"
-                        className="text-slate-600 hover:text-[#0F2D52] text-sm">
-                        Support@studycups.in
-                      </a>
-                    </div>
-                  </div>
-
-                </div>
-
-              </div>
-            </div>
-
-            {/* RIGHT SIDE FORM */}
-            <AnimatedContainer delay={150}>
-              <Suspense fallback={<div className="min-h-[540px] rounded-3xl border border-slate-100 bg-white" />}>
-                <ContactForm />
-              </Suspense>
-            </AnimatedContainer>
-
-          </div>
-        </div>
-      </section>
-      </DeferredMount>
-
 
 
     </div>

@@ -1,15 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { View, College } from "../types";
 import { getCollegeImages } from "../collegeImages";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
-import FlexibleBlockRenderer, { type Block as FlexibleBlock } from './FlexibleBlockRenderer'
+import FlexibleBlockRenderer from './FlexibleBlockRenderer'
 import { toCourseSlug, toSeoSlug } from "./Seo"
 import { Helmet } from "react-helmet-async"
-
-const DESKTOP_SIDEBAR_STICKY_TOP = 140;
-const DESKTOP_SIDEBAR_BOTTOM_GAP = 24;
 
 import {
   Monitor,
@@ -113,10 +110,9 @@ const buildCollegeCodePrefix = (shortName: string = "") => {
 
 
 interface DetailPageProps {
-  colleges?: College[];
+
   compareList: string[];
   onCompareToggle: (id: string) => void;
-  setView?: (view: View) => void;
   onOpenApplyNow: () => void;
   onOpenBrochure: () => void;
 }
@@ -129,13 +125,9 @@ type CollegeDetail = {
   placements?: any;
   reviews?: any[];
   gallery?: string[];
-  description?: string;
+
   ranking_data?: any[];
   rawScraped?: any;
-  basic?: any;
-  established_year?: any;
-  accreditation?: any;
-  affiliations?: any;
   type?: string;
 };
 
@@ -437,10 +429,8 @@ const DetailPage: React.FC<DetailPageProps> = ({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [activeSubTab, setActiveSubTab] = useState(0);
-  const [desktopSidebarTop, setDesktopSidebarTop] = useState(DESKTOP_SIDEBAR_STICKY_TOP);
   const [courses, setCourses] = useState<any[]>([]);
-  const [loadingCourses, setLoadingCourses] = useState(false);
-  const desktopSidebarRef = useRef<HTMLElement | null>(null);
+const [loadingCourses, setLoadingCourses] = useState(false);
 
 
 
@@ -563,8 +553,10 @@ useEffect(() => {
       if (json.success && json.data?.length) {
   setCourses(json.data[0].courses || []);
 }
+console.log("COURSE API RESPONSE:", json);
 
     } catch (err) {
+      console.error("Courses API error", err);
     } finally {
       setLoadingCourses(false);
     }
@@ -603,7 +595,7 @@ useEffect(() => {
 
   useEffect(() => {
     if (detail?.rawScraped?.qna?.length > 0) {
-      setQnaOpen(Array(detail?.rawScraped.qna.length).fill(false));
+      setQnaOpen(Array(detail.rawScraped.qna.length).fill(false));
     }
   }, [detail]);
 
@@ -720,6 +712,7 @@ useEffect(() => {
 
         setCourseOfferingColleges(uniqueColleges);
       } catch (err) {
+        console.error("Course offering colleges API error", err);
         if (!isCancelled) {
           setCourseOfferingColleges([]);
         }
@@ -742,23 +735,43 @@ useEffect(() => {
       "@context": "https://schema.org",
       "@type": "CollegeOrUniversity",
 
-      name: college?.basic?.name || "",
+      name: college?.basic?.name || college?.name || "",
       url: typeof window !== "undefined" ? window.location.href : "",
-
-      logo: college?.basic?.logo || "",
+      logo: college?.basic?.logo || college?.logoUrl || "",
+      description: college?.basic?.about
+        || college?.overview
+        || `${college?.basic?.name || college?.name || "College"} – admissions, courses, fees, placements and rankings.`,
 
       address: {
         "@type": "PostalAddress",
         addressLocality: college?.basic?.city || "",
         addressRegion: college?.basic?.state || "",
-        addressCountry: "India"
+        addressCountry: "IN"
       },
 
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: college?.basic?.rating || 0,
-        reviewCount: college?.basic?.reviews || 0
-      }
+      ...(college?.basic?.rating ? {
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: college.basic.rating,
+          bestRating: 5,
+          worstRating: 1,
+          reviewCount: college?.basic?.reviews || 10
+        }
+      } : {}),
+
+      ...(Array.isArray(college?.courses) && college.courses.length > 0 ? {
+        hasOfferCatalog: {
+          "@type": "OfferCatalog",
+          "name": "Courses Offered",
+          "itemListElement": college.courses.slice(0, 5).map((c: any) => ({
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Course",
+              "name": c.name || c.course_name || c
+            }
+          }))
+        }
+      } : {})
     }
   : null;
   // ================= NORMALIZATION LAYER =================
@@ -795,13 +808,13 @@ useEffect(() => {
         reviews_data: college?.reviews_page || {},
 
         // GALLERY
-        gallery: college?.gallery?.map((g:any) => g.src) || [],
+        gallery: college?.gallery?.map(g => g.src) || [],
 
         // QNA
-        questions_answers: college?.qna?.map((q:any) => ({
+        questions_answers: college?.qna?.map(q => ({
           question: q.question,
           answer_text: Array.isArray(q.answers)
-            ? q.answers.flatMap((a:any) => a.answer).join(" ")
+            ? q.answers.flatMap(a => a.answer).join(" ")
             : ""
         })) || []
       }
@@ -984,6 +997,7 @@ const getTabHeading = () => {
         }
 
       } catch (err) {
+        console.error("Detail fetch error", err);
       } finally {
         setLoadingCollege(false);
       }
@@ -991,43 +1005,6 @@ const getTabHeading = () => {
 
     loadCollege();
   }, [collegeId]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || loadingCollege) return;
-
-    const node = desktopSidebarRef.current;
-    if (!node) return;
-
-    const updateStickyTop = () => {
-      if (window.innerWidth < 1024) {
-        setDesktopSidebarTop(DESKTOP_SIDEBAR_STICKY_TOP);
-        return;
-      }
-
-      const sidebarHeight = node.getBoundingClientRect().height;
-      const bottomLockedTop =
-        window.innerHeight - sidebarHeight - DESKTOP_SIDEBAR_BOTTOM_GAP;
-
-      setDesktopSidebarTop(
-        Math.min(DESKTOP_SIDEBAR_STICKY_TOP, Math.round(bottomLockedTop))
-      );
-    };
-
-    updateStickyTop();
-
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => updateStickyTop())
-        : null;
-
-    resizeObserver?.observe(node);
-    window.addEventListener("resize", updateStickyTop);
-
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", updateStickyTop);
-    };
-  }, [loadingCollege, college?.id]);
 
 
 
@@ -1041,7 +1018,7 @@ const getTabHeading = () => {
 
   const MAIN_TABS = [
     "basic",
-    /*  "Courses & Fees", */
+    "Courses & Fees",
     "admission",
     "placement",
     "cutoff",
@@ -1272,7 +1249,7 @@ const getTabHeading = () => {
       ),
     ];
   };
-  const normalizeBlock = (block: any): FlexibleBlock | null => {
+  const normalizeBlock = (block: any) => {
     if (!block) return null;
 
     // Determine block type
@@ -1331,7 +1308,7 @@ if (blockType === "heading") {
     return null;
   };
 
-  const normalizeBlocksArray = (data: any): FlexibleBlock[] => {
+  const normalizeBlocksArray = (data: any) => {
     if (!data) return [];
 
     // If single object (like your about)
@@ -1343,7 +1320,7 @@ if (blockType === "heading") {
     // If already array
     return data
       .map((b: any) => normalizeBlock(b))
-      .filter((block): block is FlexibleBlock => Boolean(block));
+      .filter(Boolean);
   };
   const mergeBlocks = (section: any) => [
     ...(section?.about ?? []),
@@ -1530,20 +1507,13 @@ if (blockType === "heading") {
               <div className="bg-white border rounded-2xl p-6 shadow-sm">
                 {selectedCourse ? (
                   <div className="space-y-6">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                      <button
-                        onClick={() => navigate(buildUniversityPath("Courses & Fees"))}
-                        className="order-1 self-end text-sm text-blue-600 hover:underline whitespace-nowrap sm:order-2 sm:self-auto"
-                      >
-                        View All Courses
-                      </button>
-
-                      <div className="order-2 sm:order-1">
-                        <h2 className="text-1xl md:text-2xl font-bold text-blue-900">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <h2 className="text-2xl font-bold text-blue-900">
                           {selectedCourse.course_name}
                         </h2>
 
-                        <div className="mt-2 flex flex-wrap gap-4 text-sm text-black">
+                        <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-600">
                           {selectedCourse.rating && (
                             <span className="font-semibold text-yellow-600">⭐ {selectedCourse.rating}</span>
                           )}
@@ -1552,9 +1522,16 @@ if (blockType === "heading") {
                           {selectedCourse.mode && <span>{selectedCourse.mode}</span>}
                         </div>
                       </div>
+
+                      <button
+                        onClick={() => navigate(buildUniversityPath("Courses & Fees"))}
+                        className="text-sm text-blue-600 hover:underline whitespace-nowrap"
+                      >
+                        View All Courses
+                      </button>
                     </div>
 
-                    <div className="text-sm text-black space-y-1">
+                    <div className="text-sm text-slate-700 space-y-1">
                       {selectedCourse.eligibility && (
                         <p>
                           <span className="font-semibold text-slate-900">Eligibility:</span>{" "}
@@ -1605,7 +1582,7 @@ if (blockType === "heading") {
                                         </p>
                                       )}
                                       {author.meta && (
-                                        <p className="text-xs text-black">{author.meta}</p>
+                                        <p className="text-xs text-slate-600">{author.meta}</p>
                                       )}
                                     </div>
                                   </div>
@@ -1711,19 +1688,13 @@ if (blockType === "heading") {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-[auto_1fr] items-end gap-x-3 gap-y-1 md:block md:text-right">
-                    <button
-                      onClick={onOpenApplyNow}
-                      className="row-span-2 md:hidden shrink-0 px-5 py-2 bg-orange-500 text-white rounded-full text-xs font-semibold hover:bg-orange-600"
-                    >
-                      Apply Now
-                    </button>
-                    <p className="col-start-2 text-right text-xl font-bold text-green-600">
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-green-600">
                       {course.total_fees || "N/A"}
                     </p>
 
                     <p
-                      className="col-start-2 text-right text-xs text-blue-600 cursor-pointer hover:underline"
+                      className="text-xs text-blue-600 cursor-pointer hover:underline"
                       onClick={(e) => {
                         e.stopPropagation();
                         const courseSlug = course?.slug_url || toCourseSlug(course?.course_name || "");
@@ -1738,7 +1709,7 @@ if (blockType === "heading") {
                 </div>
 
                 {/* Buttons */}
-                <div className="hidden md:flex flex-wrap justify-between md:justify-end gap-3 mt-5">
+                <div className="flex flex-wrap justify-between md:justify-end gap-3 mt-5">
 
 
                   <button
@@ -1869,14 +1840,14 @@ if (blockType === "heading") {
 
             {detail?.rawScraped?.courses_full_time?.length > 0 && (() => {
 
-              const packageRows = detail?.rawScraped.courses_full_time.filter(
+              const packageRows = detail.rawScraped.courses_full_time.filter(
                 (r: any) =>
                   ["Highest Package", "Median Package", "Average Package"].includes(
                     r.course.trim()
                   )
               );
 
-              const courseRows = detail?.rawScraped.courses_full_time.filter(
+              const courseRows = detail.rawScraped.courses_full_time.filter(
                 (r: any) =>
                   !["Highest Package", "Median Package", "Average Package"].includes(
                     r.course.trim()
@@ -1942,7 +1913,7 @@ if (blockType === "heading") {
                       </h3>
 
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-                        {detail?.rawScraped.info_facilities.map(
+                        {detail.rawScraped.info_facilities.map(
                           (f: any, i: number) => (
                             <div
                               key={i}
@@ -2038,7 +2009,7 @@ if (blockType === "heading") {
         md:overflow-visible
       "
                       >
-                        {detail?.rawScraped.info_faculty.map(
+                        {detail.rawScraped.info_faculty.map(
                           (f: any, i: number) => (
                             <div
                               key={i}
@@ -2117,7 +2088,7 @@ if (blockType === "heading") {
             )}
               {/* TABLE OF CONTENTS */}
               {tocSections.length > 0 && (
-              <div className="flex gap-4 flex-col pb-2 mb-6  bg-[#eee] border p-4 rounded-xl"> 
+              <div className="flex gap-3 flex-col pb-2 mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl"> 
               <h2 className="text-lg font-bold text-slate-900">Table of Contents</h2>
                 {tocSections.map((sec: any, i: number) => (
                   <a
@@ -2178,7 +2149,7 @@ if (blockType === "heading") {
 
       {/* TABLE OF CONTENTS */}
       {tocSections.length > 0 && (
-        <div className="flex gap-4 flex-col pb-2 mb-6 bg-[#eee] border p-4 rounded-xl">
+        <div className="flex gap-3 flex-col pb-2 mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl">
           <h2 className="text-lg font-bold text-slate-900">
             Table of Contents
           </h2>
@@ -2227,7 +2198,7 @@ if (blockType === "heading") {
 
       {/* TABLE OF CONTENTS */}
       {tocSections.length > 0 && (
-        <div className="flex gap-4 flex-col pb-2 mb-6 bg-[#eee] border p-4 rounded-xl">
+        <div className="flex gap-3 flex-col pb-2 mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl">
           <h2 className="text-lg font-bold text-slate-900">
             Table of Contents
           </h2>
@@ -2283,7 +2254,7 @@ if (blockType === "heading") {
 
       {/* TABLE OF CONTENTS (MIDDLE) */}
       {tocSections.length > 0 && (
-        <div className="flex gap-4 flex-col pb-2 mb-6 bg-[#eee] border p-4 rounded-xl">
+        <div className="flex gap-3 flex-col pb-2 mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl">
           <h2 className="text-lg font-bold text-slate-900">
             Table of Contents
           </h2>
@@ -2339,7 +2310,7 @@ if (blockType === "heading") {
 
       {/* TABLE OF CONTENTS (MIDDLE) */}
       {tocSections.length > 0 && (
-        <div className="flex gap-4 flex-col pb-2 mb-6 bg-[#eee] border p-4 rounded-xl">
+        <div className="flex gap-3 flex-col pb-2 mb-6 bg-blue-50 border border-blue-100 p-4 rounded-xl">
           <h2 className="text-lg font-bold text-slate-900">
             Table of Contents
           </h2>
@@ -2561,7 +2532,7 @@ if (blockType === "heading") {
   const reviews = college?.reviews_page ?? {};
 
   const overall = reviews?.overall_rating ?? {};
-  const categories: Record<string, string | number> = reviews?.category_ratings ?? {};
+  const categories = reviews?.category_ratings ?? {};
   const say = reviews?.what_students_say ?? {};
 
   const likes = say?.likes ?? [];
@@ -3078,6 +3049,8 @@ if (blockType === "heading") {
         return `Explore ${collegeName}${collegeLocation ? `, ${collegeLocation}` : ""}${collegeTypeLabel ? `, ${collegeTypeLabel}` : ""}${establishedYearLabel ? ` established in ${establishedYearLabel}` : ""}. Check admission 2026, courses, fees, cutoff, placements, ranking and reviews.`;
     }
   })();
+  const collegeStream = college?.stream || college?.basic?.stream || "";
+
   const metaKeywords = [
     `${collegeName} admission 2026`,
     `${collegeName} fees`,
@@ -3085,7 +3058,11 @@ if (blockType === "heading") {
     `${collegeName} cutoff`,
     `${collegeName} placements`,
     `${collegeName} ranking`,
+    `${collegeName} reviews`,
     collegeLocation ? `${collegeName} ${collegeLocation}` : "",
+    collegeLocation ? `best college in ${collegeLocation}` : "",
+    collegeLocation ? `top college ${collegeLocation} 2026` : "",
+    collegeStream ? `best ${collegeStream} college in India` : "",
   ]
     .filter(Boolean)
     .join(", ");
@@ -3112,180 +3089,158 @@ if (blockType === "heading") {
         {JSON.stringify(schema)}
       </script>
     )}
+    <script type="application/ld+json">{JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://studycups.in" },
+        { "@type": "ListItem", "position": 2, "name": "Colleges", "item": "https://studycups.in/colleges" },
+        { "@type": "ListItem", "position": 3, "name": collegeName, "item": canonicalUrl }
+      ]
+    })}</script>
   </Helmet>
    
     <div>
-      {/* HERO */}
-      <div className="relative mt-[90px] w-full max-w-7xl mx-auto px-3 sm:px-4">
-
-        <div className="relative h-[250px] sm:h-[260px] w-full overflow-hidden rounded-[20px]">
+      {/* ===== HERO BANNER ===== */}
+      <div className="mt-[76px] w-full">
+        {/* Banner Image */}
+        <div className="relative h-[180px] sm:h-[240px] w-full overflow-hidden">
           <button
             onClick={() => navigate(-1)}
-            className="
-    absolute
-    top-4
-    left-4
-    z-40
-    flex items-center
-    gap-2
-    px-2 md:px-3
-    py-2
-    bg-black/60
-    hover:bg-black/80
-    text-white
-    rounded-full md:rounded-lg
-    backdrop-blur
-    transition
-  "
+            className="absolute top-3 left-4 z-40 flex items-center gap-1.5 px-3 py-1.5 bg-black/55 hover:bg-black/75 text-white rounded-full backdrop-blur transition text-xs sm:text-sm font-semibold"
             aria-label="Back"
           >
-            {/* Arrow – always visible */}
-            <span className="text-lg leading-none">←</span>
-
-            {/* Text – desktop only */}
-            <span className="hidden md:inline text-sm font-semibold">
-              Back to Colleges
-            </span>
+            <span>←</span>
+            <span className="hidden sm:inline">Back</span>
           </button>
-
-
           <img
-            src={college.heroImage}
-            alt={college.name}
+            src={college.heroImages}
+            alt={collegeName}
             className="absolute inset-0 w-full h-full object-cover object-center"
           />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/80 to-transparent" />
-
-          <div className="relative z-20 h-full flex items-center">
-            <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 flex justify-between items-start sm:items-center pb-3 gap-3">
-
-              <div className="max-w-4xl text-white">
-                <div className="flex items-center gap-4 mb-0">
-                  <img
-                    src={college.basic.logo
-                    }
-                    alt={college.name}
-                    className="h-14 w-14 rounded-full bg-white p-2 shadow"
-                  />
-
-                  <h2 className="text-1xl md:text-2xl font-bold mt-6 mb-4">
-  {getTabHeading()}
-</h2>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 text-sm sm:text-base text-white/90">
-                  <span className="flex items-center gap-1 text-[14px]">
-                    ⭐ {college.basic.rating}
-                  </span>
-
-                  <span className="opacity-60">|</span>
-
-                  <span className="flex items-center gap-1 text-[14px]">
-                    🏫 {detail?.type || college.basic.college_type || "N/A"}
-                  </span>
-
-                  {establishedYearLabel && (
-                    <>
-                      <span className="opacity-60">|</span>
-                      <span className="flex items-center gap-1 text-[14px]">
-                        📅 Estd. {establishedYearLabel}
-                      </span>
-                    </>
-                  )}
-
-                  {accreditationLabel && (
-                    <>
-                      <span className="opacity-60">|</span>
-                      <span className="flex items-center gap-1 text-[14px]">
-                        🏅 {accreditationLabel}
-                      </span>
-                    </>
-                  )}
-
-                  {affiliationLabel && (
-                    <>
-                      <span className="opacity-60">|</span>
-                      <span className="flex items-center gap-1 text-[14px]">
-                        🔗 {affiliationLabel}
-                      </span>
-                    </>
-                  )}
-                  <span className="opacity-60">|</span>
-
-                  <span className="flex items-center gap-1 text-[14px]">
-                    📍 {college.basic.city}, {college.basic.state}
-                  </span>
-                </div>
-              </div>
-
-              <div
-                className="
-    absolute z-30
-
-    /* MOBILE: top right */
-    top-0 right-0
-
-    /* DESKTOP: adjust spacing */
-    md:top-6 md:right-6
-
-    flex flex-row
-    items-center justify-end
-    gap-2
-  "
-              >
-                <button
-                  onClick={onOpenApplyNow}
-                  className="
-      px-3 py-1.5 md:px-6 md:py-2.5
-      rounded-lg
-      bg-[#1E4A7A] hover:bg-[#1A3A6A]
-      text-white text-xs md:text-sm font-semibold
-      shadow-md
-      transition
-    "
-                >
-                  Enquire Now
-                </button>
-
-                <button
-                  onClick={onOpenBrochure}
-                  className="
-      px-3 py-1.5 md:px-6 md:py-2.5
-      rounded-lg
-      bg-[#f4a71d] hover:bg-[#e69500]
-      text-white text-xs md:text-sm font-semibold
-      shadow-md
-      transition
-    "
-                >
-                  Brochure
-                </button>
-              </div>
-
-            </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          {/* Action buttons on banner */}
+          <div className="absolute bottom-3 right-4 z-30 flex gap-2">
+            <button
+              onClick={onOpenApplyNow}
+              className="px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg bg-[#1877F2] hover:bg-blue-700 text-white text-xs sm:text-sm font-bold shadow-lg transition"
+            >
+              Enquire Now
+            </button>
+            <button
+              onClick={onOpenBrochure}
+              className="px-3 sm:px-5 py-1.5 sm:py-2 rounded-lg bg-white/90 hover:bg-white text-slate-800 text-xs sm:text-sm font-bold shadow-lg transition"
+            >
+              Brochure
+            </button>
           </div>
         </div>
 
+        {/* ===== COLLEGE INFO BAR (CollegeDunia-style) ===== */}
+        <div className="bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+              {/* Logo + Name block */}
+              <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
+                <div className="flex-shrink-0 w-14 h-14 sm:w-[72px] sm:h-[72px] rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden flex items-center justify-center p-1">
+                  <img
+                    src={college.basic.logo}
+                    alt={collegeName}
+                    className="w-full h-full object-contain"
+                    onError={(e: any) => { e.currentTarget.style.display = "none"; }}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  {/* Breadcrumb */}
+                  <nav className="flex items-center gap-1 text-[11px] text-slate-400 mb-1" aria-label="Breadcrumb">
+                    <button onClick={() => navigate("/")} className="hover:text-blue-600 transition">Home</button>
+                    <span>›</span>
+                    <button onClick={() => navigate("/colleges")} className="hover:text-blue-600 transition">Colleges</button>
+                    <span>›</span>
+                    <span className="text-slate-500 truncate max-w-[160px] sm:max-w-xs">{collegeName}</span>
+                  </nav>
+                  <h1 className="text-base sm:text-xl font-extrabold text-slate-900 leading-tight">{getTabHeading()}</h1>
+                  {/* Chips row */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    {collegeLocation && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+                        📍 {collegeLocation}
+                      </span>
+                    )}
+                    {(detail?.type || college?.basic?.college_type) && (
+                      <span className="inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold border border-blue-100">
+                        {detail?.type || college.basic.college_type}
+                      </span>
+                    )}
+                    {accreditationLabel && (
+                      <span className="inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-green-50 text-green-700 font-semibold border border-green-100">
+                        🏅 {accreditationLabel}
+                      </span>
+                    )}
+                    {affiliationLabel && (
+                      <span className="inline-flex items-center text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-semibold border border-amber-100 max-w-[200px] truncate">
+                        {affiliationLabel}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
 
+              {/* Rating + Actions (desktop) */}
+              <div className="hidden sm:flex flex-col items-end gap-2.5 flex-shrink-0">
+                {college?.basic?.rating && (
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 bg-green-600 text-white text-sm font-bold px-2.5 py-1 rounded-lg">
+                      ★ {college.basic.rating}
+                    </span>
+                    <span className="text-xs text-slate-400">({college?.basic?.reviews || 0} reviews)</span>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onCompareToggle(String(college.id))}
+                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold border transition ${isCompared ? "bg-green-50 border-green-200 text-green-700" : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"}`}
+                  >
+                    {isCompared ? "✓ Compared" : "⊕ Compare"}
+                  </button>
+                  <button
+                    onClick={onOpenApplyNow}
+                    className="px-5 py-1.5 rounded-lg bg-[#1E4A7A] hover:bg-blue-900 text-white text-sm font-bold transition"
+                  >
+                    Apply Now
+                  </button>
+                </div>
+              </div>
+            </div>
 
+            {/* Key Stats Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-100">
+              {establishedYearLabel && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Established</p>
+                  <p className="text-sm font-bold text-slate-800 mt-0.5">{establishedYearLabel}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Type</p>
+                <p className="text-sm font-bold text-slate-800 mt-0.5">{detail?.type || college?.basic?.college_type || "N/A"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Rating</p>
+                <p className="text-sm font-bold text-yellow-600 mt-0.5">⭐ {college?.basic?.rating || "N/A"}/5</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 font-semibold">Location</p>
+                <p className="text-sm font-bold text-slate-800 mt-0.5">{collegeLocation || "India"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* TABS */}
-      <div
-        className="
-    bg-white  z-30
-    
-    /* DESKTOP behaviour unchanged */
-    md:sticky md:top-[70px]
-
-    /* MOBILE behaviour changed */
-    mt-4 md:mt-0
-  "
-      >
-
-        <div className="max-w-7xl mx-auto px-4 flex gap-6 overflow-x-auto no-scrollbar whitespace-nowrap">
-
+      {/* ===== STICKY TAB BAR ===== */}
+      <div className="bg-white border-b border-slate-200 md:sticky md:top-[70px] z-30 shadow-sm mt-0">
+        <div className="max-w-7xl mx-auto px-4 flex gap-0 overflow-x-auto no-scrollbar">
           {availableTabs.map((key) => (
             <button
               key={key}
@@ -3293,71 +3248,76 @@ if (blockType === "heading") {
                 setActiveTab(key);
                 navigate(buildUniversityPath(key));
               }}
-              className={`py-4 font-semibold text-sm ${activeTab === key
-                ? "text-blue-600 border-b-4 border-blue-600"
-                : "text-slate-500"
-                }`}
+              className={`py-3 px-3 sm:px-4 font-semibold text-xs sm:text-sm whitespace-nowrap border-b-[3px] transition-colors ${
+                activeTab === key
+                  ? "border-[#1E4A7A] text-[#1E4A7A]"
+                  : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+              }`}
             >
-              {key.charAt(0).toUpperCase() + key.slice(1)}
+              {key === "basic" ? "Overview" : key.charAt(0).toUpperCase() + key.slice(1)}
             </button>
           ))}
         </div>
       </div>
 
       {/* LAYOUT */}
-    <div className="container max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
 
         <div className="lg:col-span-2">{renderTabContent()}</div>
 
-       <aside
-        ref={desktopSidebarRef}
-        className="space-y-5 w-full hidden lg:block lg:sticky self-start"
-        style={{ top: desktopSidebarTop }}
-      >
+       <aside className="space-y-4 w-full hidden lg:block lg:sticky lg:top-[140px] self-start">
 
-
-          <div className="bg-[#1E4A7A] to-indigo-600 text-white rounded-2xl p-5">
-            <h3 className="font-bold text-lg">Apply Now</h3>
-            <p className="text-sm opacity-90 mt-1">
-              Get expert admission guidance
-            </p>
+          {/* CTA Card */}
+          <div className="bg-gradient-to-br from-[#1E4A7A] to-[#0f2952] text-white rounded-2xl p-5 shadow-lg">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span>🎓</span>
+              <h3 className="font-bold text-base">Free Counselling</h3>
+            </div>
+            <p className="text-xs text-white/75 mb-4">Expert admission guidance — 100% Free</p>
             <button
               onClick={onOpenApplyNow}
-              className="mt-4 w-full bg-white text-blue-700 py-2.5 rounded-lg font-semibold"
+              className="w-full bg-white text-[#1E4A7A] py-2.5 rounded-xl font-bold text-sm hover:bg-blue-50 transition"
             >
-              Apply Now
+              Apply Now →
+            </button>
+            <button
+              onClick={onOpenBrochure}
+              className="mt-2 w-full border border-white/30 text-white py-2 rounded-xl font-semibold text-sm hover:bg-white/10 transition"
+            >
+              Download Brochure
             </button>
           </div>
 
-          {/*  <div className="bg-white border rounded-2xl p-5 space-y-3">
-            <InfoRow
-              label="Highest Package"
-              value={
-                detail?.rawScraped?.placement?.highest ||
-                college?.rawScraped?.placement?.highest_package ||
-                "N/A"
-              }
-            />
-
-            <InfoRow
-              label="Placement Rate"
-              value={placementRateValue}
-            />
-
-
-
-            <InfoRow label="Type" value={detail?.type || college.type || "N/A"} />
+          {/* Quick Facts */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+            <h4 className="font-bold text-slate-900 mb-3 text-xs uppercase tracking-widest text-slate-500">Quick Facts</h4>
+            <div className="space-y-2.5">
+              {[
+                { label: "Established", value: establishedYearLabel || "N/A" },
+                { label: "Type", value: detail?.type || college?.basic?.college_type || "N/A" },
+                { label: "Accreditation", value: accreditationLabel || "N/A" },
+                { label: "Location", value: collegeLocation || "India" },
+                { label: "Rating", value: college?.basic?.rating ? `${college.basic.rating}/5` : "N/A" },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex justify-between items-start gap-2 text-sm border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                  <span className="text-slate-400 text-xs flex-shrink-0">{label}</span>
+                  <span className="font-semibold text-slate-800 text-right text-xs">{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
-*/}
+
+          {/* Compare Button */}
           <button
             onClick={() => onCompareToggle(String(college.id))}
-            className={`w-full py-2.5 rounded-xl font-semibold ${isCompared
-              ? "bg-green-100 text-green-700"
-              : "bg-slate-100"
-              }`}
+            className={`w-full py-2.5 rounded-xl font-semibold text-sm border transition ${
+              isCompared
+                ? "bg-green-50 border-green-200 text-green-700"
+                : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+            }`}
           >
-            {isCompared ? "Added to Compare" : "Compare College"}
+            {isCompared ? "✓ Added to Compare" : "⊕ Compare College"}
           </button>
 
 
@@ -3593,4 +3553,3 @@ if (blockType === "heading") {
 };
 
 export default DetailPage;
-

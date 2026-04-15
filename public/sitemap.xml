@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- ===== HOME ===== -->
+  <url><loc>https://studycups.in/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+
+  <!-- ===== STATIC PAGES ===== -->
+  <url><loc>https://studycups.in/colleges</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://studycups.in/courses</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://studycups.in/exams</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://studycups.in/blog</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://studycups.in/college-predictor</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://studycups.in/roi-calculator</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://studycups.in/nirf-insights</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://studycups.in/ai-college-finder</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://studycups.in/free-counselling</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://studycups.in/compare</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+
+  <!-- ===== TOP COLLEGES BY STREAM (new SEO slugs) ===== -->
+  <url><loc>https://studycups.in/engineering/top-colleges</loc><changefreq>weekly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges</loc><changefreq>weekly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges</loc><changefreq>weekly</changefreq><priority>0.95</priority></url>
+  <url><loc>https://studycups.in/arts/top-colleges</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/law/top-colleges</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/design/top-colleges</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+
+  <!-- ===== ENGINEERING COLLEGES BY CITY ===== -->
+  <url><loc>https://studycups.in/engineering/top-colleges-in-delhi</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-bangalore</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-mumbai</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-chennai</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-pune</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-hyderabad</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-ahmedabad</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-kolkata</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-noida</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-coimbatore</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-lucknow</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-jaipur</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-dehradun</loc><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-chandigarh</loc><changefreq>weekly</changefreq><priority>0.83</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-bhopal</loc><changefreq>weekly</changefreq><priority>0.83</priority></url>
+
+  <!-- ===== ENGINEERING COLLEGES BY STATE ===== -->
+  <url><loc>https://studycups.in/engineering/top-colleges-in-maharashtra</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-karnataka</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-tamil-nadu</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-uttar-pradesh</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-rajasthan</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-west-bengal</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-gujarat</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-telangana</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-andhra-pradesh</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/engineering/top-colleges-in-madhya-pradesh</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+
+  <!-- ===== MBA / MANAGEMENT COLLEGES BY CITY ===== -->
+  <url><loc>https://studycups.in/management/top-colleges-in-delhi</loc><changefreq>weekly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-bangalore</loc><changefreq>weekly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-mumbai</loc><changefreq>weekly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-pune</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-hyderabad</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-ahmedabad</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-kolkata</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-chennai</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-lucknow</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-jaipur</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-noida</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-coimbatore</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-dehradun</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+
+  <!-- ===== MBA / MANAGEMENT COLLEGES BY STATE ===== -->
+  <url><loc>https://studycups.in/management/top-colleges-in-maharashtra</loc><changefreq>weekly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-delhi</loc><changefreq>weekly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-karnataka</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-tamil-nadu</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-gujarat</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-west-bengal</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-uttar-pradesh</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-rajasthan</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-telangana</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/management/top-colleges-in-punjab</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+
+  <!-- ===== MEDICAL / MBBS COLLEGES BY CITY ===== -->
+  <url><loc>https://studycups.in/medical/top-colleges-in-delhi</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-bangalore</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-mumbai</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-chennai</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-hyderabad</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-kolkata</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-pune</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-lucknow</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-ahmedabad</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+
+  <!-- ===== MEDICAL COLLEGES BY STATE ===== -->
+  <url><loc>https://studycups.in/medical/top-colleges-in-maharashtra</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-karnataka</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-tamil-nadu</loc><changefreq>weekly</changefreq><priority>0.91</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-uttar-pradesh</loc><changefreq>weekly</changefreq><priority>0.89</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-andhra-pradesh</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-west-bengal</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-kerala</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/medical/top-colleges-in-rajasthan</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+
+  <!-- ===== ARTS & SCIENCE COLLEGES ===== -->
+  <url><loc>https://studycups.in/arts/top-colleges-in-delhi</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/arts/top-colleges-in-bangalore</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/arts/top-colleges-in-mumbai</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/arts/top-colleges-in-chennai</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/arts/top-colleges-in-kolkata</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/arts/top-colleges-in-maharashtra</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/arts/top-colleges-in-tamil-nadu</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/arts/top-colleges-in-west-bengal</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+
+  <!-- ===== LAW COLLEGES ===== -->
+  <url><loc>https://studycups.in/law/top-colleges-in-delhi</loc><changefreq>weekly</changefreq><priority>0.89</priority></url>
+  <url><loc>https://studycups.in/law/top-colleges-in-mumbai</loc><changefreq>weekly</changefreq><priority>0.89</priority></url>
+  <url><loc>https://studycups.in/law/top-colleges-in-bangalore</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/law/top-colleges-in-chennai</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/law/top-colleges-in-kolkata</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/law/top-colleges-in-maharashtra</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/law/top-colleges-in-delhi</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+
+  <!-- ===== DESIGN COLLEGES ===== -->
+  <url><loc>https://studycups.in/design/top-colleges-in-delhi</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/design/top-colleges-in-mumbai</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/design/top-colleges-in-ahmedabad</loc><changefreq>weekly</changefreq><priority>0.86</priority></url>
+  <url><loc>https://studycups.in/design/top-colleges-in-bangalore</loc><changefreq>weekly</changefreq><priority>0.86</priority></url>
+  <url><loc>https://studycups.in/design/top-colleges-in-maharashtra</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+
+  <!-- ===== LEGACY REDIRECTS (old slugs still indexed) ===== -->
+  <url><loc>https://studycups.in/mba/top-colleges</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/btech/top-colleges</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/mbbs/top-colleges</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/bca/top-colleges</loc><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://studycups.in/bba/top-colleges</loc><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://studycups.in/bcom/top-colleges</loc><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://studycups.in/bsc/top-colleges</loc><changefreq>weekly</changefreq><priority>0.82</priority></url>
+  <url><loc>https://studycups.in/law/top-colleges</loc><changefreq>weekly</changefreq><priority>0.83</priority></url>
+
+  <!-- ===== KEY ENTRANCE EXAMS ===== -->
+  <url><loc>https://studycups.in/exams/cat-2026</loc><changefreq>weekly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://studycups.in/exams/jee-main-2026</loc><changefreq>weekly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://studycups.in/exams/neet-2026</loc><changefreq>weekly</changefreq><priority>0.93</priority></url>
+  <url><loc>https://studycups.in/exams/gate-2026</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/exams/cuet-2026</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/exams/xat-2026</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/exams/cmat-2026</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/exams/mat-2026</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/exams/clat-2026</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/exams/snap-2026</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/exams/nift-2026</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/exams/mht-cet-2026</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+
+  <!-- ===== KEY COURSES ===== -->
+  <url><loc>https://studycups.in/courses/management/mba</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/courses/management/pgdm</loc><changefreq>weekly</changefreq><priority>0.90</priority></url>
+  <url><loc>https://studycups.in/courses/engineering/btech</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/courses/medical/mbbs</loc><changefreq>weekly</changefreq><priority>0.92</priority></url>
+  <url><loc>https://studycups.in/courses/engineering/bca</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/courses/management/bba</loc><changefreq>weekly</changefreq><priority>0.88</priority></url>
+  <url><loc>https://studycups.in/courses/commerce/bcom</loc><changefreq>weekly</changefreq><priority>0.87</priority></url>
+  <url><loc>https://studycups.in/courses/science/bsc</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/courses/arts/ba</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/courses/engineering/mtech</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/courses/engineering/mca</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/courses/law/llb</loc><changefreq>weekly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://studycups.in/courses/design/bdes</loc><changefreq>weekly</changefreq><priority>0.83</priority></url>
+
+</urlset>

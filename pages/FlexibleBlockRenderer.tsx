@@ -1,12 +1,10 @@
 import React, { useState } from "react";
 
-const SHOW_CONTENT_IMAGES = false;
-
-export type Block =
+type Block =
   | { type: "text"; value: string }
   | { type: "list"; value: string[] }
   | { type: "table"; value: string[][] }
-  | { type: "image"; value?: string; src?: string }
+  | { type: "image"; value: string }
   | { type: "video"; src: string }
   | { type: "heading"; value: string; level?: string };
 
@@ -72,7 +70,7 @@ const FlexibleBlockRenderer: React.FC<Props> = ({ blocks }) => {
   return (
     <div key={i}>
       <p
-        className={`text-sm text-black leading-relaxed ${
+        className={`text-sm text-slate-700 leading-relaxed ${
           expanded ? "" : "line-clamp-4"
         }`}
       >
@@ -92,7 +90,7 @@ const FlexibleBlockRenderer: React.FC<Props> = ({ blocks }) => {
 }
           case "list":
             return (
-              <ul key={i} className="list-disc pl-6 text-sm text-black space-y-1">
+              <ul key={i} className="list-disc pl-6 text-sm space-y-1">
                 {block.value.map((item, idx) => (
                   <li key={idx}>{item}</li>
                 ))}
@@ -120,12 +118,12 @@ const FlexibleBlockRenderer: React.FC<Props> = ({ blocks }) => {
 
               return (
                 <div key={i} className="overflow-x-auto border rounded-xl">
-                  <table className="w-full min-w-[900px] border-collapse text-sm text-black">
+                  <table className="w-full min-w-[900px] border-collapse text-sm">
 
                     <thead>
 
                       {/* GROUP HEADER */}
-                      <tr className="bg-slate-200 text-black">
+                      <tr className="bg-slate-200 text-slate-800">
                         <th
                           rowSpan={2}
                           className="border p-3 font-semibold text-left"
@@ -145,7 +143,7 @@ const FlexibleBlockRenderer: React.FC<Props> = ({ blocks }) => {
                       </tr>
 
                       {/* SUB HEADER */}
-                      <tr className="bg-slate-100 text-black">
+                      <tr className="bg-slate-100 text-slate-700">
                         {secondRow.map((sub, sIndex) => (
                           <th
                             key={sIndex}
@@ -182,7 +180,7 @@ const FlexibleBlockRenderer: React.FC<Props> = ({ blocks }) => {
             // NORMAL TABLE FALLBACK
             return (
               <div key={i} className="overflow-x-auto border rounded-xl">
-                <table className="w-full border-collapse text-sm text-black">
+                <table className="w-full border-collapse text-sm">
                   <tbody>
                     {rows.map((row, rIdx) => (
                       <tr key={rIdx} className="hover:bg-slate-50">
@@ -199,8 +197,8 @@ const FlexibleBlockRenderer: React.FC<Props> = ({ blocks }) => {
             );
           }
           case "image":
-            // Temporarily hide backend-driven content images on course/college detail pages.
-            if (!SHOW_CONTENT_IMAGES) return null;
+            console.log("IMAGE BLOCK:", block);
+            console.log("IMAGE SRC:", block?.src);
             if (!block.src) return null;
 
             return (

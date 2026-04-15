@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from "react-helmet-async";
 import type { View, Event } from '../types';
 import { EVENTS_DATA } from '../constants';
 import { useOnScreen } from '../hooks/useOnScreen';
@@ -95,30 +96,110 @@ const EventsPage: React.FC<EventsPageProps> = ({ setView }) => {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const res = await fetch("http://localhost:5000/api/events");
+                const res = await fetch("https://studycupsbackend-wb8p.onrender.com/api/events");
                 const json = await res.json();
                 if (json.success) setEvents(json.data);
                 setLoading(false);
-            } catch {
+            } catch (err) {
                 setLoading(false);
             }
         };
         fetchEvents();
     }, []);
+
     return (
-        <div className="bg-slate-50">
+        <div className="bg-[#f8fafc]">
+            <Helmet>
+                <title>Educational Events &amp; Webinars 2026 – College Fairs, Workshops | StudyCups</title>
+                <meta name="description" content="Discover upcoming educational events 2026 – college fairs, webinars, workshops and admission deadlines. Register for free counselling sessions and MBA, B.Tech, MBBS guidance events." />
+                <meta name="keywords" content="educational events 2026, college fair India, MBA webinar, admission workshop, StudyCups events, college counselling event, JEE workshop, NEET seminar" />
+                <link rel="canonical" href="https://studycups.in/events" />
+                <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+                <meta property="og:type" content="website" />
+                <meta property="og:site_name" content="StudyCups" />
+                <meta property="og:title" content="Educational Events & Webinars 2026 | StudyCups" />
+                <meta property="og:description" content="Upcoming college fairs, webinars, workshops and admission deadlines. Free counselling sessions for MBA, B.Tech, MBBS 2026 admissions." />
+                <meta property="og:url" content="https://studycups.in/events" />
+                <meta property="og:image" content="https://studycups.in/logos/StudyCups.png" />
+                <meta property="og:image:width" content="1200" />
+                <meta property="og:image:height" content="630" />
+                <meta property="og:locale" content="en_IN" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="Educational Events & Webinars 2026 | StudyCups" />
+                <meta name="twitter:description" content="Upcoming college fairs, webinars, workshops and admission deadlines for 2026 admissions." />
+                <meta name="twitter:image" content="https://studycups.in/logos/StudyCups.png" />
+                <script type="application/ld+json">{JSON.stringify({
+                    "@context": "https://schema.org",
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                        {"@type":"ListItem","position":1,"name":"Home","item":"https://studycups.in"},
+                        {"@type":"ListItem","position":2,"name":"Events 2026","item":"https://studycups.in/events"}
+                    ]
+                })}</script>
+            </Helmet>
+
             {/* Hero Section */}
-            <section className="bg-[--primary-dark] text-white py-20 rounded-b-3xl">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">Upcoming Educational Events</h1>
-                    <p className="mt-4 text-lg text-white/80 max-w-3xl mx-auto">
-                        Stay informed about webinars, workshops, college fairs, and important deadlines. Don't miss out on opportunities to advance your academic journey.
+            <section className="relative md:mt-[100px] mt-0 overflow-hidden">
+                {/* 4-layer gradient bg */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#030c1a] via-[#061528] to-[#0b2545]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(14,165,233,0.18)_0%,transparent_60%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(245,158,11,0.14)_0%,transparent_55%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.08)_0%,transparent_70%)]" />
+
+                {/* 3 glow orbs */}
+                <div className="pointer-events-none absolute top-[-60px] left-[-60px] w-[300px] h-[300px] rounded-full bg-indigo-600/20 blur-[80px]" />
+                <div className="pointer-events-none absolute bottom-[-40px] right-[10%] w-[250px] h-[250px] rounded-full bg-sky-500/15 blur-[70px]" />
+                <div className="pointer-events-none absolute top-[30%] right-[-40px] w-[200px] h-[200px] rounded-full bg-amber-400/10 blur-[60px]" />
+
+                {/* dot-grid overlay */}
+                <div className="absolute inset-0 opacity-[0.04]" style={{backgroundImage:"radial-gradient(circle,#fff 1px,transparent 1px)",backgroundSize:"28px 28px"}} />
+
+                <div className="relative max-w-7xl mx-auto px-4 py-5 md:py-8 text-center">
+                    {/* breadcrumb */}
+                    <nav aria-label="breadcrumb" className="mb-3 flex items-center justify-center gap-1.5 text-[11px] text-white/50">
+                        <a href="/" className="hover:text-white transition">Home</a>
+                        <span>/</span>
+                        <span className="text-amber-400 font-medium">Events 2026</span>
+                    </nav>
+
+                    {/* animated badge */}
+                    <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-0.5 mb-3">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-300">
+                            LIVE EVENTS · WEBINARS · COLLEGE FAIRS · WORKSHOPS
+                        </span>
+                    </div>
+
+                    <h1 className="text-[22px] sm:text-[30px] md:text-[38px] font-extrabold leading-tight text-white mb-3">
+                        Upcoming{" "}
+                        <span className="bg-gradient-to-r from-amber-300 via-orange-400 to-amber-500 bg-clip-text text-transparent">
+                            Educational Events
+                        </span>
+                    </h1>
+
+                    <p className="text-white/65 text-[12px] md:text-[14px] leading-relaxed max-w-2xl mx-auto mb-4">
+                        Stay ahead with <strong className="text-white/90">webinars, workshops, college fairs</strong> and important admission deadlines. Register for free counselling sessions for MBA, B.Tech &amp; MBBS 2026 admissions.
                     </p>
+
+                    {/* 4 inline stats */}
+                    <div className="flex flex-wrap gap-4 mt-2 text-white/80 text-[11px] justify-center">
+                        <span>🎓 <strong className="text-white">Free</strong> Webinars</span>
+                        <span>🏛️ <strong className="text-white">College</strong> Fairs</span>
+                        <span>📅 <strong className="text-white">Live</strong> Deadlines</span>
+                        <span>💬 <strong className="text-white">Expert</strong> Sessions</span>
+                    </div>
+                </div>
+
+                {/* Wave SVG divider */}
+                <div className="relative w-full overflow-hidden leading-[0] h-6">
+                    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="absolute bottom-0 w-full h-full" fill="#f8fafc">
+                        <path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z"/>
+                    </svg>
                 </div>
             </section>
 
             {/* Events Grid */}
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
                 {loading ? (
                     <p className="text-center py-20 text-lg">Loading events...</p>
                 ) : events.length > 0 ? (
@@ -130,9 +211,13 @@ const EventsPage: React.FC<EventsPageProps> = ({ setView }) => {
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-20 bg-white rounded-lg shadow-sm border">
-                        <h3 className="text-2xl font-semibold text-slate-700">No Upcoming Events</h3>
-                        <p className="text-slate-500 mt-2">Please check back later.</p>
+                    <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-slate-100">
+                        <div className="text-4xl mb-4">📅</div>
+                        <h3 className="text-[20px] font-bold text-slate-800">No Upcoming Events</h3>
+                        <p className="text-slate-500 mt-2 text-sm">New events are being planned. Check back soon!</p>
+                        <a href="/" className="inline-block mt-6 px-6 py-2.5 bg-gradient-to-r from-[#1f4fa8] to-[#0a214a] text-white rounded-xl text-sm font-semibold">
+                            Back to Home
+                        </a>
                     </div>
                 )}
             </div>

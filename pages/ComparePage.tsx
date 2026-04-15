@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { College } from "../types";
 import { useNavigate } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 interface ComparePageProps {
   compareList: string[];
@@ -238,7 +239,7 @@ const getPackageValue = (college: any, kind: "highest" | "average") =>
     findPackageSourceInText(college, kind),
   ]
     .map((candidate) => parsePackageAmount(candidate))
-   .find((value): value is number => value !== null && Number.isFinite(value) && value > 0);
+    .find((value): value is number => Number.isFinite(value) && value > 0) ?? null;
 
 const getPackageLabel = (college: any, kind: "highest" | "average") => {
   const source =
@@ -268,7 +269,7 @@ const getAnnualFeeValue = (college: any) => {
       college?.courses?.[0]?.fees,
     ]
       .map((value) => parseCurrencyValue(value))
-     .find((value): value is number => value !== null && Number.isFinite(value) && value > 0);
+      .find((value): value is number => Number.isFinite(value) && value > 0) ?? null;
 
   if (directFeeValue) return directFeeValue;
 
@@ -459,7 +460,6 @@ const ComparePage: React.FC<ComparePageProps> = ({ compareList, colleges }) => {
                 return [id, json.data] as const;
               }
             } catch (error) {
-              console.error(`Compare detail fetch failed for college ${id}`, error);
             }
 
             return [id, null] as const;
@@ -582,29 +582,61 @@ const ComparePage: React.FC<ComparePageProps> = ({ compareList, colleges }) => {
 
   if (selectedColleges.length < 2) {
     return (
-      <div className="mx-auto max-w-4xl px-6 py-40 text-center">
-        <h1 className="mb-4 text-3xl font-bold text-[#10233e]">Compare Colleges</h1>
-        <p className="mb-8 text-slate-600">
-          Please select at least 2 colleges to compare.
-        </p>
-        <button
-          onClick={() => navigate("/colleges")}
-          className="rounded-lg bg-[#f0a018] px-6 py-3 font-semibold text-[#10233e]"
-        >
-          Add College
-        </button>
+      <div className="min-h-screen bg-[#f5f7fb] flex items-center justify-center px-4">
+        <div className="max-w-lg w-full text-center bg-white rounded-2xl shadow-[0_8px_40px_rgba(10,33,74,0.10)] border border-slate-100 p-10">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1f4fa8] to-[#0a214a] flex items-center justify-center mx-auto mb-5">
+            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <h1 className="text-[22px] font-extrabold text-[#0a214a] mb-3">Compare Colleges</h1>
+          <p className="text-slate-500 text-sm mb-2">Select at least <strong className="text-slate-700">2 colleges</strong> to compare fees, placements, ROI, NAAC accreditation and rankings side by side.</p>
+          <p className="text-[11px] text-slate-400 mb-6">Use the <strong className="text-slate-500">Compare</strong> button on any college card in the listings.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => navigate("/colleges")}
+              className="px-5 py-2.5 bg-gradient-to-r from-[#f59e0b] to-[#d97706] text-[#0a1628] font-bold rounded-xl text-sm shadow hover:opacity-90 transition"
+            >
+              Browse Colleges →
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="px-5 py-2.5 bg-[#0a214a] text-white font-semibold rounded-xl text-sm hover:bg-[#1f4fa8] transition"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-24">
+      <Helmet>
+        <title>Compare Colleges Side by Side 2026 – Fees, Placements, ROI | StudyCups</title>
+        <meta name="description" content="Compare top colleges side by side – fees, placement packages, ROI, NAAC accreditation, rankings and more. Make informed admission decisions for MBA, B.Tech, MBBS 2026." />
+        <meta name="keywords" content="compare colleges India 2026, college comparison fees placement, MBA college compare, B.Tech college ROI, NIRF ranking comparison, StudyCups compare" />
+        <link rel="canonical" href="https://studycups.in/compare" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="StudyCups" />
+        <meta property="og:title" content="Compare Colleges Side by Side 2026 | StudyCups" />
+        <meta property="og:description" content="Compare fees, placements, ROI & rankings of top colleges. Make smarter admission decisions." />
+        <meta property="og:url" content="https://studycups.in/compare" />
+        <meta property="og:image" content="https://studycups.in/logos/StudyCups.png" />
+        <meta property="og:locale" content="en_IN" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Compare Colleges 2026 – Fees, Placements, ROI | StudyCups" />
+        <meta name="twitter:description" content="Compare top colleges fees, packages and ROI side by side." />
+        <meta name="twitter:image" content="https://studycups.in/logos/StudyCups.png" />
+      </Helmet>
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#0f7a86]">
           Side by Side Comparison
         </p>
-        <h1 className="mt-2 text-3xl font-extrabold text-[#10233e]">
-          Comparing {selectedColleges.length} Colleges
+        <h1 className="mt-2 text-[22px] md:text-[30px] font-extrabold text-[#10233e]">
+          Comparing {selectedColleges.length} Colleges Side by Side
         </h1>
         <p className="mt-2 text-sm text-slate-600">
           ROI is estimated from average package versus listed annual fee, so treat it as a quick decision aid.

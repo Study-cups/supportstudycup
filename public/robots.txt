@@ -1,4 +1,54 @@
 User-agent: *
 Allow: /
 
+# Block utility/internal routes
+Disallow: /registration
+Disallow: /api/
+Disallow: /*.json$
+
+# Allow all key content paths
+User-agent: Googlebot
+Allow: /
+Allow: /engineering/
+Allow: /management/
+Allow: /medical/
+Allow: /arts/
+Allow: /law/
+Allow: /design/
+Allow: /mba/
+Allow: /btech/
+Allow: /mbbs/
+Allow: /bca/
+Allow: /bba/
+Allow: /bcom/
+Allow: /bsc/
+Allow: /colleges
+Allow: /courses/
+Allow: /exams/
+Allow: /blog/
+Allow: /university/
+Allow: /compare
+Allow: /college-predictor
+Allow: /nirf-insights
+Allow: /ai-college-finder
+Allow: /free-counselling
+
+User-agent: Bingbot
+Crawl-delay: 3
+
+User-agent: YandexBot
+Crawl-delay: 10
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
 Sitemap: https://studycups.in/sitemap.xml

@@ -40,7 +40,6 @@ const hashIndex = (str: string) => {
 interface CoursesPageProps {
  
   initialStream?: string;
-  onOpenApplyNow?: () => void;
 }
 const normalizeText = (text = "") =>
   text
@@ -63,11 +62,11 @@ const normalizeFacetKey = (value = "") =>
   value.toLowerCase().replace(/[^a-z]/g, "");
 
 const STREAM_MATCHERS = {
-  engineering: ["engineering", "engineer", "btech", "technology", "be"],
+  engineering: ["engineering", "btech", "technology", "be"],
   management: ["management", "mba", "pgdm", "business", "executive"],
-  medical: ["medical", "doctor", "mbbs", "health", "nursing", "pharma"],
+  medical: ["medical", "mbbs", "health", "nursing", "pharma"],
   commerce: ["commerce", "bcom", "account", "finance", "economics"],
-  arts: ["arts", "art", "humanities", "social", "science", "ba", "bsc"],
+  arts: ["arts", "humanities", "social", "science", "ba", "bsc"],
   law: ["law", "llb", "legal"],
   design: ["design", "fashion"],
 } as const;
@@ -142,8 +141,6 @@ type FilterChip = {
   active: boolean;
   count: number;
 };
-
-type FacetCountMap = Record<string, number>;
 
 const getFacetChipPreview = (
   chips: FilterChip[],
@@ -281,40 +278,29 @@ const getSectionIdForLevel = (level = "") => {
 const COURSE_SECTION_CONFIG = [
   {
     key: "postgraduate" as CourseSectionKey,
-    title: "Postgraduate Programs",
-    linkLabel: "View all PG courses ->",
+    title: "Postgraduate Programs in India 2026",
+    seoDesc: "Top MBA, PGDM, M.Tech, MCA, M.Sc & LLM courses — fees, eligibility & top colleges",
+    linkLabel: "View all PG courses →",
     sectionId: "courses-postgraduate",
     desktopLayout: "grid" as const,
   },
   {
     key: "undergraduate" as CourseSectionKey,
-    title: "Undergraduate Programs",
-    linkLabel: "View all UG courses ->",
+    title: "Undergraduate Programs in India 2026",
+    seoDesc: "B.Tech, BBA, BCA, MBBS, B.Com, LLB & BA courses — admission, fees & colleges",
+    linkLabel: "View all UG courses →",
     sectionId: "courses-undergraduate",
     desktopLayout: "list" as const,
   },
   {
     key: "popular" as CourseSectionKey,
-    title: "Popular Programs",
-    linkLabel: "View all popular courses ->",
+    title: "Popular & Trending Courses 2026",
+    seoDesc: "High-demand programs with best career scope, placement packages & top recruiters",
+    linkLabel: "View all popular courses →",
     sectionId: "courses-popular",
     desktopLayout: "list" as const,
   },
 ];
-
-const createSectionPageState = (): Record<CourseSectionKey, number> => ({
-  postgraduate: 1,
-  undergraduate: 1,
-  popular: 1,
-});
-
-const createMobileSectionExpansionState = (): Record<CourseSectionKey, boolean> => ({
-  postgraduate: false,
-  undergraduate: false,
-  popular: false,
-});
-
-const MOBILE_SECTION_PREVIEW_COUNT = 3;
 
 const COURSES_PAGE_TESTIMONIALS = [
   {
@@ -343,7 +329,6 @@ const COURSES_PAGE_TESTIMONIALS = [
 const CoursesPage: React.FC<CoursesPageProps> = ({
  
   initialStream,
-  onOpenApplyNow,
 }) => { 
     const API_BASE = "https://studycupsbackend-wb8p.onrender.com/api";
    const navigate = useNavigate();
@@ -356,11 +341,11 @@ const [selectedLevel, setSelectedLevel] = useState("All");
   const [selectedMode, setSelectedMode] = useState("All");
   const [showMobileFilters, setShowMobileFilters] = useState(false); 
   const [expandedDesktopFacet, setExpandedDesktopFacet] = useState<FilterChipType | null>(null);
-  const [sectionPages, setSectionPages] = useState<Record<CourseSectionKey, number>>(
-    createSectionPageState
-  );
-  const [expandedMobileSections, setExpandedMobileSections] =
-    useState<Record<CourseSectionKey, boolean>>(createMobileSectionExpansionState);
+  const [sectionPages, setSectionPages] = useState<Record<CourseSectionKey, number>>({
+    postgraduate: 1,
+    undergraduate: 1,
+    popular: 1,
+  });
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const desktopFacetRef = useRef<HTMLDivElement | null>(null);
 
@@ -370,8 +355,11 @@ const [selectedLevel, setSelectedLevel] = useState("All");
 const location = useLocation();
 
 useEffect(() => {
-  setSectionPages(createSectionPageState());
-  setExpandedMobileSections(createMobileSectionExpansionState());
+  setSectionPages({
+    postgraduate: 1,
+    undergraduate: 1,
+    popular: 1,
+  });
 }, [searchTerm, selectedStream, selectedLevel, selectedMode]);
 
 useEffect(() => {
@@ -542,18 +530,12 @@ const getBackendCourseModes = (course: any) =>
 const getPrimaryFacetValue = (values: string[], fallback = "N/A") =>
   values[0] || fallback;
 
-const incrementFacetCounts = (counts: FacetCountMap, values: string[]) => {
-  Array.from(new Set(values.filter(Boolean))).forEach((value) => {
-    counts[value] = (counts[value] || 0) + 1;
-  });
-};
-
 const getCategorySlugFromStream = (courseName: string) => {
   return deriveStream(courseName)
     .toLowerCase()
     .replace(/\s+/g, "-");
 };
-function formatToLakhs(num:any) {
+function formatToLakhs(num) {
   if (!num) return "N/A";
 
   let lakhs = num / 100000;
@@ -561,7 +543,7 @@ function formatToLakhs(num:any) {
   // keep 2 decimals max (20.75)
   lakhs = Math.round(lakhs * 100) / 100;
 
-  return "Ã¢â€šÂ¹" + lakhs + " Lakhs";
+  return "₹" + lakhs + " Lakhs";
 }
 
 const normalizeCourseCard = (course: any) => {
@@ -581,29 +563,12 @@ const normalizeCourseCard = (course: any) => {
     : derivedLevel
       ? [derivedLevel]
       : [];
-  const searchText = normalizeText(
-    [
-      name,
-      getPrimaryFacetValue(filterLevels),
-      getPrimaryFacetValue(modeValues),
-      getPrimaryFacetValue(filterStreams, derivedStream),
-      ...matchableStreams,
-      ...filterLevels,
-      ...modeValues,
-      "phd",
-      "doctoral",
-      name.includes("Working") ? "working professional part time wp" : "",
-      name.includes("Executive") ? "executive management" : "",
-    ].join(" ")
-  );
 
   return {
     ...course,
     courseKey: slug || name,
-    derivedStream,
     slug,
     name,
-    searchText,
     stream: getPrimaryFacetValue(filterStreams, derivedStream),
     streams: matchableStreams,
     filterStreams,
@@ -631,7 +596,6 @@ useEffect(() => {
       setCourses(normalizedCourses);
     })
     .catch(err => {
-      console.error("Courses API error", err);
     })
     .finally(() => setLoading(false));
 }, []);
@@ -658,25 +622,12 @@ useEffect(() => {
     navState?.initialStream ||
     initialStream ||
     "";
-  const resolvedStream = requestedStream
-    ? resolveRequestedStream(requestedStream, streams)
-    : "All";
 
+  if (!requestedStream) return;
+
+  const resolvedStream = resolveRequestedStream(requestedStream, streams);
   setSelectedStream(resolvedStream);
 }, [initialStream, location.search, location.state, streams]);
-
-useEffect(() => {
-  const navState =
-    location.state && typeof location.state === "object"
-      ? (location.state as any)
-      : null;
-  const requestedSearch =
-    new URLSearchParams(location.search).get("search") ||
-    navState?.initialSearchTerm ||
-    "";
-
-  setSearchTerm(requestedSearch);
-}, [location.search, location.state]);
 
 
 const levels = useMemo(() => {
@@ -697,9 +648,27 @@ const modes = useMemo(() => {
 
 const searchTokens = useMemo(() => tokenize(searchTerm), [searchTerm]);
 
+const getSearchText = (course) => {
+  return normalizeText(
+    [
+      course.name,
+      course.level,
+      course.mode,
+      course.stream,
+      ...(course.streams || []),
+      ...(course.levels || []),
+      ...(course.modes || []),
+      "phd",
+      "doctoral",
+      course.name?.includes("Working") ? "working professional part time wp" : "",
+      course.name?.includes("Executive") ? "executive management" : "",
+    ].join(" ")
+  );
+};
+
 const searchMatchedCourses = useMemo(() => {
   return courses.filter((course) => {
-    const searchable = course.searchText || "";
+    const searchable = getSearchText(course);
 
     return (
       searchTokens.length === 0 ||
@@ -715,7 +684,7 @@ const matchesFacetFilters = (
   const streamMatch =
     filters.stream === "All" ||
     (course.streams || []).includes(filters.stream) ||
-    course.derivedStream === filters.stream;
+    deriveStream(course.name) === filters.stream;
 
   const levelMatch =
     filters.level === "All" || (course.levels || []).includes(filters.level);
@@ -737,69 +706,6 @@ const matchesFacetFilters = (
   });
 }, [searchMatchedCourses, selectedStream, selectedLevel, selectedMode]);
 
-const streamCounts = useMemo(() => {
-  const counts: FacetCountMap = {};
-
-  searchMatchedCourses.forEach((course) => {
-    if (
-      !matchesFacetFilters(course, {
-        stream: "All",
-        level: selectedLevel,
-        mode: selectedMode,
-      })
-    ) {
-      return;
-    }
-
-    incrementFacetCounts(
-      counts,
-      course.streams?.length ? course.streams : [course.stream || course.derivedStream]
-    );
-  });
-
-  return counts;
-}, [searchMatchedCourses, selectedLevel, selectedMode]);
-
-const modeCounts = useMemo(() => {
-  const counts: FacetCountMap = {};
-
-  searchMatchedCourses.forEach((course) => {
-    if (
-      !matchesFacetFilters(course, {
-        stream: selectedStream,
-        level: selectedLevel,
-        mode: "All",
-      })
-    ) {
-      return;
-    }
-
-    incrementFacetCounts(counts, course.modes || []);
-  });
-
-  return counts;
-}, [searchMatchedCourses, selectedStream, selectedLevel]);
-
-const levelCounts = useMemo(() => {
-  const counts: FacetCountMap = {};
-
-  searchMatchedCourses.forEach((course) => {
-    if (
-      !matchesFacetFilters(course, {
-        stream: selectedStream,
-        level: "All",
-        mode: selectedMode,
-      })
-    ) {
-      return;
-    }
-
-    incrementFacetCounts(counts, course.levels || []);
-  });
-
-  return counts;
-}, [searchMatchedCourses, selectedStream, selectedMode]);
-
 
   const clearFilters = () => {
     setSelectedStream("All");
@@ -817,9 +723,6 @@ const buildFilterChips = (
   values: string[],
   type: FilterChipType
 ): FilterChip[] => {
-  const countMap =
-    type === "stream" ? streamCounts : type === "level" ? levelCounts : modeCounts;
-
   return values
     .filter(value => value !== "All")
     .map((value) => ({
@@ -832,24 +735,30 @@ const buildFilterChips = (
           : type === "level"
             ? selectedLevel === value
             : selectedMode === value,
-      count: countMap[value] || 0,
+      count: searchMatchedCourses.filter((course) =>
+        matchesFacetFilters(course, {
+          stream: type === "stream" ? value : selectedStream,
+          level: type === "level" ? value : selectedLevel,
+          mode: type === "mode" ? value : selectedMode,
+        })
+      ).length,
     }))
     .filter(chip => chip.count > 0);
 };
 
 const streamFilterChips = useMemo(
   () => buildFilterChips(streams, "stream"),
-  [streams, selectedStream, selectedLevel, selectedMode, streamCounts]
+  [streams, searchMatchedCourses, selectedStream, selectedLevel, selectedMode]
 );
 
 const levelFilterChips = useMemo(
   () => buildFilterChips(levels, "level"),
-  [levels, selectedStream, selectedLevel, selectedMode, levelCounts]
+  [levels, searchMatchedCourses, selectedStream, selectedLevel, selectedMode]
 );
 
 const modeFilterChips = useMemo(
   () => buildFilterChips(modes, "mode"),
-  [modes, selectedStream, selectedLevel, selectedMode, modeCounts]
+  [modes, searchMatchedCourses, selectedStream, selectedLevel, selectedMode]
 );
 
 const streamChipPreview = useMemo(
@@ -866,21 +775,6 @@ const levelChipPreview = useMemo(
   () => getFacetChipPreview(levelFilterChips, 2, selectedLevel),
   [levelFilterChips, selectedLevel]
 );
-
-const professionalModeOption = useMemo(
-  () =>
-    modes.find((mode) =>
-      /(professional|executive|working|part[\s-]?time|weekend)/i.test(mode)
-    ) || null,
-  [modes]
-);
-
-const isHeroAllCoursesActive =
-  selectedStream === "All" && selectedLevel === "All" && selectedMode === "All";
-
-const isHeroProfessionalActive = professionalModeOption
-  ? selectedMode === professionalModeOption
-  : false;
 
 const expandedDesktopFacetConfig =
   expandedDesktopFacet === "stream"
@@ -1022,196 +916,210 @@ const getCourseLink = (course: any) => {
   return buildCourseDetailPath(categorySlug, course.name, courseSlug);
 };
 
+/* ── Stream → gradient map ── */
+const STREAM_GRADIENT: Record<string, string> = {
+  Management:  "from-blue-600 to-indigo-700",
+  Engineering: "from-violet-600 to-indigo-700",
+  Medical:     "from-red-500 to-rose-700",
+  Law:         "from-emerald-600 to-teal-700",
+  Commerce:    "from-amber-500 to-orange-600",
+  Design:      "from-pink-500 to-fuchsia-700",
+  Doctoral:    "from-slate-600 to-slate-800",
+  General:     "from-sky-500 to-cyan-700",
+};
+const getStreamGradient = (stream = "") => {
+  const key = Object.keys(STREAM_GRADIENT).find(
+    (k) => stream.toLowerCase().includes(k.toLowerCase())
+  );
+  return key ? STREAM_GRADIENT[key] : STREAM_GRADIENT.General;
+};
+
 const renderCompactCourseCard = (course: any) => {
   const courseLink = getCourseLink(course);
   const courseTags = getCourseCardTags(course);
+  const grad = getStreamGradient(course.stream || deriveStream(course.name));
 
   return (
-    <div
+    <article
       key={course.courseKey}
       onClick={() => navigate(courseLink)}
-      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-[24px] border border-[#d6cec2] bg-[#ffffff] shadow-[0_10px_22px_rgba(15,35,63,0.06)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_34px_rgba(15,35,63,0.12)]"
+      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-[0_4px_24px_rgba(10,33,74,0.08)] hover:shadow-[0_14px_40px_rgba(10,33,74,0.16)] hover:-translate-y-1 transition-all duration-300"
+      aria-label={`${course.name} – ${course.stream || "General"} course in India 2026`}
     >
-      <div className="p-4 md:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#efe8da] text-[#0a5474]">
-            <GraduationCap className="h-5 w-5 md:h-6 md:w-6" strokeWidth={2} />
-          </div>
+      {/* Gradient top accent bar */}
+      <div className={`h-1.5 w-full bg-gradient-to-r ${grad} flex-shrink-0`} />
 
-          <span className="rounded-full border border-[#f3a11c]/20 bg-[#f7ebd2] px-3 py-1 text-[10px] font-semibold text-[#cb7b12] md:text-[11px]">
+      <div className="flex flex-col flex-1 p-4 gap-0">
+        {/* Icon + badge row */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${grad} text-white shadow-md flex-shrink-0`}>
+            <GraduationCap className="h-5 w-5" strokeWidth={2} />
+          </div>
+          <span className="rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 leading-none mt-1">
             {getCourseBadgeLabel(course)}
           </span>
         </div>
 
-        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0b6b86]">
+        {/* Stream label */}
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-1">
           {course.stream || "General Program"}
         </p>
 
-        <h3
-          className="mt-2 line-clamp-2 text-[1.42rem] leading-[1.05] text-[#0f203e] md:text-[1.05rem] lg:text-[1rem]"
-          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-        >
+        {/* Course name */}
+        <h3 className="text-[15px] font-bold leading-snug text-slate-800 line-clamp-2 mb-2">
           {course.name}
         </h3>
 
-        <p className="mt-3 line-clamp-3 min-h-[4.5rem] text-[13px] leading-6 text-slate-500 md:min-h-[5.4rem] md:text-[12px] md:leading-6">
+        {/* Description */}
+        <p className="text-[12px] leading-5 text-slate-500 line-clamp-3 flex-1">
           {getCourseCardDescription(course)}
         </p>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {courseTags.map((tag) => (
-            <span
-              key={`${course.courseKey}-${tag}`}
-              className="rounded-full border border-[#d8cdbd] bg-[#f7f1e6] px-2.5 py-1 text-[10px] font-medium text-[#0f2d52] md:text-[11px]"
-            >
-              {tag}
-            </span>
-          ))}
+        {/* Tags */}
+        {courseTags.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {courseTags.slice(0, 3).map((tag) => (
+              <span
+                key={`${course.courseKey}-${tag}`}
+                className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-medium text-slate-600"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 border-t border-slate-100 bg-slate-50/80">
+        <div className="flex flex-col items-center py-2.5 border-r border-slate-100">
+          <span className="text-[13px] font-extrabold text-[#1f4fa8]">{course.totalColleges || 0}+</span>
+          <span className="text-[9px] uppercase tracking-wide text-slate-400 mt-0.5">Colleges</span>
+        </div>
+        <div className="flex flex-col items-center py-2.5 border-r border-slate-100">
+          <span className="text-[11px] font-extrabold text-slate-700 truncate max-w-[80px] text-center">
+            {course.duration && course.duration !== "N/A" ? course.duration : "—"}
+          </span>
+          <span className="text-[9px] uppercase tracking-wide text-slate-400 mt-0.5">Duration</span>
+        </div>
+        <div className="flex flex-col items-center py-2.5">
+          <span className="text-[11px] font-extrabold text-slate-700 truncate max-w-[70px] text-center">
+            {course.level && course.level !== "N/A" ? course.level : "—"}
+          </span>
+          <span className="text-[9px] uppercase tracking-wide text-slate-400 mt-0.5">Level</span>
         </div>
       </div>
 
-      <div className="mt-auto grid grid-cols-3 border-y border-[#d8cdbd] bg-[#f7f2e9]">
-        <div className="px-3 py-3 text-center">
-          <p
-            className="text-[1rem] font-semibold leading-tight text-[#0f203e] md:text-[0.9rem]"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          >
-            {course.totalColleges || 0}+
-          </p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-slate-500">
-            Colleges
-          </p>
-        </div>
-
-        <div className="border-x border-[#d8cdbd] px-3 py-3 text-center">
-          <p
-            className="truncate text-[0.94rem] font-semibold leading-tight text-[#0f203e] md:text-[0.7rem]"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          >
-            {course.duration && course.duration !== "N/A" ? course.duration : "NA"}
-          </p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-slate-500">
-            Duration
-          </p>
-        </div>
-
-        <div className="px-3 py-3 text-center">
-          <p
-            className="truncate text-[0.94rem] font-semibold leading-tight text-[#0f203e] md:text-[0.9rem]"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          >
-            {course.level || "N/A"}
-          </p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-slate-500">
-            Level
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-[1fr_auto] gap-3 p-4">
+      {/* CTA row */}
+      <div className="flex gap-2 p-3 border-t border-slate-100">
         <button
-          onClick={(event) => {
-            event.stopPropagation();
-            navigate(courseLink);
-          }}
-          className="rounded-xl bg-[#eb980f] px-4 py-3 text-[13px] font-bold text-[#0f203e] transition hover:brightness-105 md:px-4 md:text-sm"
+          onClick={(e) => { e.stopPropagation(); navigate(courseLink); }}
+          className={`flex-1 rounded-xl bg-gradient-to-r ${grad} py-2.5 text-[12px] font-bold text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all`}
         >
-          Enquire Free
+          Explore Course →
         </button>
-
         <button
-          onClick={(event) => {
-            event.stopPropagation();
-            navigate(courseLink);
-          }}
-          aria-label={`Open ${course.name}`}
-          className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#d6cec2] bg-white text-[#0f2d52] transition hover:bg-[#f5efe5]"
+          onClick={(e) => { e.stopPropagation(); navigate(courseLink); }}
+          aria-label={`View details of ${course.name}`}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-[#1f4fa8] hover:border-[#1f4fa8]/30 transition"
         >
-          <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
+          <ArrowRight className="h-4 w-4" strokeWidth={2} />
         </button>
       </div>
-    </div>
+    </article>
   );
 };
 
 const renderWideCourseCard = (course: any) => {
   const courseLink = getCourseLink(course);
   const courseHighlights = getWideCourseHighlights(course);
-  const accentTones = [
-    {
-      iconBox: "border-[#d5dde5] bg-[#eaf1f4] text-[#205a77]",
-      badge: "bg-[#e8edff] text-[#3954c7]",
-    },
-    {
-      iconBox: "border-[#eadac6] bg-[#f7ecdc] text-[#bd7e22]",
-      badge: "bg-[#dff3e6] text-[#13834f]",
-    },
-    {
-      iconBox: "border-[#ead5d8] bg-[#f7e8eb] text-[#ad4c66]",
-      badge: "bg-[#fde5eb] text-[#c2456a]",
-    },
-  ];
-  const accentTone = accentTones[hashIndex(course.courseKey || course.name) % accentTones.length];
+  const grad = getStreamGradient(course.stream || deriveStream(course.name));
 
   return (
-    <div
+    <article
       key={course.courseKey}
       onClick={() => navigate(courseLink)}
-      className="group flex cursor-pointer items-start justify-between gap-6 rounded-[20px] border border-[#d7cfc3] bg-[#ffffff] px-5 py-5 shadow-[0_10px_24px_rgba(15,35,63,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(15,35,63,0.09)]"
+      className="group flex cursor-pointer items-stretch rounded-2xl bg-white border border-slate-100 shadow-[0_4px_20px_rgba(10,33,74,0.07)] hover:shadow-[0_12px_36px_rgba(10,33,74,0.14)] hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+      aria-label={`${course.name} – ${course.stream || "General"} course in India 2026`}
     >
-      <div className="flex min-w-0 flex-1 gap-4">
-        <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${accentTone.iconBox}`}
-        >
-          <GraduationCap className="h-5 w-5" strokeWidth={2.1} />
-        </div>
+      {/* Gradient left accent bar */}
+      <div className={`w-1.5 shrink-0 bg-gradient-to-b ${grad}`} />
 
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#0b6b86]">
-            {course.stream || "General Program"}
-          </p>
+      <div className="flex flex-1 min-w-0 items-center justify-between gap-5 px-5 py-4">
+        {/* Left: icon + content */}
+        <div className="flex min-w-0 flex-1 gap-4 items-start">
+          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${grad} text-white shadow-md`}>
+            <GraduationCap className="h-5 w-5" strokeWidth={2} />
+          </div>
 
-          <h3
-            className="mt-1 line-clamp-2 text-[1.65rem] leading-[1.02] text-[#0f203e]"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          >
-            {course.name}
-          </h3>
-
-          <p className="mt-2 max-w-[720px] text-sm leading-7 text-slate-500">
-            {getCourseCardDescription(course)}
-          </p>
-
-          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-            {courseHighlights.map((item) => (
-              <span
-                key={`${course.courseKey}-${item}`}
-                className="flex items-center gap-2 text-[12px] font-semibold text-[#0f2d52]"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-[#0b6b86]" />
-                {item}
+          <div className="min-w-0 flex-1">
+            {/* Stream + demand badge */}
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                {course.stream || "General Program"}
               </span>
-            ))}
+              <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[9px] font-bold text-amber-700">
+                {getWideCourseBadgeLabel(course)}
+              </span>
+            </div>
+
+            {/* Course name */}
+            <h3 className="text-[16px] md:text-[19px] font-bold leading-snug text-slate-800 line-clamp-1 mb-1.5">
+              {course.name}
+            </h3>
+
+            {/* Description */}
+            <p className="text-[12px] md:text-[13px] leading-relaxed text-slate-500 line-clamp-2 max-w-[680px]">
+              {getCourseCardDescription(course)}
+            </p>
+
+            {/* Highlights */}
+            {courseHighlights.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                {courseHighlights.slice(0, 4).map((item) => (
+                  <span
+                    key={`${course.courseKey}-${item}`}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600"
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full bg-gradient-to-r ${grad}`} />
+                    {item}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Quick stats chips */}
+            <div className="mt-2.5 flex items-center gap-3 flex-wrap">
+              {course.totalColleges > 0 && (
+                <span className="rounded-full bg-blue-50 border border-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-700">
+                  {course.totalColleges}+ Colleges
+                </span>
+              )}
+              {course.duration && course.duration !== "N/A" && (
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                  {course.duration}
+                </span>
+              )}
+              {course.level && course.level !== "N/A" && (
+                <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600">
+                  {course.level}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex shrink-0 flex-col items-end gap-6">
-        <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${accentTone.badge}`}>
-          {getWideCourseBadgeLabel(course)}
-        </span>
-
-        <button
-          onClick={(event) => {
-            event.stopPropagation();
-            navigate(courseLink);
-          }}
-          className="rounded-xl bg-[#eb980f] px-5 py-3 text-sm font-bold text-[#0f203e] transition hover:brightness-105"
-        >
-          Enquire Free <span aria-hidden="true">-&gt;</span>
-        </button>
+        {/* Right: CTA */}
+        <div className="shrink-0 flex flex-col items-end justify-center">
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate(courseLink); }}
+            className={`rounded-xl bg-gradient-to-r ${grad} px-5 py-2.5 text-[12px] font-bold text-white shadow hover:shadow-lg hover:-translate-y-0.5 transition-all whitespace-nowrap`}
+          >
+            Explore Course →
+          </button>
+        </div>
       </div>
-    </div>
+    </article>
   );
 };
 
@@ -1220,7 +1128,7 @@ const renderSectionPagination = (
   currentPage: number,
   totalPages: number
 ) => {
-  if (isMobileViewport || totalPages <= 1) {
+  if (totalPages <= 1) {
     return null;
   }
 
@@ -1270,315 +1178,294 @@ const renderSectionPagination = (
     </div>
   );
 };
-
-const toggleMobileSectionExpansion = (sectionKey: CourseSectionKey) => {
-  setExpandedMobileSections((previous) => ({
-    ...previous,
-    [sectionKey]: !previous[sectionKey],
-  }));
-};
-
-const renderCompactCourseCardSkeleton = (key: string) => (
-  <div
-    key={key}
-    className="flex h-full flex-col overflow-hidden rounded-[24px] border border-[#d6cec2] bg-white shadow-[0_10px_22px_rgba(15,35,63,0.06)] animate-pulse"
-  >
-    <div className="p-4 md:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="h-12 w-12 rounded-2xl bg-slate-200" />
-        <div className="h-7 w-28 rounded-full bg-slate-200" />
-      </div>
-
-      <div className="mt-4 h-3 w-24 rounded-full bg-slate-200" />
-      <div className="mt-3 h-8 w-4/5 rounded-xl bg-slate-200" />
-
-      <div className="mt-4 space-y-2">
-        <div className="h-3 rounded-full bg-slate-200" />
-        <div className="h-3 w-11/12 rounded-full bg-slate-200" />
-        <div className="h-3 w-3/4 rounded-full bg-slate-200" />
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {[...Array(3)].map((_, index) => (
-          <div
-            key={`${key}-tag-${index}`}
-            className="h-6 w-20 rounded-full bg-slate-200"
-          />
-        ))}
-      </div>
-    </div>
-
-    <div className="mt-auto grid grid-cols-3 border-y border-[#d8cdbd] bg-[#f7f2e9]">
-      {[...Array(3)].map((_, index) => (
-        <div
-          key={`${key}-meta-${index}`}
-          className={`px-3 py-3 text-center ${index === 1 ? "border-x border-[#d8cdbd]" : ""}`}
-        >
-          <div className="mx-auto h-4 w-12 rounded-full bg-slate-200" />
-          <div className="mx-auto mt-2 h-2 w-14 rounded-full bg-slate-200" />
-        </div>
-      ))}
-    </div>
-
-    <div className="grid grid-cols-[1fr_auto] gap-3 p-4">
-      <div className="h-11 rounded-xl bg-slate-200" />
-      <div className="h-11 w-11 rounded-xl bg-slate-200" />
-    </div>
-  </div>
-);
-
-const renderWideCourseCardSkeleton = (key: string) => (
-  <div
-    key={key}
-    className="flex items-start justify-between gap-6 rounded-[20px] border border-[#d7cfc3] bg-white px-5 py-5 shadow-[0_10px_24px_rgba(15,35,63,0.05)] animate-pulse"
-  >
-    <div className="flex min-w-0 flex-1 gap-4">
-      <div className="h-12 w-12 shrink-0 rounded-2xl bg-slate-200" />
-
-      <div className="min-w-0 flex-1">
-        <div className="h-3 w-24 rounded-full bg-slate-200" />
-        <div className="mt-3 h-8 w-2/3 rounded-xl bg-slate-200" />
-
-        <div className="mt-4 space-y-2">
-          <div className="h-3 rounded-full bg-slate-200" />
-          <div className="h-3 w-11/12 rounded-full bg-slate-200" />
-          <div className="h-3 w-4/5 rounded-full bg-slate-200" />
-        </div>
-
-        <div className="mt-4 flex flex-wrap gap-3">
-          {[...Array(4)].map((_, index) => (
-            <div
-              key={`${key}-highlight-${index}`}
-              className="h-3 w-20 rounded-full bg-slate-200"
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-
-    <div className="hidden shrink-0 flex-col items-end gap-6 md:flex">
-      <div className="h-7 w-24 rounded-full bg-slate-200" />
-      <div className="h-11 w-32 rounded-xl bg-slate-200" />
-    </div>
-  </div>
-);
-
-const renderCoursesLoadingState = () => (
-  <div className="space-y-14">
-    {COURSE_SECTION_CONFIG.map((section) => (
-      <section
-        key={section.key}
-        className="border-t border-[#d8d0c3] pt-10 first:border-t-0 first:pt-0"
-      >
-        <div className="mb-6 flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="h-10 w-56 rounded-full bg-slate-200 animate-pulse" />
-          <div className="hidden h-4 w-32 rounded-full bg-slate-200 animate-pulse md:block" />
-        </div>
-
-        <div className="flex gap-4 overflow-hidden px-2 pb-3 md:hidden">
-          {[...Array(3)].map((_, index) => (
-            <div
-              key={`${section.key}-mobile-${index}`}
-              className="min-w-[240px] max-w-[260px] shrink-0"
-            >
-              {renderCompactCourseCardSkeleton(`${section.key}-mobile-card-${index}`)}
-            </div>
-          ))}
-        </div>
-
-        {section.desktopLayout === "grid" ? (
-          <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-8">
-            {[...Array(4)].map((_, index) =>
-              renderCompactCourseCardSkeleton(`${section.key}-grid-${index}`)
-            )}
-          </div>
-        ) : (
-          <div className="hidden space-y-4 md:block">
-            {[...Array(3)].map((_, index) =>
-              renderWideCourseCardSkeleton(`${section.key}-row-${index}`)
-            )}
-          </div>
-        )}
-      </section>
-    ))}
-  </div>
-);
-
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#f5f7fb] md:overflow-visible">
-       <Helmet>
-              <title>
-                StudyCups  Compare Colleges, Courses & Exams in India
-              </title>
-              <meta
-                name="description"
-                content="StudyCups helps students compare colleges, courses, fees, placements and exams across India. Find your dream college today."
-              />
-              <link rel="canonical" href="https://studycups.in/" />
-            </Helmet>
+    <div className="bg-[#f5f7fb] min-h-screen">
+      <Helmet>
+        {/* ── Primary SEO ── */}
+        <title>
+          {selectedStream && selectedStream !== "All"
+            ? `Best ${selectedStream} Courses in India 2026 – Fees, Syllabus, Top Colleges | StudyCups`
+            : "All Courses in India 2026 – MBA, B.Tech, MBBS, BCA, BBA, Law | StudyCups"}
+        </title>
+        <meta name="description" content={
+          selectedStream && selectedStream !== "All"
+            ? `Explore best ${selectedStream} courses in India 2026. Compare fees, syllabus, NIRF-ranked colleges, eligibility criteria, entrance exams and career scope. Free expert counselling on StudyCups.`
+            : "Browse 50+ courses in India 2026 – MBA, B.Tech, MBBS, BCA, BBA, Law, Design & more. Compare fees, top NIRF-ranked colleges, syllabus, eligibility and career options. Free counselling on StudyCups."
+        } />
+        <meta name="keywords" content={
+          selectedStream && selectedStream !== "All"
+            ? `${selectedStream} courses India 2026, best ${selectedStream} colleges, ${selectedStream} fees syllabus, ${selectedStream} eligibility, ${selectedStream} admission 2026, ${selectedStream} career scope, top ${selectedStream} colleges NIRF, free counselling ${selectedStream}`
+            : "courses in India 2026, MBA courses India, B.Tech courses, MBBS colleges 2026, BCA BBA courses, law colleges India, best courses after 12th, college admission 2026, NIRF ranked colleges, free counselling StudyCups, compare course fees"
+        } />
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+        <meta name="author" content="StudyCups" />
+        <link rel="canonical" href="https://studycups.in/courses" />
 
-{/* HERO */}
-<section className="relative mt-0 md:mt-20 overflow-hidden bg-[#071d35]">
-  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.08),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(37,99,235,0.22),_transparent_32%)]" />
-  <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(3,17,33,0.96)_0%,rgba(6,29,55,0.94)_55%,rgba(0,62,109,0.88)_100%)]" />
-  <div className="absolute -left-16 top-24 h-36 w-36 rounded-full bg-[#f59e0b]/10 blur-3xl md:h-56 md:w-56" />
-  <div className="absolute right-0 top-20 h-48 w-48 rounded-full bg-cyan-400/10 blur-3xl md:h-72 md:w-72" />
+        {/* ── Open Graph ── */}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="StudyCups" />
+        <meta property="og:locale" content="en_IN" />
+        <meta property="og:title" content={
+          selectedStream && selectedStream !== "All"
+            ? `Best ${selectedStream} Courses in India 2026 – Fees, Colleges | StudyCups`
+            : "All Courses in India 2026 – MBA, B.Tech, MBBS, BCA, BBA | StudyCups"
+        } />
+        <meta property="og:description" content="Compare 50+ courses by fees, top colleges, syllabus & career scope. Free expert counselling for 2026 admissions." />
+        <meta property="og:url" content="https://studycups.in/courses" />
+        <meta property="og:image" content="https://studycups.in/logos/StudyCups.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
 
-  <div className="relative container mx-auto px-4 py-5 md:px-6 md:py-4">
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div className="max-w-[690px]">
-        <div className="flex flex-wrap items-center gap-2 pt-2 text-xs text-white/70 md:pt-3 md:text-sm md:text-white/60">
-          <span onClick={() => navigate("/")} className="cursor-pointer">
-            Home
+        {/* ── Twitter Card ── */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@StudyCups" />
+        <meta name="twitter:title" content={
+          selectedStream && selectedStream !== "All"
+            ? `Best ${selectedStream} Courses in India 2026 | StudyCups`
+            : "All Courses in India 2026 – MBA, B.Tech, MBBS & More | StudyCups"
+        } />
+        <meta name="twitter:description" content="Browse MBA, B.Tech, MBBS, BCA, Law courses. Compare fees, top colleges, syllabus & get free admission guidance." />
+        <meta name="twitter:image" content="https://studycups.in/logos/StudyCups.png" />
+
+        {/* ── JSON-LD: ItemList of courses ── */}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          "name": selectedStream && selectedStream !== "All"
+            ? `Best ${selectedStream} Courses in India 2026`
+            : "All Courses in India 2026",
+          "description": "Compare top courses in India by fees, colleges, eligibility and career scope.",
+          "url": "https://studycups.in/courses",
+          "numberOfItems": filteredCourses.length,
+          "itemListElement": filteredCourses.slice(0, 10).map((c: any, idx: number) => ({
+            "@type": "ListItem",
+            "position": idx + 1,
+            "name": c.name || "",
+            "url": `https://studycups.in/courses/${c.slug || toCourseSlug(c.name || "")}`,
+            "description": getCourseCardDescription(c),
+          }))
+        })}</script>
+
+        {/* ── JSON-LD: BreadcrumbList ── */}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://studycups.in/" },
+            { "@type": "ListItem", "position": 2, "name": "Courses & Programs", "item": "https://studycups.in/courses" },
+            ...(selectedStream && selectedStream !== "All"
+              ? [{ "@type": "ListItem", "position": 3, "name": selectedStream, "item": `https://studycups.in/courses?stream=${encodeURIComponent(selectedStream)}` }]
+              : [])
+          ]
+        })}</script>
+
+        {/* ── JSON-LD: EducationalOrganization ── */}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "EducationalOrganization",
+          "name": "StudyCups",
+          "url": "https://studycups.in",
+          "logo": "https://studycups.in/logos/StudyCups.png",
+          "description": "India's trusted college admission portal – MBA, B.Tech, MBBS, BCA, BBA, Law counselling & admissions.",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+91-8081269969",
+            "contactType": "Admissions Counselling",
+            "areaServed": "IN",
+            "availableLanguage": ["Hindi", "English"]
+          },
+          "sameAs": ["https://www.justdial.com/studycups"]
+        })}</script>
+      </Helmet>
+
+{/* ═══════════════════════════════════════
+    HERO — COURSES PAGE
+═══════════════════════════════════════ */}
+<section className="relative mt-6 md:mt-[100px] overflow-hidden">
+
+  {/* ── Multi-layer gradient background ── */}
+  <div className="absolute inset-0 bg-gradient-to-br from-[#030c1a] via-[#061528] to-[#0b2545]" />
+  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(99,102,241,0.18)_0%,transparent_50%)]" />
+  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(14,165,233,0.14)_0%,transparent_50%)]" />
+  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(245,158,11,0.10)_0%,transparent_40%)]" />
+
+  {/* Glow orbs */}
+  <div className="pointer-events-none absolute -top-16 -left-12 h-56 w-56 rounded-full bg-indigo-500/20 blur-[80px]" />
+  <div className="pointer-events-none absolute top-8 right-0 h-64 w-64 rounded-full bg-sky-400/15 blur-[90px]" />
+  <div className="pointer-events-none absolute bottom-0 left-1/3 h-40 w-80 rounded-full bg-amber-400/10 blur-[70px]" />
+
+  {/* Dot-grid pattern */}
+  <div
+    className="pointer-events-none absolute inset-0 opacity-[0.03]"
+    style={{ backgroundImage: "radial-gradient(circle,#fff 1px,transparent 1px)", backgroundSize: "26px 26px" }}
+  />
+
+  <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-8 py-5 md:py-7">
+
+    {/* Breadcrumb */}
+    <nav aria-label="breadcrumb" className="flex items-center gap-1.5 text-[11px] text-white/40 mb-3">
+      <a href="/" className="hover:text-white/70 transition">Home</a>
+      <span>/</span>
+      <span className="text-[#f3a11c] font-semibold">Courses &amp; Programs</span>
+      {selectedStream && selectedStream !== "All" && (
+        <><span>/</span><span className="text-white/60">{selectedStream}</span></>
+      )}
+    </nav>
+
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-5 lg:gap-8 items-start">
+
+      {/* ── LEFT ── */}
+      <div>
+
+        {/* Live badge */}
+        <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-0.5 mb-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="text-[10px] font-bold tracking-[0.12em] text-amber-300 uppercase">
+            2026 Admissions Open · 500+ Partner Colleges
           </span>
-          <span className="text-white/30">&gt;</span>
-          <span className="font-semibold text-[#f3a11c]">Courses &amp; Programs</span>
         </div>
 
-        <div className="mt-8 inline-flex rounded-full border border-[#f3a11c]/45 bg-[#f3a11c]/10 px-4 py-2 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-[#f3a11c] md:hidden">
-          All Programs - 2026 Admissions Open
-        </div>
-      
-
-        <h1
-          className="mt-4 max-w-[640px] pt-1 text-[30px] leading-[1.2] text-white md:mt-3 md:pt-3 md:text-[3rem] md:leading-[0.96]"
-          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-        >
-          Find the{" "}
-          <span className="font-medium italic text-[#f3a11c]">Right Course</span>
-          <br />
-          for Your Career
+        {/* H1 */}
+        <h1 className="text-[18px] sm:text-[26px] md:text-[34px] font-extrabold leading-[1.05] tracking-tight text-white">
+          Explore&nbsp;
+          <span className="relative inline-block">
+            <span className="bg-gradient-to-r from-amber-300 via-orange-400 to-amber-500 bg-clip-text text-transparent">
+              {selectedStream && selectedStream !== "All" ? selectedStream : "All Courses"}
+            </span>
+            <span className="absolute -bottom-1 left-0 right-0 h-[2px] rounded-full bg-gradient-to-r from-amber-400 to-orange-500 opacity-50" />
+          </span>
+          {" "}
+          <span className="text-white/70 text-[15px] sm:text-[20px] md:text-[24px] font-semibold">
+            in India 2026
+          </span>
         </h1>
 
-        <p className="max-w-[590px] pt-5 text-[15px] leading-[1.72] text-white/82 md:pt-8 md:text-[0.94rem] md:leading-6">
-          From MBA to MBBS, B.Tech to Fashion Design, our expert counsellors help
-          you get admitted to the best college for your goals, budget, and score.
-          Free guidance for every course.
+        {/* SEO subtext */}
+        <p className="mt-1.5 max-w-[600px] text-xs md:text-sm leading-relaxed text-white/58">
+          Compare MBA, B.Tech, MBBS, BCA, BBA, Law &amp; 50+ programs — fees,
+          syllabus, NIRF rankings, eligibility &amp; career scope.
+          Get&nbsp;<strong className="text-white/80 font-semibold">free expert counselling</strong>.
         </p>
 
-        <div className="mt-8 hidden max-w-[500px] md:block">
-          <label className="relative block">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base text-white/45">
-              Search
-            </span>
+        {/* ── Search bar ── */}
+        <div className="mt-3 max-w-[500px]">
+          <div className="relative flex items-center">
+            <svg className="absolute left-3.5 w-4 h-4 text-white/40 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
-              type="text"
+              type="search"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Search B.Tech, MBA, MBBS, Design..."
-              className="h-10 w-full rounded-full border border-white/14 bg-white/8 pl-20 pr-5 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-[#f3a11c]/60 focus:bg-white/12"
+              placeholder="Search MBA, B.Tech, MBBS, Law, BCA..."
+              className="h-10 w-full rounded-xl border border-white/15 bg-white/8 pl-10 pr-4 text-sm text-white placeholder:text-white/35 outline-none transition focus:border-amber-400/50 focus:bg-white/12 backdrop-blur"
             />
-          </label>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 text-white/40 hover:text-white/70 transition text-xs"
+              >✕</button>
+            )}
+          </div>
         </div>
 
-        <div className="mt-7 flex flex-wrap gap-2 md:hidden">
-          <button
-            type="button"
-            onClick={() => {
-              clearFilters();
-            }}
-            className={`rounded-full border px-3 py-2 text-[10px] font-semibold leading-none transition ${
-              isHeroAllCoursesActive
-                ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
-                : "border-white/18 bg-white/8 text-white/85"
-            }`}
-          >
-            All Courses
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedLevel(selectedLevel === "Postgraduate" ? "All" : "Postgraduate");
-              setSelectedMode("All");
-            }}
-            className={`rounded-full border px-3 py-2 text-[10px] font-semibold leading-none transition ${
-              selectedLevel === "Postgraduate"
-                ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
-                : "border-white/18 bg-white/8 text-white/85"
-            }`}
-          >
-            Postgraduate
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedLevel(selectedLevel === "Undergraduate" ? "All" : "Undergraduate");
-              setSelectedMode("All");
-            }}
-            className={`rounded-full border px-3 py-2 text-[10px] font-semibold leading-none transition ${
-              selectedLevel === "Undergraduate"
-                ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
-                : "border-white/18 bg-white/8 text-white/85"
-            }`}
-          >
-            Undergraduate
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (!professionalModeOption) return;
-              setSelectedMode(
-                selectedMode === professionalModeOption ? "All" : professionalModeOption
-              );
-              setSelectedLevel("All");
-            }}
-            className={`rounded-full border px-3 py-2 text-[10px] font-semibold leading-none transition ${
-              isHeroProfessionalActive
-                ? "border-[#f3a11c] bg-[#f3a11c] text-[#111827]"
-                : "border-white/18 bg-white/8 text-white/85"
-            }`}
-          >
-            Professional
-          </button>
+        {/* ── Quick-stream chips ── */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {["All", "Management", "Engineering", "Medical", "Law", "Design", "Commerce"].map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSelectedStream(s)}
+              className={`rounded-full px-3 py-1 text-[10px] font-semibold border transition-all ${
+                selectedStream === s
+                  ? "bg-gradient-to-r from-amber-400 to-orange-500 border-amber-400 text-[#0a1e3a] shadow-[0_3px_10px_rgba(245,158,11,0.35)]"
+                  : "border-white/15 bg-white/8 text-white/65 hover:bg-white/15 hover:text-white"
+              }`}
+            >
+              {s === "All" ? "🎓 All" : s}
+            </button>
+          ))}
         </div>
 
+        {/* Stats mini-row */}
+        <div className="mt-3 flex flex-wrap gap-3">
+          {[
+            { icon: "🏛️", val: "500+", lbl: "Colleges" },
+            { icon: "📚", val: "50+", lbl: "Programs" },
+            { icon: "👨‍🎓", val: "5,000+", lbl: "Guided" },
+            { icon: "⭐", val: "4.6/5", lbl: "Rating" },
+          ].map(({ icon, val, lbl }) => (
+            <div key={lbl} className="flex items-center gap-1.5">
+              <span className="text-xs">{icon}</span>
+              <div>
+                <span className="text-[#f3a11c] font-extrabold text-xs">{val}</span>
+                <span className="text-white/40 text-[10px] ml-1">{lbl}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="hidden w-full max-w-[228px] shrink-0 md:block lg:mr-2">
-        <div className="rounded-[22px] border border-white/10 bg-white/[0.08] p-4 shadow-[0_18px_42px_rgba(0,0,0,0.22)] backdrop-blur-xl">
-          <p
-            className="text-center text-[2.75rem] leading-none text-[#f3a11c]"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          >
-            {loading ? "6" : Math.max(streams.length - 1, 6)}
-          </p>
-          <p className="mt-1 text-center text-[0.88rem] text-white/78">
-            Programs We Specialise In
-          </p>
+      {/* ── RIGHT: Stats card ── */}
+      <div className="hidden lg:block">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.30)] backdrop-blur-xl">
 
-          <div className="mt-4 h-px bg-white/10" />
-
-          <div className="mt-4 space-y-2 text-[0.88rem] text-white/72">
-            <div className="flex items-center justify-between gap-4">
-              <span>Partner Colleges</span>
-              <span className="font-semibold text-[#f3a11c]">500+</span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span>Students Guided</span>
-              <span className="font-semibold text-[#f3a11c]">5,000+</span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span>Justdial Rating</span>
-              <span className="font-semibold text-[#f3a11c]">4.6/5</span>
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <span>Scholarship Available</span>
-              <span className="font-semibold text-[#f3a11c]">INR 1 Lakh</span>
-            </div>
+          {/* Program count */}
+          <div className="text-center mb-3">
+            <p className="text-[2rem] font-extrabold leading-none bg-gradient-to-b from-amber-300 to-orange-500 bg-clip-text text-transparent">
+              {loading ? "50+" : `${Math.max(filteredCourses.length, 50)}+`}
+            </p>
+            <p className="text-[12px] text-white/55 mt-0.5">
+              {selectedStream && selectedStream !== "All" ? `${selectedStream} Courses` : "Total Programs Listed"}
+            </p>
           </div>
+
+          <div className="h-px bg-white/10 mb-3" />
+
+          {/* Key stats */}
+          <div className="space-y-2 text-[12px]">
+            {[
+              ["Partner Colleges", "500+"],
+              ["Students Guided", "5,000+"],
+              ["Justdial Rating", "4.6 / 5 ⭐"],
+              ["Scholarship Up To", "₹1 Lakh"],
+              ["Free Counselling", "Yes ✓"],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-3">
+                <span className="text-white/55">{label}</span>
+                <span className="font-bold text-amber-400">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="h-px bg-white/10 my-3" />
+
+          {/* CTA */}
+          <a
+            href="tel:+918081269969"
+            className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 py-2 text-xs font-bold text-[#0a1e3a] shadow-[0_4px_16px_rgba(245,158,11,0.40)] hover:-translate-y-0.5 transition-all"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            Call for Free Guidance
+          </a>
         </div>
       </div>
     </div>
+  </div>
+
+  {/* Wave bottom divider */}
+  <div className="relative h-6 overflow-hidden">
+    <svg viewBox="0 0 1440 24" className="absolute bottom-0 w-full" preserveAspectRatio="none">
+      <path d="M0,24 L1440,24 L1440,6 Q1080,24 720,12 Q360,0 0,12 Z" fill="#f5f7fb" />
+    </svg>
   </div>
 </section>
 
-<div className="hidden lg:block sticky top-[74px] z-40  bg-[#f5f7fb] border-b border-[#d9d4ca] shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-  <div className="w-full px-0 py-0">
-    <div className="border-0 bg-[#f6f1e8] px-6 py-3">
-      <div ref={desktopFacetRef} className="flex flex-col gap-3">
+<div className="hidden md:block sticky top-[74px] z-40 bg-white border-b border-slate-200 shadow-[0_4px_16px_rgba(10,33,74,0.07)]">
+  <div className="max-w-7xl mx-auto px-6 py-2.5">
+    <div ref={desktopFacetRef} className="flex flex-col gap-2.5">
         <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
           <span className="shrink-0 text-sm font-bold uppercase tracking-[0.08em] text-slate-500">
             Filter By:
@@ -1754,43 +1641,34 @@ const renderCoursesLoadingState = () => (
           </div>
         )}
       </div>
-    </div>
   </div>
 </div>
 
-{/* ONLY MOBILE SEARCH + FILTER */}
-<div className="md:hidden max-w-7xl mx-auto px-4 mt-3 mb-4">
-  <div className="bg-white rounded-xl border-none shadow-none flex items-center gap-3 px-4 py-3">
-    <input
-      placeholder="Search course, stream, mode..."
-      className="
-        flex-1 text-sm
-        bg-transparent
-        border-0
-        outline-none
-        ring-0
-        focus:ring-0
-        focus:outline-none
-        shadow-none
-      "
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-    />
-    <button
-      onClick={() => setShowMobileFilters(true)}
-      className="text-sm font-semibold text-[var(--primary-medium)]"
-    >
-      Filters
-    </button>
-  </div>
+{/* MOBILE FILTER BUTTON */}
+<div className="md:hidden px-6 mt-4">
+  <button
+    onClick={() => setShowMobileFilters(true)}
+    className=" 
+      
+      w-full
+      py-3
+      rounded-xl
+      bg-transparent
+      text-[#0A225A]
+      font-semibold
+      shadow-md
+    "
+  >
+    Filters
+  </button>
 </div>
 
 
 
 
 
-      <div className="container mx-auto px-6 py-12"> 
-       <div className="flex items-start gap-8">
+      <div className="  container mx-auto px-6 py-12"> 
+       <div className="flex gap-8 items-start">
         {/* FILTERS */}
        {/* LEFT FILTER SIDEBAR (Desktop) */}
 <aside className="hidden">
@@ -1930,89 +1808,50 @@ const renderCoursesLoadingState = () => (
 
 
         {/* COURSES SECTIONS */}
-        <div className="min-w-0 flex-1">
-          {loading ? (
-            renderCoursesLoadingState()
-          ) : sectionViews.some((section) => section.courses.length > 0) ? (
+        <div className="flex-1">
+          {sectionViews.some((section) => section.courses.length > 0) ? (
             <div className="space-y-14">
               {sectionViews.map((section) => {
                 if (section.courses.length === 0) {
                   return null;
                 }
 
-                const mobilePreviewCourses = section.courses.slice(0, MOBILE_SECTION_PREVIEW_COUNT);
-                const isMobileSectionExpanded = expandedMobileSections[section.key];
-                const hasExpandableMobileView =
-                  section.courses.length > MOBILE_SECTION_PREVIEW_COUNT;
-
                 return (
                   <section
                     key={section.key}
                     id={section.sectionId}
-                    className="border-t border-[#d8d0c3] pt-10 first:border-t-0 first:pt-0"
+                    className="border-t border-slate-100 pt-8 first:border-t-0 first:pt-0"
                   >
-                    <div className="mb-6 flex flex-col items-start gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
-                      <h2
-                        className="text-[1.9rem] leading-tight text-[#0f203e] md:text-[2.2rem]"
-                        style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-                      >
-                        {section.title}
-                      </h2>
-
-                      {hasExpandableMobileView ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleMobileSectionExpansion(section.key)}
-                          aria-expanded={isMobileSectionExpanded}
-                          className="text-sm font-semibold text-[#0b6b86] md:hidden"
-                        >
-                          {isMobileSectionExpanded ? "Show fewer ->" : section.linkLabel}
-                        </button>
-                      ) : (
-                        <span className="text-sm font-medium text-[#0b6b86] md:hidden">
-                          {section.courses.length} course{section.courses.length === 1 ? "" : "s"}
-                        </span>
-                      )}
-
-                      <span className="hidden text-sm font-medium text-[#0b6b86] md:inline">
+                    {/* SEO-rich section header */}
+                    <div className="mb-5 flex items-end justify-between gap-4">
+                      <div>
+                        {/* Gradient accent bar */}
+                        <div className="h-1 w-10 rounded-full bg-gradient-to-r from-[#1f4fa8] to-[#f59e0b] mb-2" />
+                        <h2 className="text-[18px] md:text-[22px] font-extrabold text-slate-800 leading-tight">
+                          {section.title}
+                        </h2>
+                        {(section as any).seoDesc && (
+                          <p className="text-[12px] text-slate-500 mt-1">{(section as any).seoDesc}</p>
+                        )}
+                      </div>
+                      <span className="hidden text-[12px] font-semibold text-[#1f4fa8] hover:underline cursor-pointer md:inline whitespace-nowrap">
                         {section.linkLabel}
                       </span>
                     </div>
 
-                    <div className="md:hidden">
-                      {isMobileSectionExpanded ? (
-                        <div className="space-y-4">
-                          {section.courses.map((course:any) => (
-                            <div key={course.courseKey}>{renderCompactCourseCard(course)}</div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory px-2 pb-3">
-                          {mobilePreviewCourses.map((course:any) => (
-                            <div
-                              key={course.courseKey}
-                              className="min-w-[240px] max-w-[260px] shrink-0 snap-start"
-                            >
-                              {renderCompactCourseCard(course)}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {hasExpandableMobileView && !isMobileSectionExpanded ? (
-                        <p className="mt-3 px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                          Showing 3 of {section.courses.length} courses
-                        </p>
-                      ) : null}
+                    {/* Mobile: 2-col compact grid */}
+                    <div className="grid grid-cols-2 gap-3 md:hidden">
+                      {section.pagedCourses.map((course) => renderCompactCourseCard(course))}
                     </div>
 
+                    {/* Desktop: grid or list */}
                     {section.desktopLayout === "grid" ? (
-                      <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-4 md:gap-8">
-                        {section.pagedCourses.map((course:any) => renderCompactCourseCard(course))}
+                      <div className="hidden md:grid md:grid-cols-2 xl:grid-cols-4 gap-5">
+                        {section.pagedCourses.map((course) => renderCompactCourseCard(course))}
                       </div>
                     ) : (
-                      <div className="hidden space-y-4 md:block">
-                        {section.pagedCourses.map((course:any) => renderWideCourseCard(course))}
+                      <div className="hidden space-y-3 md:block">
+                        {section.pagedCourses.map((course) => renderWideCourseCard(course))}
                       </div>
                     )}
 
@@ -2096,7 +1935,17 @@ const renderCoursesLoadingState = () => (
                       className="h-4 w-4 rounded border-slate-400"
                     />
                     <span className="flex-1">{stream}</span>
-                    <span className="text-slate-700">{streamCounts[stream] || 0}</span>
+                    <span className="text-slate-700">
+                      {
+                        searchMatchedCourses.filter((course) =>
+                          matchesFacetFilters(course, {
+                            stream,
+                            level: selectedLevel,
+                            mode: selectedMode,
+                          })
+                        ).length
+                      }
+                    </span>
                   </label>
                 ))}
             </div>
@@ -2128,7 +1977,17 @@ const renderCoursesLoadingState = () => (
                       className="h-4 w-4 rounded border-slate-400"
                     />
                     <span className="flex-1">{mode}</span>
-                    <span className="text-slate-700">{modeCounts[mode] || 0}</span>
+                    <span className="text-slate-700">
+                      {
+                        searchMatchedCourses.filter((course) =>
+                          matchesFacetFilters(course, {
+                            stream: selectedStream,
+                            level: selectedLevel,
+                            mode,
+                          })
+                        ).length
+                      }
+                    </span>
                   </label>
                 ))}
             </div>
@@ -2160,7 +2019,17 @@ const renderCoursesLoadingState = () => (
                       className="h-4 w-4 rounded border-slate-400"
                     />
                     <span className="flex-1">{level}</span>
-                    <span className="text-slate-700">{levelCounts[level] || 0}</span>
+                    <span className="text-slate-700">
+                      {
+                        searchMatchedCourses.filter((course) =>
+                          matchesFacetFilters(course, {
+                            stream: selectedStream,
+                            level,
+                            mode: selectedMode,
+                          })
+                        ).length
+                      }
+                    </span>
                   </label>
                 ))}
             </div>
@@ -2213,7 +2082,10 @@ const renderCoursesLoadingState = () => (
 
                 <button
                   type="button"
-                     onClick={onOpenApplyNow}
+                  onClick={() => {
+                    setSearchTerm("MBA");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-[#0b5c73] transition hover:bg-[#f6f2ea] md:px-8"
                 >
                   Apply for Scholarship <span className="ml-1">-&gt;</span>
@@ -2309,12 +2181,14 @@ const renderCoursesLoadingState = () => (
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             onClick={() => {
-              onOpenApplyNow?.();
-             
+              setSearchTerm("MBA");
+              setSelectedStream("Management");
+              setSelectedLevel("All");
+              setSelectedMode("All");
             }}
             className="rounded-full bg-[#f3a11c] px-6 py-3 text-sm font-bold text-[#071d35] shadow-[0_10px_28px_rgba(243,161,28,0.28)] transition hover:brightness-105"
           >
-            Get Free  Guidance
+            Get Free MBA Guidance
           </button>
 
           <button
@@ -2369,6 +2243,106 @@ const renderCoursesLoadingState = () => (
 
   <div className="mt-8 h-px bg-[#d7d0c6]" />
 </div>
+
+{/* ── SEO TEXT BLOCK + AI-Friendly Content ── */}
+<section className="max-w-7xl mx-auto px-4 md:px-8 py-10">
+
+  {/* Gradient divider heading */}
+  <div className="flex items-center gap-3 mb-6">
+    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+    <span className="text-xs font-bold uppercase tracking-widest text-slate-400">About These Programs</span>
+    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    {/* SEO text block */}
+    <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_4px_20px_rgba(10,33,74,0.06)]">
+      <h2 className="text-base font-bold text-slate-800 mb-3">
+        {selectedStream && selectedStream !== "All"
+          ? `Best ${selectedStream} Courses in India 2026 — Fees, Syllabus & Colleges`
+          : "Top Courses in India 2026 — MBA, B.Tech, MBBS, Law, BCA & More"}
+      </h2>
+      <p className="text-sm text-slate-600 leading-relaxed mb-3">
+        StudyCups lists <strong>{filteredCourses.length}+</strong>{" "}
+        {selectedStream && selectedStream !== "All" ? selectedStream : ""} courses offered
+        by top-ranked colleges across India. Compare programs by fees, duration, eligibility
+        criteria, entrance exams (JEE, NEET, CAT, CLAT, CUET), career scope, and average
+        salary packages — all updated for 2026 admissions.
+      </p>
+      <p className="text-sm text-slate-600 leading-relaxed">
+        Popular programs:&nbsp;
+        {["MBA", "B.Tech", "MBBS", "BCA", "BBA", "LLB", "B.Com", "M.Tech", "PGDM"].map((c, i, arr) => (
+          <span key={c}>
+            <button
+              type="button"
+              onClick={() => setSelectedStream(c === "MBA" || c === "PGDM" ? "Management" : c === "B.Tech" || c === "M.Tech" ? "Engineering" : c === "MBBS" ? "Medical" : c === "LLB" ? "Law" : "All")}
+              className="text-blue-600 hover:underline font-medium"
+            >{c}</button>
+            {i < arr.length - 1 && " · "}
+          </span>
+        ))}.
+      </p>
+    </div>
+
+    {/* AI-friendly quick answers */}
+    <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_4px_20px_rgba(10,33,74,0.06)]">
+      <h2 className="text-base font-bold text-slate-800 mb-4">
+        Frequently Asked — Course Admissions 2026
+      </h2>
+      <div className="space-y-3">
+        {[
+          {
+            q: "Which is the best MBA college in India 2026?",
+            a: "IIMs, XLRI, MDI, SPJIMR and FMS Delhi rank among the top MBA colleges. StudyCups helps you shortlist based on your CAT/GMAT score and budget.",
+          },
+          {
+            q: "What is the eligibility for B.Tech admissions?",
+            a: "B.Tech requires 10+2 with Physics, Chemistry & Maths (PCM) and a valid JEE Main / state entrance exam score.",
+          },
+          {
+            q: "Can I get admission in MBBS without NEET?",
+            a: "No. NEET-UG is mandatory for all MBBS admissions in India as per the Supreme Court order.",
+          },
+          {
+            q: "What courses can I do after 12th Commerce?",
+            a: "After 12th Commerce you can pursue BBA, B.Com, BCA, Integrated MBA, CA Foundation, or Law (LLB 5-year).",
+          },
+        ].map(({ q, a }) => (
+          <details key={q} className="group">
+            <summary className="flex items-start gap-2 cursor-pointer text-sm font-semibold text-slate-700 list-none">
+              <span className="text-[#1f4fa8] mt-0.5 flex-shrink-0">Q.</span>
+              <span>{q}</span>
+            </summary>
+            <p className="mt-1.5 ml-5 text-xs text-slate-500 leading-relaxed">{a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  {/* Popular streams gradient chips */}
+  <div className="mt-6 flex flex-wrap gap-2 items-center">
+    <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Browse by Stream:</span>
+    {[
+      { label: "MBA / PGDM", stream: "Management", color: "from-blue-500 to-indigo-600" },
+      { label: "B.Tech / M.Tech", stream: "Engineering", color: "from-indigo-500 to-violet-600" },
+      { label: "MBBS / Medical", stream: "Medical", color: "from-red-500 to-rose-600" },
+      { label: "Law / LLB", stream: "Law", color: "from-emerald-500 to-teal-600" },
+      { label: "BBA / BCA", stream: "Commerce", color: "from-amber-500 to-orange-600" },
+      { label: "Design", stream: "Design", color: "from-pink-500 to-fuchsia-600" },
+    ].map(({ label, stream, color }) => (
+      <button
+        key={stream}
+        type="button"
+        onClick={() => setSelectedStream(stream)}
+        className={`inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r ${color} px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all`}
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+</section>
 
     </div>
   );
