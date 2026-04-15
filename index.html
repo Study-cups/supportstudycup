@@ -1,18 +1,49 @@
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
-<head> 
-    
+<head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logos/StudyCups.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preload" as="image" href="/images/Registeredimg-optimized.png" fetchpriority="high" />
-    <title>StudyCups - College Portal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap"
-      rel="stylesheet"
-    >
+
+    <!-- Primary SEO -->
+    <title>StudyCups – Best Colleges in India 2026 | Fees, Rankings & Admissions</title>
+    <meta name="description" content="Find and compare the best colleges in India 2026. Explore top MBA, B.Tech, MBBS, BBA, BCA colleges by fees, rankings, placements and get expert admission guidance. Offices in Kanpur, Delhi NCR." />
+    <meta name="keywords" content="best colleges in India, top colleges 2026, MBA colleges India, BTech colleges, MBBS admission, college fees, college rankings, StudyCups, college admission guidance" />
+    <meta name="author" content="StudyCups" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://studycups.in/" />
+
+    <!-- Favicon & App Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/logos/StudyCups.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/logos/StudyCups.png" />
+    <meta name="theme-color" content="#2461A4" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="StudyCups" />
+    <meta property="og:title" content="StudyCups – Best Colleges in India 2026 | Fees, Rankings & Admissions" />
+    <meta property="og:description" content="Find and compare the best colleges in India 2026. MBA, B.Tech, MBBS and more. Expert guidance, real rankings, latest fees." />
+    <meta property="og:url" content="https://studycups.in/" />
+    <meta property="og:image" content="https://studycups.in/logos/StudyCups.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@studycups" />
+    <meta name="twitter:title" content="StudyCups – Best Colleges in India 2026" />
+    <meta name="twitter:description" content="Find and compare the best colleges in India 2026. MBA, B.Tech, MBBS and more." />
+    <meta name="twitter:image" content="https://studycups.in/logos/StudyCups.png" />
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://studycupsbackend-wb8p.onrender.com" />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <style>
         :root {
             --primary-dark: #263A4D; /* Deep Blue */
@@ -101,40 +132,6 @@
 </head>
 <body>
     <div id="root"></div>
-    <script>
-      (function () {
-        const fallbackSvg =
-          "data:image/svg+xml;charset=UTF-8," +
-          encodeURIComponent(
-            "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'>" +
-              "<rect width='1200' height='800' fill='#f1f5f9'/>" +
-              "<rect x='360' y='220' width='480' height='300' rx='28' fill='#dbe4ee'/>" +
-              "<path d='M430 470l110-120 90 90 70-70 120 100' fill='none' stroke='#94a3b8' stroke-width='32' stroke-linecap='round' stroke-linejoin='round'/>" +
-              "<circle cx='760' cy='320' r='34' fill='#94a3b8'/>" +
-              "<text x='50%' y='640' text-anchor='middle' fill='#64748b' font-family='Poppins, Arial, sans-serif' font-size='44' font-weight='600'>Image unavailable</text>" +
-            "</svg>"
-          );
-
-        window.addEventListener(
-          "error",
-          function (event) {
-            const target = event.target;
-
-            if (!(target instanceof HTMLImageElement)) {
-              return;
-            }
-
-            if (target.dataset.fallbackApplied === "true") {
-              return;
-            }
-
-            target.dataset.fallbackApplied = "true";
-            target.src = fallbackSvg;
-          },
-          true
-        );
-      })();
-    </script>
     <script type="module" src="/index.tsx"></script>
 </body>
 </html>
